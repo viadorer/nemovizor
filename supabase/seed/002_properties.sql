@@ -23,7 +23,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_luxurious_family_home_exterior_in_a_modern_arch_79afac09-b8fc-422f-8681-d24b4e78ec2c_1.png',
   'Luxusni rodinny dum',
   ARRAY['/images/u9534644866_A_luxurious_family_home_exterior_in_a_modern_arch_79afac09-b8fc-422f-8681-d24b4e78ec2c_1.png'],
-  'b1000000-0000-0000-0000-000000000001',
+  'b1',
   true, true
 ),
 -- 2. Moderni byt Praha 2
@@ -39,7 +39,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_chic_and_modern_Parisian_apartment_with_sleek_m_978ddd7e-c1ba-47fd-b9f6-3d3e92409162_1.png',
   'Luxusni byt',
   ARRAY['/images/u9534644866_A_chic_and_modern_Parisian_apartment_with_sleek_m_978ddd7e-c1ba-47fd-b9f6-3d3e92409162_1.png'],
-  'b1000000-0000-0000-0000-000000000001',
+  'b1',
   true, true
 ),
 -- 3. Pronajem Praha 5
@@ -55,7 +55,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_cbb61a6d-dc86-4aeb-8b9c-7c02268c90fb_3.png',
   'Designovy byt',
   ARRAY['/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_cbb61a6d-dc86-4aeb-8b9c-7c02268c90fb_3.png'],
-  'b1000000-0000-0000-0000-000000000004',
+  'b4',
   false, true
 ),
 -- 4. Vila Brno
@@ -71,7 +71,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_hypermodern_luxury_house_with_futuristic_archit_038b2e37-1fbc-4d5b-a953-675705175b3a_2.png',
   'Moderni vila',
   ARRAY['/images/u9534644866_A_hypermodern_luxury_house_with_futuristic_archit_038b2e37-1fbc-4d5b-a953-675705175b3a_2.png'],
-  'b1000000-0000-0000-0000-000000000002',
+  'b2',
   true, true
 ),
 -- 5. Investicni byt Usti
@@ -87,7 +87,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_5c88f539-845f-40a3-957d-755e1f886c9d_0.png',
   'Investicni byt Usti',
   ARRAY['/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_5c88f539-845f-40a3-957d-755e1f886c9d_0.png'],
-  'b1000000-0000-0000-0000-000000000003',
+  'b3',
   false, true
 ),
 -- 6. Penthouse Brno
@@ -103,7 +103,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_beautifully_designed_apartment_in_France_blendi_b6767da1-246c-43e4-bda5-1b7ed1494a0e_0.png',
   'Penthouse Brno',
   ARRAY['/images/u9534644866_A_beautifully_designed_apartment_in_France_blendi_b6767da1-246c-43e4-bda5-1b7ed1494a0e_0.png'],
-  'b1000000-0000-0000-0000-000000000002',
+  'b2',
   true, true
 ),
 -- 7. Dum s garazi Praha 5
@@ -119,7 +119,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_modern_luxury_home_exterior_with_a_sleek_garage_807055a2-b1a6-486c-a56b-051b92561a75_0.png',
   'Moderni dum s garazi',
   ARRAY['/images/u9534644866_A_modern_luxury_home_exterior_with_a_sleek_garage_807055a2-b1a6-486c-a56b-051b92561a75_0.png'],
-  'b1000000-0000-0000-0000-000000000001',
+  'b1',
   true, true
 ),
 -- 8. Drazba Ostrava
@@ -135,7 +135,7 @@ INSERT INTO properties (
   '/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_5c88f539-845f-40a3-957d-755e1f886c9d_1.png',
   'Drazbovy byt Ostrava',
   ARRAY['/images/u9534644866_A_contemporary_apartment_interior_with_three_dist_5c88f539-845f-40a3-957d-755e1f886c9d_1.png'],
-  'b1000000-0000-0000-0000-000000000003',
+  'b3',
   false, true
 ),
 -- 9. Real: Koprivnice
@@ -151,7 +151,7 @@ INSERT INTO properties (
   '/images/real-koprivnice-2+1.jpg',
   'Byt 2+1 Koprivnice',
   ARRAY['/images/real-koprivnice-2+1.jpg'],
-  'b1000000-0000-0000-0000-000000000001',
+  'b1',
   false, true
 ),
 -- 10. Real: Plzen
@@ -167,6 +167,6 @@ INSERT INTO properties (
   '/images/real-plzen-1+1.jpg',
   'Byt 1+1 Plzen',
   ARRAY['/images/real-plzen-1+1.jpg'],
-  'b1000000-0000-0000-0000-000000000004',
+  'b4',
   false, true
 );

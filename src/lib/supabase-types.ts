@@ -222,6 +222,10 @@ export interface Database {
           total_deals: number;
           bio: string;
           slug: string | null;
+          agency_id: string | null;
+          languages: string[] | null;
+          certifications: string[] | null;
+          year_started: number | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["brokers"]["Row"], "id" | "created_at"> & {
@@ -229,6 +233,79 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["brokers"]["Insert"]>;
+      };
+      agencies: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          logo: string | null;
+          description: string;
+          phone: string;
+          email: string;
+          website: string | null;
+          seat_city: string | null;
+          seat_address: string | null;
+          founded_year: number | null;
+          total_brokers: number;
+          total_listings: number;
+          total_deals: number;
+          rating: number;
+          specializations: string[];
+          parent_agency_id: string | null;
+          is_independent: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["agencies"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agencies"]["Insert"]>;
+      };
+      branches: {
+        Row: {
+          id: string;
+          agency_id: string;
+          name: string;
+          slug: string;
+          address: string;
+          city: string;
+          zip: string | null;
+          phone: string;
+          email: string;
+          latitude: number;
+          longitude: number;
+          is_headquarters: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["branches"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["branches"]["Insert"]>;
+      };
+      reviews: {
+        Row: {
+          id: string;
+          target_type: "broker" | "agency";
+          broker_id: string | null;
+          agency_id: string | null;
+          author_name: string;
+          rating: number;
+          text: string;
+          date: string;
+          property_type: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["reviews"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
       };
     };
     Views: Record<string, never>;

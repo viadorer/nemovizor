@@ -6,7 +6,7 @@ import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { LocationSearch } from "@/components/location-search";
-import { featuredProperties, latestProperties, properties } from "@/lib/data";
+import { getFeaturedProperties, getLatestProperties, getAllProperties } from "@/lib/api";
 import { Property } from "@/lib/types";
 import Link from "next/link";
 
@@ -29,43 +29,43 @@ function useNearbyProperties(count = 6): { nearby: Property[]; cityLabel: string
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fallback: Praha
-    const fallback = (label = "Praha") => {
-      const sorted = properties
-        .filter((p) => p.latitude && p.longitude)
-        .sort((a, b) => {
-          const dA = haversineKm(50.08, 14.42, a.latitude, a.longitude);
-          const dB = haversineKm(50.08, 14.42, b.latitude, b.longitude);
-          return dA - dB;
-        });
-      setNearby(sorted.slice(0, count));
-      setCityLabel(label);
-      setLoading(false);
-    };
-
-    if (!navigator.geolocation) {
-      fallback();
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: uLat, longitude: uLon } = pos.coords;
-        const withDist = properties
+    getAllProperties().then((allProps) => {
+      const fallback = (label = "Praha") => {
+        const sorted = allProps
           .filter((p) => p.latitude && p.longitude)
-          .map((p) => ({ p, dist: haversineKm(uLat, uLon, p.latitude, p.longitude) }))
-          .sort((a, b) => a.dist - b.dist);
-
-        const top = withDist.slice(0, count).map((x) => x.p);
-        // Najít nejbližší město
-        const closestCity = top[0]?.city || "vás";
-        setNearby(top);
-        setCityLabel(closestCity);
+          .sort((a, b) => {
+            const dA = haversineKm(50.08, 14.42, a.latitude, a.longitude);
+            const dB = haversineKm(50.08, 14.42, b.latitude, b.longitude);
+            return dA - dB;
+          });
+        setNearby(sorted.slice(0, count));
+        setCityLabel(label);
         setLoading(false);
-      },
-      () => fallback(), // geolokace zamítnuta
-      { timeout: 5000, maximumAge: 300000 }
-    );
+      };
+
+      if (!navigator.geolocation) {
+        fallback();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude: uLat, longitude: uLon } = pos.coords;
+          const withDist = allProps
+            .filter((p) => p.latitude && p.longitude)
+            .map((p) => ({ p, dist: haversineKm(uLat, uLon, p.latitude, p.longitude) }))
+            .sort((a, b) => a.dist - b.dist);
+
+          const top = withDist.slice(0, count).map((x) => x.p);
+          const closestCity = top[0]?.city || "vás";
+          setNearby(top);
+          setCityLabel(closestCity);
+          setLoading(false);
+        },
+        () => fallback(),
+        { timeout: 5000, maximumAge: 300000 }
+      );
+    });
   }, [count]);
 
   return { nearby, cityLabel, loading };
@@ -74,6 +74,13 @@ function useNearbyProperties(count = 6): { nearby: Property[]; cityLabel: string
 export default function Home() {
   const router = useRouter();
   const { nearby, cityLabel, loading } = useNearbyProperties(6);
+  const [featured, setFeatured] = useState<Property[]>([]);
+  const [latest, setLatest] = useState<Property[]>([]);
+
+  useEffect(() => {
+    getFeaturedProperties().then(setFeatured);
+    getLatestProperties().then(setLatest);
+  }, []);
 
   return (
     <div className="page-shell">
@@ -186,7 +193,7 @@ export default function Home() {
           <div className="container">
             <h2 className="section-title">Prémiové nabídky</h2>
             <div className="property-row">
-              {featuredProperties.map((property) => (
+              {featured.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>
@@ -222,7 +229,7 @@ export default function Home() {
           <div className="container">
             <h2 className="section-title">Nové nabídky</h2>
             <div className="property-grid">
-              {latestProperties.map((property) => (
+              {latest.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>

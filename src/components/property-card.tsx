@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPrice } from "@/lib/data";
+import { formatPrice } from "@/lib/api";
 import { Property } from "@/lib/types";
 
 type PropertyCardProps = {

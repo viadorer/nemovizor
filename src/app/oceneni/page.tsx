@@ -5,7 +5,8 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { LocationSearch } from "@/components/location-search";
-import { getUniqueCities } from "@/lib/data";
+import { useEffect } from "react";
+import { getUniqueCities } from "@/lib/api";
 
 const ALL_STEPS = [
   { id: 0, label: "Typ nemovitosti" },
@@ -177,7 +178,8 @@ export default function ValuationPage() {
     consent: false,
   });
 
-  const cities = getUniqueCities();
+  const [cities, setCities] = useState<string[]>([]);
+  useEffect(() => { getUniqueCities().then(setCities); }, []);
   const visibleSteps = useMemo(() => getVisibleSteps(form.propertyType), [form.propertyType]);
   const currentIndex = visibleSteps.indexOf(stepId);
   const totalSteps = visibleSteps.length;

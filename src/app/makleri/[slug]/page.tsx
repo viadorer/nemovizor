@@ -9,7 +9,7 @@ import {
   getBrokerReviews,
   getAgencyById,
   getAgencyBranches,
-} from "@/lib/data";
+} from "@/lib/api";
 
 function StarIcon({ filled }: { filled: boolean }) {
   return (
@@ -37,16 +37,16 @@ type BrokerDetailPageProps = {
 
 export default async function BrokerDetailPage({ params }: BrokerDetailPageProps) {
   const { slug } = await params;
-  const broker = getBrokerBySlug(slug);
+  const broker = await getBrokerBySlug(slug);
 
   if (!broker) {
     notFound();
   }
 
-  const properties = getBrokerProperties(broker.id);
-  const reviewsList = getBrokerReviews(broker.id);
-  const agency = getAgencyById(broker.agencyId);
-  const agencyBranches = agency ? getAgencyBranches(agency.id) : [];
+  const properties = await getBrokerProperties(broker.id);
+  const reviewsList = await getBrokerReviews(broker.id);
+  const agency = await getAgencyById(broker.agencyId);
+  const agencyBranches = agency ? await getAgencyBranches(agency.id) : [];
   const hqBranch = agencyBranches.find((b) => b.isHeadquarters);
 
   return (

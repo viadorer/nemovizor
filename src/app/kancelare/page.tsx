@@ -5,12 +5,13 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import {
-  getAllAgencies,
+  getAgencies,
   getAgencyCities,
   getAgencyBranchCities,
   getAllBranchCities,
   getAllBrokerActiveCities,
-} from "@/lib/data";
+} from "@/lib/api";
+import type { Agency } from "@/lib/types";
 
 // ===== DROPDOWN =====
 type DropdownProps<T extends string> = {
@@ -72,25 +73,40 @@ export default function AgenciesPage() {
   const [search, setSearch] = useState("");
   const [cityActivity, setCityActivity] = useState<string | null>(null);
   const [citySeat, setCitySeat] = useState<string | null>(null);
+  const [allAgencies, setAllAgencies] = useState<Agency[]>([]);
+  const [activityCities, setActivityCities] = useState<string[]>([]);
+  const [seatCities, setSeatCities] = useState<string[]>([]);
+  const [agencyCitiesMap, setAgencyCitiesMap] = useState<Record<string, string[]>>({});
+  const [branchCitiesMap, setBranchCitiesMap] = useState<Record<string, string[]>>({});
 
-  const allAgencies = getAllAgencies();
-  const activityCities = getAllBrokerActiveCities();
-  const seatCities = getAllBranchCities();
+  useEffect(() => {
+    Promise.all([getAgencies(), getAllBrokerActiveCities(), getAllBranchCities()]).then(([a, ac, sc]) => {
+      setAllAgencies(a);
+      setActivityCities(ac);
+      setSeatCities(sc);
+      Promise.all(a.map((ag) => getAgencyCities(ag.id).then((c) => [ag.id, c] as const))).then(
+        (entries) => setAgencyCitiesMap(Object.fromEntries(entries))
+      );
+      Promise.all(a.map((ag) => getAgencyBranchCities(ag.id).then((c) => [ag.id, c] as const))).then(
+        (entries) => setBranchCitiesMap(Object.fromEntries(entries))
+      );
+    });
+  }, []);
 
   const filtered = useMemo(() => {
     return allAgencies.filter((a) => {
       if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (cityActivity) {
-        const cities = getAgencyCities(a.id);
+        const cities = agencyCitiesMap[a.id] ?? [];
         if (!cities.includes(cityActivity)) return false;
       }
       if (citySeat) {
-        const branchCities = getAgencyBranchCities(a.id);
+        const branchCities = branchCitiesMap[a.id] ?? [];
         if (!branchCities.includes(citySeat)) return false;
       }
       return true;
     });
-  }, [search, cityActivity, citySeat, allAgencies]);
+  }, [search, cityActivity, citySeat, allAgencies, agencyCitiesMap, branchCitiesMap]);
 
   const hasFilters = search || cityActivity || citySeat;
 

@@ -7,7 +7,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster";
 import { Property } from "@/lib/types";
-import { formatPrice } from "@/lib/data";
+import { formatPrice } from "@/lib/api";
 
 // ===== Vlastní ikona markeru (pointmap.png) =====
 function createMarkerIcon(_isFeatured: boolean) {

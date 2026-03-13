@@ -6,7 +6,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { PropertyCard } from "@/components/property-card";
 import { SiteHeader } from "@/components/site-header";
-import { properties, latestProperties, getUniqueCities } from "@/lib/data";
+import { getAllProperties, getUniqueCities } from "@/lib/api";
+import type { Property } from "@/lib/types";
 import type { MapBounds } from "@/components/property-map";
 import {
   ListingType, PropertyCategory,
@@ -29,8 +30,6 @@ const PropertyMap = dynamic(() => import("@/components/property-map"), {
     </div>
   ),
 });
-
-const allProperties = [...properties, ...latestProperties];
 
 const categoryLabels: Record<PropertyCategory, string> = {
   apartment: "Byt",
@@ -236,6 +235,9 @@ function ListingsContent() {
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [isMobile, setIsMobile] = useState(false);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 900px)");
@@ -245,11 +247,17 @@ function ListingsContent() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  useEffect(() => {
+    Promise.all([getAllProperties(), getUniqueCities()]).then(([props, c]) => {
+      setAllProperties(props);
+      setCities(c);
+      setLoading(false);
+    });
+  }, []);
+
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds);
   }, []);
-
-  const cities = getUniqueCities();
 
   const filtered = useMemo(() => {
     return allProperties.filter((p) => {

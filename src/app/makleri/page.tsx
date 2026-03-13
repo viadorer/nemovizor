@@ -5,13 +5,14 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import {
-  brokers,
-  getAllAgencies,
+  getBrokers,
+  getAgencies,
   getBrokerCities,
   getAgencyBranchCities,
   getAllBrokerActiveCities,
   getAllBranchCities,
-} from "@/lib/data";
+} from "@/lib/api";
+import type { Broker, Agency } from "@/lib/types";
 
 // ===== DROPDOWN =====
 type DropdownProps<T extends string> = {
@@ -74,26 +75,46 @@ export default function BrokersPage() {
   const [cityActivity, setCityActivity] = useState<string | null>(null);
   const [citySeat, setCitySeat] = useState<string | null>(null);
   const [agencyFilter, setAgencyFilter] = useState<string | null>(null);
+  const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [activityCities, setActivityCities] = useState<string[]>([]);
+  const [seatCities, setSeatCities] = useState<string[]>([]);
+  const [brokerCitiesMap, setBrokerCitiesMap] = useState<Record<string, string[]>>({});
+  const [branchCitiesMap, setBranchCitiesMap] = useState<Record<string, string[]>>({});
 
-  const agencies = getAllAgencies();
-  const activityCities = getAllBrokerActiveCities();
-  const seatCities = getAllBranchCities();
+  useEffect(() => {
+    Promise.all([getBrokers(), getAgencies(), getAllBrokerActiveCities(), getAllBranchCities()]).then(
+      ([b, a, ac, sc]) => {
+        setAllBrokers(b);
+        setAgencies(a);
+        setActivityCities(ac);
+        setSeatCities(sc);
+        // Pre-load broker cities and branch cities for filtering
+        Promise.all(b.map((broker) => getBrokerCities(broker.id).then((c) => [broker.id, c] as const))).then(
+          (entries) => setBrokerCitiesMap(Object.fromEntries(entries))
+        );
+        Promise.all([...new Set(b.map((broker) => broker.agencyId))].filter(Boolean).map(
+          (aid) => getAgencyBranchCities(aid).then((c) => [aid, c] as const)
+        )).then((entries) => setBranchCitiesMap(Object.fromEntries(entries)));
+      }
+    );
+  }, []);
 
   const filtered = useMemo(() => {
-    return brokers.filter((b) => {
+    return allBrokers.filter((b) => {
       if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (agencyFilter && b.agencyId !== agencyFilter) return false;
       if (cityActivity) {
-        const cities = getBrokerCities(b.id);
+        const cities = brokerCitiesMap[b.id] ?? [];
         if (!cities.includes(cityActivity)) return false;
       }
       if (citySeat) {
-        const branchCities = getAgencyBranchCities(b.agencyId);
+        const branchCities = branchCitiesMap[b.agencyId] ?? [];
         if (!branchCities.includes(citySeat)) return false;
       }
       return true;
     });
-  }, [search, cityActivity, citySeat, agencyFilter]);
+  }, [search, cityActivity, citySeat, agencyFilter, allBrokers, brokerCitiesMap, branchCitiesMap]);
 
   const hasFilters = search || cityActivity || citySeat || agencyFilter;
 

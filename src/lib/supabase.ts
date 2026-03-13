@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./supabase-types";
 
 // ===== SUPABASE CLIENT =====
@@ -9,8 +9,10 @@ import type { Database } from "./supabase-types";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-/** Klient pro browser (client components) */
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-
 /** Je Supabase nakonfigurovaný? */
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+/** Klient pro browser (client components) — null pokud není nakonfigurovaný */
+export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;

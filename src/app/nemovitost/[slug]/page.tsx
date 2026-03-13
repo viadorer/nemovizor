@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { formatPrice, getPropertyBySlug, getSimilarProperties, getBrokerById, getAgencyById } from "@/lib/data";
+import { formatPrice, getPropertyBySlug, getSimilarProperties, getBrokerById, getAgencyById } from "@/lib/api";
 import { DetailMap, WideDetailMap } from "./detail-map";
 import { MediaGallery } from "./media-gallery";
 import { PointsOfInterest } from "./points-of-interest";
@@ -14,15 +14,15 @@ type PropertyDetailPageProps = {
 
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  const property = await getPropertyBySlug(slug);
 
   if (!property) {
     notFound();
   }
 
-  const similarProperties = getSimilarProperties(property.slug, property.city);
-  const broker = property.brokerId ? getBrokerById(property.brokerId) : undefined;
-  const agency = broker?.agencyId ? getAgencyById(broker.agencyId) : undefined;
+  const similarProperties = await getSimilarProperties(property.slug, property.city);
+  const broker = property.brokerId ? await getBrokerById(property.brokerId) : undefined;
+  const agency = broker?.agencyId ? await getAgencyById(broker.agencyId) : undefined;
 
   const params_data = [
     { label: "Typ", value: property.subtype },

@@ -5,14 +5,14 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import {
-  brokers,
-  getAllAgencies,
+  getBrokers,
+  getAgencies,
   getAllLocationCities,
   getAllSpecializations,
   getBrokerCities,
   getAgencyCities,
   getAgencyBranchCities,
-} from "@/lib/data";
+} from "@/lib/api";
 import type { Broker, Agency } from "@/lib/types";
 
 type DropdownProps<T extends string> = {
@@ -79,21 +79,46 @@ export default function SpecialistePage() {
   const [city, setCity] = useState<string | null>(null);
   const [specialization, setSpecialization] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | "broker" | "agency">("all");
+  const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
+  const [allAgencies, setAllAgencies] = useState<Agency[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [specs, setSpecs] = useState<string[]>([]);
+  const [brokerCitiesMap, setBrokerCitiesMap] = useState<Record<string, string[]>>({});
+  const [agencyCitiesMap, setAgencyCitiesMap] = useState<Record<string, string[]>>({});
+  const [branchCitiesMap, setBranchCitiesMap] = useState<Record<string, string[]>>({});
 
-  const allAgencies = getAllAgencies();
-  const cities = getAllLocationCities();
-  const specs = getAllSpecializations();
+  useEffect(() => {
+    Promise.all([getBrokers(), getAgencies(), getAllLocationCities(), getAllSpecializations()]).then(
+      ([b, a, c, s]) => {
+        setAllBrokers(b);
+        setAllAgencies(a);
+        setCities(c);
+        setSpecs(s);
+        // Pre-load city maps
+        Promise.all(b.map((br) => getBrokerCities(br.id).then((cc) => [br.id, cc] as const))).then(
+          (entries) => setBrokerCitiesMap(Object.fromEntries(entries))
+        );
+        const allIds = [...new Set([...b.map((br) => br.agencyId), ...a.map((ag) => ag.id)])].filter(Boolean);
+        Promise.all(allIds.map((id) => getAgencyBranchCities(id).then((cc) => [id, cc] as const))).then(
+          (entries) => setBranchCitiesMap(Object.fromEntries(entries))
+        );
+        Promise.all(a.map((ag) => getAgencyCities(ag.id).then((cc) => [ag.id, cc] as const))).then(
+          (entries) => setAgencyCitiesMap(Object.fromEntries(entries))
+        );
+      }
+    );
+  }, []);
 
   const filtered = useMemo(() => {
     const results: ResultItem[] = [];
 
     if (typeFilter !== "agency") {
-      brokers.forEach((b) => {
+      allBrokers.forEach((b) => {
         if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return;
         if (city) {
-          const brokerCities = getBrokerCities(b.id);
-          const branchCities = getAgencyBranchCities(b.agencyId);
-          if (!brokerCities.includes(city) && !branchCities.includes(city)) return;
+          const bCities = brokerCitiesMap[b.id] ?? [];
+          const brCities = branchCitiesMap[b.agencyId] ?? [];
+          if (!bCities.includes(city) && !brCities.includes(city)) return;
         }
         if (specialization && !b.specialization.includes(specialization)) return;
         results.push({ type: "broker", data: b });
@@ -104,9 +129,9 @@ export default function SpecialistePage() {
       allAgencies.forEach((a) => {
         if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return;
         if (city) {
-          const agencyCities = getAgencyCities(a.id);
-          const branchCities = getAgencyBranchCities(a.id);
-          if (!agencyCities.includes(city) && !branchCities.includes(city)) return;
+          const aCities = agencyCitiesMap[a.id] ?? [];
+          const brCities = branchCitiesMap[a.id] ?? [];
+          if (!aCities.includes(city) && !brCities.includes(city)) return;
         }
         if (specialization && !a.specializations.includes(specialization)) return;
         results.push({ type: "agency", data: a });
@@ -120,7 +145,7 @@ export default function SpecialistePage() {
     });
 
     return results;
-  }, [search, city, specialization, typeFilter, allAgencies]);
+  }, [search, city, specialization, typeFilter, allBrokers, allAgencies, brokerCitiesMap, agencyCitiesMap, branchCitiesMap]);
 
   const hasFilters = search || city || specialization || typeFilter !== "all";
 

@@ -10,7 +10,7 @@ import {
   getAgencyReviews,
   getAgencyProperties,
   getAgencyById,
-} from "@/lib/data";
+} from "@/lib/api";
 
 function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
   return (
@@ -30,17 +30,17 @@ type AgencyDetailPageProps = {
 
 export default async function AgencyDetailPage({ params }: AgencyDetailPageProps) {
   const { slug } = await params;
-  const agency = getAgencyBySlug(slug);
+  const agency = await getAgencyBySlug(slug);
 
   if (!agency) {
     notFound();
   }
 
-  const agencyBrokers = getAgencyBrokers(agency.id);
-  const agencyBranches = getAgencyBranches(agency.id);
-  const reviewsList = getAgencyReviews(agency.id);
-  const agencyProperties = getAgencyProperties(agency.id);
-  const parentAgency = agency.parentAgencyId ? getAgencyById(agency.parentAgencyId) : null;
+  const agencyBrokers = await getAgencyBrokers(agency.id);
+  const agencyBranches = await getAgencyBranches(agency.id);
+  const reviewsList = await getAgencyReviews(agency.id);
+  const agencyProperties = await getAgencyProperties(agency.id);
+  const parentAgency = agency.parentAgencyId ? await getAgencyById(agency.parentAgencyId) : null;
 
   return (
     <div className="page-shell">

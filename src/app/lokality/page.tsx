@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getUniqueCities } from "@/lib/data";
+import { getUniqueCities } from "@/lib/api";
 
-export default function LocationsPage() {
-  const cities = getUniqueCities();
+export default async function LocationsPage() {
+  const cities = await getUniqueCities();
 
   return (
     <div className="page-shell">
