@@ -1,0 +1,12 @@
+[project]
+id = ""  # Vyplnit po vytvoreni projektu v Supabase Dashboard
+
+[db]
+port = 54322
+major_version = 15
+
+[api]
+port = 54321
+
+[studio]
+port = 54323

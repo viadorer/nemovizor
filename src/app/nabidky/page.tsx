@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { PropertyCard } from "@/components/property-card";
 import { SiteHeader } from "@/components/site-header";
@@ -233,6 +234,16 @@ function ListingsContent() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(null);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds);
@@ -254,9 +265,9 @@ function ListingsContent() {
     });
   }, [listingType, category, subtype, selectedCity, priceMin, priceMax, areaMin, areaMax]);
 
-  // Filtrovat seznam podle viditelné oblasti mapy
+  // Filtrovat seznam podle viditelné oblasti mapy (na mobilu v list view nefiltrovat)
   const visibleInMap = useMemo(() => {
-    if (!mapBounds) return filtered;
+    if (!mapBounds || (isMobile && mobileView === "list")) return filtered;
     return filtered.filter((p) => {
       if (!p.latitude || !p.longitude) return false;
       return (
@@ -266,7 +277,7 @@ function ListingsContent() {
         p.longitude <= mapBounds.east
       );
     });
-  }, [filtered, mapBounds]);
+  }, [filtered, mapBounds, isMobile, mobileView]);
 
   const clearFilters = () => {
     setListingType(null);
@@ -302,7 +313,7 @@ function ListingsContent() {
       <SiteHeader />
       <main className="search-page">
         <div className="search-layout">
-          <div className="search-sidebar">
+          <div className={`search-sidebar ${isMobile && mobileView === "map" ? "search-sidebar--mobile-hidden" : ""}`}>
             <div className="search-filters-bar">
               <FilterDropdown
                 label="Typ nabídky"
@@ -432,7 +443,7 @@ function ListingsContent() {
             <div className="search-resize-grip" />
           </div>
 
-          <div className="search-map-panel">
+          <div className={`search-map-panel ${isMobile ? (mobileView === "map" ? "search-map-panel--mobile-full" : "search-map-panel--mobile-hidden") : ""}`}>
             <PropertyMap
               properties={filtered}
               selectedPropertyId={selectedPropertyId}
@@ -445,6 +456,66 @@ function ListingsContent() {
           </div>
         </div>
       </main>
+
+      {/* Mobilní spodní lišta */}
+      <div className="mobile-bottom-bar">
+        <Link href="/" className="mobile-bar-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          <span>Domov</span>
+        </Link>
+        <Link href="/nabidky" className="mobile-bar-item mobile-bar-item--active">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <span>Nabidky</span>
+        </Link>
+        <button
+          className="mobile-bar-toggle"
+          onClick={() => {
+            setMobileView((v) => v === "list" ? "map" : "list");
+            // Trigger resize pro Leaflet
+            setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
+          }}
+        >
+          {mobileView === "list" ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 6l7-3 8 3 7-3v15l-7 3-8-3-7 3V6z" />
+              <path d="M8 3v15" />
+              <path d="M16 6v15" />
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 6h13" />
+              <path d="M8 12h13" />
+              <path d="M8 18h13" />
+              <path d="M3 6h.01" />
+              <path d="M3 12h.01" />
+              <path d="M3 18h.01" />
+            </svg>
+          )}
+          <span>{mobileView === "list" ? "Mapa" : "Seznam"}</span>
+        </button>
+        <Link href="/oceneni" className="mobile-bar-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="4" y="2" width="16" height="20" rx="2" />
+            <path d="M8 6h8" />
+            <path d="M8 10h8" />
+            <path d="M8 14h4" />
+          </svg>
+          <span>Oceneni</span>
+        </Link>
+        <Link href="/" className="mobile-bar-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Profil</span>
+        </Link>
+      </div>
     </div>
   );
 }

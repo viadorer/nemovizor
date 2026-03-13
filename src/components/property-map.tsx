@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -61,6 +61,34 @@ function createPriceLabel(p: Property) {
   });
 }
 
+// ===== Tile layers =====
+type MapStyle = "dark" | "standard" | "satellite";
+
+const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string; label: string }> = {
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    label: "Tmavá",
+  },
+  standard: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    label: "Klasická",
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: '&copy; Esri &mdash; Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    label: "Letecká",
+  },
+};
+
+function MapStyleIcon({ style }: { style: MapStyle }) {
+  const svgProps = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 };
+  if (style === "dark") return <svg {...svgProps}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>;
+  if (style === "standard") return <svg {...svgProps}><path d="M1 6l7-3 8 3 7-3v15l-7 3-8-3-7 3V6z" /><path d="M8 3v15" /><path d="M16 6v15" /></svg>;
+  return <svg {...svgProps}><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
+}
+
 // ===== Bounds type =====
 export type MapBounds = {
   north: number;
@@ -99,6 +127,13 @@ export default function PropertyMap({
   const markerMapRef = useRef<Map<string, L.Marker>>(new Map());
   const initialFitDoneRef = useRef(false);
   const restoredFromSessionRef = useRef(false);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      return (sessionStorage.getItem("nemovizor-map-style") as MapStyle) || "dark";
+    } catch { return "dark"; }
+  });
 
   // ===== SessionStorage klíč pro uložení stavu mapy =====
   const STORAGE_KEY = "nemovizor-map-state";
@@ -134,14 +169,12 @@ export default function PropertyMap({
       attributionControl: true,
     }).setView(initCenter, initZoom);
 
-    // Dark-themed tiles
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    // Initial tile layer based on saved style
+    const initStyle = TILE_LAYERS[mapStyle] || TILE_LAYERS.dark;
+    tileLayerRef.current = L.tileLayer(initStyle.url, {
+      attribution: initStyle.attribution,
       maxZoom: 19,
     }).addTo(map);
-
-    // Light-themed tile layer (připraveno pro light mode)
-    // Dynamicky přepínat v ThemeProvider pokud třeba
 
     mapInstanceRef.current = map;
     // @ts-ignore markerClusterGroup is added by leaflet.markercluster plugin
@@ -275,36 +308,27 @@ export default function PropertyMap({
     }
   }, [selectedPropertyId]);
 
-  // Update tile layer based on theme
+  // Switch tile layer when mapStyle changes
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const observer = new MutationObserver(() => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      map.eachLayer((layer) => {
-        if (layer instanceof L.TileLayer) {
-          map.removeLayer(layer);
-        }
-      });
+    const style = TILE_LAYERS[mapStyle];
+    if (!style) return;
 
-      const tileUrl = theme === "light"
-        ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+    // Remove old tile layer
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
 
-      L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-        maxZoom: 19,
-      }).addTo(map);
-    });
+    tileLayerRef.current = L.tileLayer(style.url, {
+      attribution: style.attribution,
+      maxZoom: 19,
+    }).addTo(map);
 
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
+    // Persist choice
+    try { sessionStorage.setItem("nemovizor-map-style", mapStyle); } catch {}
+  }, [mapStyle]);
 
   // FlyTo from location search
   useEffect(() => {
@@ -326,15 +350,31 @@ export default function PropertyMap({
   }, [flyTo, onFlyToDone]);
 
   return (
-    <div
-      ref={mapRef}
-      style={{
-        width: "100%",
-        height,
-        minHeight: singleProperty ? "250px" : "400px",
-        borderRadius: singleProperty ? "12px" : "0",
-        overflow: "hidden",
-      }}
-    />
+    <div style={{ position: "relative", width: "100%", height, minHeight: singleProperty ? "250px" : "400px" }}>
+      <div
+        ref={mapRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: singleProperty ? "12px" : "0",
+          overflow: "hidden",
+        }}
+      />
+      {!singleProperty && (
+        <div className="map-style-switcher">
+          {(Object.keys(TILE_LAYERS) as MapStyle[]).map((key) => (
+            <button
+              key={key}
+              className={`map-style-btn ${mapStyle === key ? "map-style-btn--active" : ""}`}
+              onClick={() => setMapStyle(key)}
+              title={TILE_LAYERS[key].label}
+            >
+              <span className="map-style-btn-icon"><MapStyleIcon style={key} /></span>
+              <span className="map-style-btn-label">{TILE_LAYERS[key].label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
