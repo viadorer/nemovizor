@@ -271,7 +271,7 @@ function ListingsContent() {
       if (areaMax && p.area > areaMax) return false;
       return true;
     });
-  }, [listingType, category, subtype, selectedCity, priceMin, priceMax, areaMin, areaMax]);
+  }, [allProperties, listingType, category, subtype, selectedCity, priceMin, priceMax, areaMin, areaMax]);
 
   // Filtrovat seznam podle viditelné oblasti mapy (na mobilu v list view nefiltrovat)
   const visibleInMap = useMemo(() => {
