@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from "./supabase";
+import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Property, Broker, Agency, Branch, Review, PropertyFilters } from "./types";
 import type { Database } from "./supabase-types";
 
@@ -221,9 +221,9 @@ function dbReviewToApp(row: DbReview): Review {
 // ===== Properties =====
 
 export async function fetchProperties(filters?: PropertyFilters): Promise<Property[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  let query = supabase
+  let query = getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .eq("active", true)
@@ -246,7 +246,7 @@ export async function fetchProperties(filters?: PropertyFilters): Promise<Proper
   if (filters?.areaMax) query = query.lte("area", filters.areaMax);
 
   const { data, error } = await query;
-  if (error) { console.error("Supabase fetchProperties error:", error); return []; }
+  if (error) { console.error("Supabase fetchProperties error:", JSON.stringify(error)); return []; }
 
   return (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) =>
     dbPropertyToApp(row, row.brokers)
@@ -254,9 +254,9 @@ export async function fetchProperties(filters?: PropertyFilters): Promise<Proper
 }
 
 export async function fetchFeaturedProperties(): Promise<Property[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .eq("active", true)
@@ -264,7 +264,7 @@ export async function fetchFeaturedProperties(): Promise<Property[]> {
     .order("created_at", { ascending: false })
     .limit(6);
 
-  if (error) { console.error("Supabase fetchFeatured error:", error); return []; }
+  if (error) { console.error("Supabase fetchFeatured error:", JSON.stringify(error)); return []; }
 
   return (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) =>
     dbPropertyToApp(row, row.brokers)
@@ -272,9 +272,9 @@ export async function fetchFeaturedProperties(): Promise<Property[]> {
 }
 
 export async function fetchPropertyBySlug(slug: string): Promise<Property | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .eq("slug", slug)
@@ -286,9 +286,9 @@ export async function fetchPropertyBySlug(slug: string): Promise<Property | null
 }
 
 export async function fetchSimilarProperties(slug: string, city: string): Promise<Property[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .eq("active", true)
@@ -303,9 +303,9 @@ export async function fetchSimilarProperties(slug: string, city: string): Promis
 }
 
 export async function fetchUniqueCities(): Promise<string[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("properties").select("city").eq("active", true);
+  const { data, error } = await getSupabase()!.from("properties").select("city").eq("active", true);
   if (error || !data) return [];
   return [...new Set((data as { city: string }[]).map((r) => r.city))].sort();
 }
@@ -313,33 +313,33 @@ export async function fetchUniqueCities(): Promise<string[]> {
 // ===== Brokers =====
 
 export async function fetchBrokers(): Promise<Broker[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("brokers").select("*").order("name");
+  const { data, error } = await getSupabase()!.from("brokers").select("*").order("name");
   if (error) return [];
   return (data ?? []).map(dbBrokerToApp);
 }
 
 export async function fetchBrokerById(id: string): Promise<Broker | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await supabase.from("brokers").select("*").eq("id", id).single();
+  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("id", id).single();
   if (error || !data) return null;
   return dbBrokerToApp(data);
 }
 
 export async function fetchBrokerBySlug(slug: string): Promise<Broker | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await supabase.from("brokers").select("*").eq("slug", slug).single();
+  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("slug", slug).single();
   if (error || !data) return null;
   return dbBrokerToApp(data);
 }
 
 export async function fetchBrokerProperties(brokerId: string): Promise<Property[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .eq("broker_id", brokerId)
@@ -355,54 +355,54 @@ export async function fetchBrokerProperties(brokerId: string): Promise<Property[
 // ===== Agencies =====
 
 export async function fetchAgencies(): Promise<Agency[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("agencies").select("*").order("name");
+  const { data, error } = await getSupabase()!.from("agencies").select("*").order("name");
   if (error) return [];
   return (data ?? []).map(dbAgencyToApp);
 }
 
 export async function fetchAgencyById(id: string): Promise<Agency | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await supabase.from("agencies").select("*").eq("id", id).single();
+  const { data, error } = await getSupabase()!.from("agencies").select("*").eq("id", id).single();
   if (error || !data) return null;
   return dbAgencyToApp(data);
 }
 
 export async function fetchAgencyBySlug(slug: string): Promise<Agency | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await supabase.from("agencies").select("*").eq("slug", slug).single();
+  const { data, error } = await getSupabase()!.from("agencies").select("*").eq("slug", slug).single();
   if (error || !data) return null;
   return dbAgencyToApp(data);
 }
 
 export async function fetchAgencyBrokers(agencyId: string): Promise<Broker[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("brokers").select("*").eq("agency_id", agencyId).order("name");
+  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("agency_id", agencyId).order("name");
   if (error) return [];
   return (data ?? []).map(dbBrokerToApp);
 }
 
 export async function fetchAgencyBranches(agencyId: string): Promise<Branch[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("branches").select("*").eq("agency_id", agencyId).order("name");
+  const { data, error } = await getSupabase()!.from("branches").select("*").eq("agency_id", agencyId).order("name");
   if (error) return [];
   return (data ?? []).map(dbBranchToApp);
 }
 
 export async function fetchAgencyProperties(agencyId: string): Promise<Property[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
   // Get broker IDs for this agency, then get their properties
-  const { data: brokerData } = await supabase.from("brokers").select("id").eq("agency_id", agencyId);
+  const { data: brokerData } = await getSupabase()!.from("brokers").select("id").eq("agency_id", agencyId);
   if (!brokerData?.length) return [];
 
   const brokerIds = (brokerData as { id: string }[]).map((b) => b.id);
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("properties")
     .select("*, brokers(*)")
     .in("broker_id", brokerIds)
@@ -418,9 +418,9 @@ export async function fetchAgencyProperties(agencyId: string): Promise<Property[
 // ===== Branches =====
 
 export async function fetchAllBranches(): Promise<Branch[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase.from("branches").select("*").order("name");
+  const { data, error } = await getSupabase()!.from("branches").select("*").order("name");
   if (error) return [];
   return (data ?? []).map(dbBranchToApp);
 }
@@ -428,9 +428,9 @@ export async function fetchAllBranches(): Promise<Branch[]> {
 // ===== Reviews =====
 
 export async function fetchBrokerReviews(brokerId: string): Promise<Review[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("reviews")
     .select("*")
     .eq("target_type", "broker")
@@ -442,9 +442,9 @@ export async function fetchBrokerReviews(brokerId: string): Promise<Review[]> {
 }
 
 export async function fetchAgencyReviews(agencyId: string): Promise<Review[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()!
     .from("reviews")
     .select("*")
     .eq("target_type", "agency")
@@ -458,26 +458,26 @@ export async function fetchAgencyReviews(agencyId: string): Promise<Review[]> {
 // ===== Utility: Cities =====
 
 export async function fetchAllBrokerCities(): Promise<string[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
   // Cities from properties linked to brokers
-  const { data } = await supabase.from("properties").select("city").eq("active", true);
+  const { data } = await getSupabase()!.from("properties").select("city").eq("active", true);
   if (!data) return [];
   return [...new Set((data as { city: string }[]).map((r) => r.city))].sort();
 }
 
 export async function fetchAllBranchCities(): Promise<string[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data } = await supabase.from("branches").select("city");
+  const { data } = await getSupabase()!.from("branches").select("city");
   if (!data) return [];
   return [...new Set((data as { city: string }[]).map((r) => r.city))].sort();
 }
 
 export async function fetchAllSpecializations(): Promise<string[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data } = await supabase.from("brokers").select("specialization");
+  const { data } = await getSupabase()!.from("brokers").select("specialization");
   if (!data) return [];
   return [...new Set((data as { specialization: string }[]).map((r) => r.specialization))].sort();
 }
