@@ -300,18 +300,49 @@ function ListingsContent() {
 
   const hasFilters = listingType || category || subtype || selectedCity || priceMin || priceMax || areaMin || areaMax;
 
-  const listingTypeOptions = (Object.entries(listingTypeLabels) as [ListingType, string][])
-    .filter(([k]) => k !== "auction") // skryjeme dražbu prozatím
-    .map(([value, label]) => ({ value, label }));
+  // Pomocná funkce: filtruje properties podle všech filtrů KROMĚ jednoho (aby dropdown ukazoval dostupné hodnoty)
+  const filterExcluding = useCallback((exclude: string) => {
+    return allProperties.filter((p) => {
+      if (exclude !== "listingType" && listingType && p.listingType !== listingType) return false;
+      if (exclude !== "category" && category && p.category !== category) return false;
+      if (exclude !== "subtype" && subtype && p.subtype !== subtype) return false;
+      if (exclude !== "city" && selectedCity && p.city !== selectedCity) return false;
+      if (exclude !== "price" && priceMin && p.price < priceMin) return false;
+      if (exclude !== "price" && priceMax && p.price > priceMax) return false;
+      if (exclude !== "area" && areaMin && p.area < areaMin) return false;
+      if (exclude !== "area" && areaMax && p.area > areaMax) return false;
+      return true;
+    });
+  }, [allProperties, listingType, category, subtype, selectedCity, priceMin, priceMax, areaMin, areaMax]);
 
-  const categoryOptions = (Object.entries(categoryLabels) as [PropertyCategory, string][])
-    .map(([value, label]) => ({ value, label }));
+  const listingTypeOptions = useMemo(() => {
+    const available = new Set(filterExcluding("listingType").map((p) => p.listingType));
+    return (Object.entries(listingTypeLabels) as [ListingType, string][])
+      .filter(([k]) => available.has(k))
+      .map(([value, label]) => ({ value, label }));
+  }, [filterExcluding]);
 
-  const subtypeOptions = category
-    ? Object.values(subtypesByCategory[category]).map((label) => ({ value: label, label }))
-    : [];
+  const categoryOptions = useMemo(() => {
+    const available = new Set(filterExcluding("category").map((p) => p.category));
+    return (Object.entries(categoryLabels) as [PropertyCategory, string][])
+      .filter(([k]) => available.has(k))
+      .map(([value, label]) => ({ value, label }));
+  }, [filterExcluding]);
 
-  const cityOptions = cities.map((city) => ({ value: city, label: city }));
+  const subtypeOptions = useMemo(() => {
+    if (!category) return [];
+    const available = new Set(filterExcluding("subtype").map((p) => p.subtype));
+    return Object.values(subtypesByCategory[category])
+      .filter((label) => available.has(label))
+      .map((label) => ({ value: label, label }));
+  }, [category, filterExcluding]);
+
+  const cityOptions = useMemo(() => {
+    const available = new Set(filterExcluding("city").map((p) => p.city));
+    return cities
+      .filter((city) => available.has(city))
+      .map((city) => ({ value: city, label: city }));
+  }, [cities, filterExcluding]);
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
   const areaPresets = [30, 50, 80, 100, 150, 200, 300];
