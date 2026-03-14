@@ -263,7 +263,7 @@ export function LocationSearch({
         if (r) {
           const bb = r.boundingbox;
           onSelect({
-            name: city.value, label: "mesto", location: "",
+            name: city.value, label: "město", location: "",
             lat: parseFloat(r.lat), lon: parseFloat(r.lon),
             bbox: [parseFloat(bb[2]), parseFloat(bb[0]), parseFloat(bb[3]), parseFloat(bb[1])],
             city: city.value,
@@ -392,7 +392,7 @@ export function LocationSearch({
           {/* DB cities with property counts */}
           {dbMatches.length > 0 && (
             <>
-              <div className="location-search-group-label">Mesta s nabidkami</div>
+              <div className="location-search-group-label">Města s nabídkami</div>
               {dbMatches.map((city, i) => (
                 <button
                   key={`db-${city.value}`}
@@ -409,7 +409,7 @@ export function LocationSearch({
                   <div className="location-search-item-text">
                     <span className="location-search-item-name">{city.value}</span>
                   </div>
-                  <span className="location-search-item-count">{city.count} nabidek</span>
+                  <span className="location-search-item-count">{city.count} nabídek</span>
                 </button>
               ))}
             </>

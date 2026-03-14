@@ -23,13 +23,13 @@ const PropertyMap = dynamic(() => import("@/components/property-map"), {
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
         <circle cx="12" cy="10" r="3" />
       </svg>
-      <span>Nacitani mapy...</span>
+      <span>Načítání mapy...</span>
     </div>
   ),
 });
 
 const categoryLabels: Record<PropertyCategory, string> = {
-  apartment: "Byt", house: "Dum", land: "Pozemek", commercial: "Komercni", other: "Ostatni",
+  apartment: "Byt", house: "Dům", land: "Pozemek", commercial: "Komerční", other: "Ostatní",
 };
 
 const subtypesByCategory: Record<PropertyCategory, Record<string, string>> = {
@@ -38,7 +38,7 @@ const subtypesByCategory: Record<PropertyCategory, Record<string, string>> = {
 };
 
 const listingTypeLabels: Record<ListingType, string> = {
-  sale: "Prodej", rent: "Pronajem", auction: "Drazba", shares: "Podily", project: "Projekt",
+  sale: "Prodej", rent: "Pronájem", auction: "Dražba", shares: "Podíly", project: "Projekt",
 };
 
 export default function ListingsPage() {
@@ -88,7 +88,7 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
             className={`filter-dropdown-item ${!value ? "filter-dropdown-item--active" : ""}`}
             onClick={() => { onChange(null); setOpen(false); }}
           >
-            Vse
+            Vše
           </button>
           {options.map((opt) => (
             <button
@@ -528,7 +528,7 @@ function ListingsContent() {
         <div className="search-layout">
           <div className={`search-sidebar ${isMobile && mobileView === "map" ? "search-sidebar--mobile-hidden" : ""}`}>
             <div className="search-filters-bar">
-              <FilterDropdown label="Typ nabidky" value={listingType} options={listingTypeOptions} onChange={setListingType} />
+              <FilterDropdown label="Typ nabídky" value={listingType} options={listingTypeOptions} onChange={setListingType} />
               <FilterDropdown
                 label="Typ nemovitosti" value={category} options={categoryOptions}
                 onChange={(val) => { setCategory(val); setSubtype(null); }}
@@ -536,11 +536,11 @@ function ListingsContent() {
               {category && subtypeOptions.length > 0 && (
                 <FilterDropdown label="Podtyp" value={subtype} options={subtypeOptions} onChange={setSubtype} />
               )}
-              <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kc" />
+              <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
               <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
 
               <LocationSearch
-                placeholder="Hledat mesto, ulici..."
+                placeholder="Hledat město, ulici..."
                 dbCities={dbCities}
                 onSelect={(item) => {
                   setMapFlyTo({ lat: item.lat, lon: item.lon, bbox: item.bbox });
@@ -555,7 +555,7 @@ function ListingsContent() {
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
-                  {locationLabel || "Cele Cesko"}
+                  {locationLabel || "Celé Česko"}
                 </button>
               )}
 
@@ -569,8 +569,8 @@ function ListingsContent() {
               )}
 
               <span className="search-results-count">
-                {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabidka" : totalResults < 5 ? "nabidky" : "nabidek"}
-                {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v teto oblasti" : ""}
+                {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabídka" : totalResults < 5 ? "nabídky" : "nabídek"}
+                {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v této oblasti" : ""}
                 {totalPages > 1 && ` (str. ${page}/${totalPages})`}
               </span>
             </div>
@@ -578,7 +578,7 @@ function ListingsContent() {
             <div className="search-results-scroll">
               {loading && properties.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                  Nacitani...
+                  Načítání...
                 </div>
               ) : (
                 <>
@@ -594,7 +594,7 @@ function ListingsContent() {
                     ))}
                     {properties.length === 0 && !loading && (
                       <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                        Zadne nemovitosti neodpovidaji zadanym filtrum.
+                        Žádné nemovitosti neodpovídají zadaným filtrům.
                       </div>
                     )}
                   </div>
@@ -704,7 +704,7 @@ function ListingsContent() {
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          <span>Nabidky</span>
+          <span>Nabídky</span>
         </Link>
         <button
           className="mobile-bar-toggle"
@@ -731,7 +731,7 @@ function ListingsContent() {
             <rect x="4" y="2" width="16" height="20" rx="2" />
             <path d="M8 6h8" /><path d="M8 10h8" /><path d="M8 14h4" />
           </svg>
-          <span>Oceneni</span>
+          <span>Ocenění</span>
         </Link>
         <Link href="/" className="mobile-bar-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
