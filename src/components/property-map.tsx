@@ -247,7 +247,6 @@ export default function PropertyMap({
 
     markersGroup.clearLayers();
     markerMapRef.current.clear();
-    initialFitDoneRef.current = false;
 
     if (validProperties.length === 0) return;
 
@@ -264,7 +263,6 @@ export default function PropertyMap({
 
       marker.on("click", () => {
         onPropertySelect?.(p.id);
-        // Otevřít popup okamžitě při prvním kliknutí
         setTimeout(() => marker.openPopup(), 10);
       });
 
@@ -272,44 +270,41 @@ export default function PropertyMap({
       markersGroup.addLayer(marker);
     });
 
-    // Auto-zoom to fit all markers — skip if session restored or flyTo is active
+    // Auto-zoom only on first load or for single property view
     if (restoredFromSessionRef.current) {
       restoredFromSessionRef.current = false;
-    } else if (flyToActiveRef.current) {
-      // flyTo is in progress — don't override with fitBounds
-    } else if (validProperties.length === 1 || singleProperty) {
+    } else if (singleProperty && validProperties.length >= 1) {
       const p = validProperties[0];
       map.setView([p.latitude, p.longitude], 15, { animate: true });
-    } else if (!initialFitDoneRef.current) {
-      // Only fitBounds on initial load, not on every data refresh
+    } else if (!initialFitDoneRef.current && !flyToActiveRef.current) {
+      // First load only — fit all markers
       const bounds = L.latLngBounds(
         validProperties.map((p) => [p.latitude, p.longitude] as [number, number])
       );
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
     }
+    // After first fit, never auto-zoom again (user controls the viewport)
     initialFitDoneRef.current = true;
-
-    // Emit bounds after markers settle
-    setTimeout(() => {
-      if (!mapInstanceRef.current) return;
-      try {
-        const b = map.getBounds();
-        onBoundsChange?.({
-          north: b.getNorth(),
-          south: b.getSouth(),
-          east: b.getEast(),
-          west: b.getWest(),
-        });
-      } catch { /* map not ready */ }
-    }, 500);
   }, [validProperties, mode, singleProperty, onPropertySelect]);
 
-  // Open popup when selectedPropertyId changes (without resetting zoom)
+  // Highlight marker when selectedPropertyId changes (hover from grid)
+  const prevSelectedRef = useRef<string | null>(null);
   useEffect(() => {
+    // Remove highlight from previous marker
+    if (prevSelectedRef.current) {
+      const prevMarker = markerMapRef.current.get(prevSelectedRef.current);
+      if (prevMarker) {
+        const el = prevMarker.getElement();
+        if (el) el.classList.remove("map-marker--highlighted");
+      }
+    }
+    prevSelectedRef.current = selectedPropertyId || null;
+
     if (!selectedPropertyId) return;
     const marker = markerMapRef.current.get(selectedPropertyId);
     if (marker) {
-      setTimeout(() => marker.openPopup(), 100);
+      const el = marker.getElement();
+      if (el) el.classList.add("map-marker--highlighted");
     }
   }, [selectedPropertyId]);
 

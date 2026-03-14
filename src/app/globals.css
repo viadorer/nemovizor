@@ -2667,6 +2667,20 @@ nav ul li a.active {
   border-color: var(--accent);
 }
 
+/* Highlighted marker (hover from grid) */
+.map-marker--highlighted .map-price-label {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  transform: scale(1.15);
+  z-index: 10000 !important;
+  box-shadow: 0 4px 16px rgba(255, 184, 0, 0.4);
+}
+
+.map-marker--highlighted {
+  z-index: 10000 !important;
+}
+
 /* Map style switcher */
 .map-style-switcher {
   position: absolute;
