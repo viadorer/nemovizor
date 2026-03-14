@@ -140,35 +140,35 @@ async function extractPropertiesFromPage(page) {
       return results;
     }
 
-    // Method 2: parse DOM property cards
-    document.querySelectorAll(".l-searchResult, .propertyCard, [data-test='propertyCard']").forEach(el => {
-      const idAttr = el.id?.replace("property-", "") || el.dataset?.propertyId || "";
-      if (!idAttr) return;
+    // Method 2: parse DOM property cards (CSS modules — use partial class matching)
+    document.querySelectorAll("[class*='propertyCard'][class*='Wrapper']").forEach(el => {
+      const link = el.querySelector("a[href*='/properties/']");
+      const href = link ? link.href : "";
+      const idMatch = href.match(/\/properties\/(\d+)/);
+      const id = idMatch ? idMatch[1] : "";
+      if (id === "") return;
 
-      const priceEl = el.querySelector(".propertyCard-priceValue, [data-test='asking-price']");
-      const priceText = priceEl?.textContent?.trim() || "0";
+      const priceEl = el.querySelector("[class*='price'], [class*='Price']");
+      const priceText = priceEl ? priceEl.textContent.trim() : "0";
       const price = Number(priceText.replace(/[^0-9]/g, "")) || 0;
 
-      const addressEl = el.querySelector(".propertyCard-address, address, [data-test='address']");
-      const address = addressEl?.textContent?.trim() || "";
+      const addressEl = el.querySelector("[class*='address'], address");
+      const address = addressEl ? addressEl.textContent.trim() : "";
 
-      const typeEl = el.querySelector(".property-information span:first-child, .propertyCard-details .property-information span");
-      const propertyType = typeEl?.textContent?.trim() || "";
+      const typeEl = el.querySelector("[class*='propertyType'], [class*='PropertyType']");
+      const propertyType = typeEl ? typeEl.textContent.trim() : "";
 
-      const bedsEl = el.querySelector(".property-information span:nth-child(2)");
-      const bedrooms = parseInt(bedsEl?.textContent || "0") || 0;
+      const bedsMatch = el.textContent.match(/(\d+)\s*bed/i);
+      const bedrooms = bedsMatch ? parseInt(bedsMatch[1]) : 0;
 
-      const imgEl = el.querySelector("img.propertyCard-img, img[data-test='property-img']");
-      const imgSrc = imgEl?.src || "";
+      const imgEl = el.querySelector("img");
+      const imgSrc = imgEl ? imgEl.src : "";
 
-      const linkEl = el.querySelector("a.propertyCard-link, a[data-test='property-details']");
-      const link = linkEl?.href || "";
-
-      const agentEl = el.querySelector(".propertyCard-branchSummary-branchName, [data-test='branch-name']");
-      const agent = agentEl?.textContent?.trim() || "";
+      const agentEl = el.querySelector("[class*='branch'], [class*='agent']");
+      const agent = agentEl ? agentEl.textContent.trim() : "";
 
       results.push({
-        id: String(idAttr),
+        id: String(id),
         price,
         priceLabel: priceText,
         address,
@@ -328,8 +328,8 @@ async function main() {
 
         await sleep(DELAY_MS);
         try {
-          await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
-          await sleep(2000);
+          await page.goto(url, { waitUntil: "load", timeout: 30000 });
+          await sleep(4000);
         } catch (e) {
           console.error(`  Nav error: ${e.message}`);
           continue;
