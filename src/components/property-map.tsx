@@ -336,15 +336,33 @@ export default function PropertyMap({
     if (!map || !flyTo) return;
     flyToActiveRef.current = true;
 
-    if (flyTo.bbox) {
-      // bbox = [minLon, minLat, maxLon, maxLat]
-      const bounds = L.latLngBounds(
-        [flyTo.bbox[1], flyTo.bbox[0]],
-        [flyTo.bbox[3], flyTo.bbox[2]]
-      );
-      map.flyToBounds(bounds, { padding: [40, 40], maxZoom: 15, duration: 1.2 });
-    } else {
-      map.flyTo([flyTo.lat, flyTo.lon], 13, { duration: 1.2 });
+    try {
+      // Check map container has dimensions (hidden on mobile list view)
+      const container = map.getContainer();
+      if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) {
+        // Map is hidden — store flyTo and apply when map becomes visible
+        flyToActiveRef.current = false;
+        onFlyToDoneRef.current?.();
+        return;
+      }
+
+      if (
+        flyTo.bbox &&
+        Array.isArray(flyTo.bbox) &&
+        flyTo.bbox.length >= 4 &&
+        flyTo.bbox.every((v) => typeof v === "number" && !isNaN(v))
+      ) {
+        // bbox = [minLon, minLat, maxLon, maxLat]
+        const bounds = L.latLngBounds(
+          [flyTo.bbox[1], flyTo.bbox[0]],
+          [flyTo.bbox[3], flyTo.bbox[2]]
+        );
+        map.flyToBounds(bounds, { padding: [40, 40], maxZoom: 15, duration: 1.2 });
+      } else if (typeof flyTo.lat === "number" && typeof flyTo.lon === "number" && !isNaN(flyTo.lat) && !isNaN(flyTo.lon)) {
+        map.flyTo([flyTo.lat, flyTo.lon], 13, { duration: 1.2 });
+      }
+    } catch {
+      // Leaflet can throw on hidden/zero-size containers
     }
 
     // Clear flyTo flag after animation completes, then notify parent
