@@ -567,7 +567,7 @@ nav ul li a.active {
 .property-image-wrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
 }
 
@@ -1090,31 +1090,20 @@ nav ul li a.active {
 
 .mg-grid--1 {
   grid-template-columns: 1fr;
-  aspect-ratio: 21 / 9;
+  aspect-ratio: 3 / 2;
 }
 
-.mg-grid--2 {
-  grid-template-columns: 1.2fr 1fr;
-  aspect-ratio: 21 / 10;
-}
-
-.mg-grid--3 {
-  grid-template-columns: 1.2fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  aspect-ratio: 21 / 10;
-}
-
-.mg-grid--3 .mg-cell--main {
-  grid-row: 1 / -1;
-}
-
+.mg-grid--2,
+.mg-grid--3,
 .mg-grid--4,
 .mg-grid--5 {
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   grid-template-rows: 1fr 1fr;
-  aspect-ratio: 21 / 10;
+  aspect-ratio: 3 / 2;
 }
 
+.mg-grid--2 .mg-cell--main,
+.mg-grid--3 .mg-cell--main,
 .mg-grid--4 .mg-cell--main,
 .mg-grid--5 .mg-cell--main {
   grid-row: 1 / -1;
@@ -2321,12 +2310,16 @@ nav ul li a.active {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .mg-grid--2,
+  .mg-grid--3,
   .mg-grid--4,
   .mg-grid--5 {
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 2fr 1fr;
     grid-template-rows: 1fr 1fr;
   }
 
+  .mg-grid--2 .mg-cell--main,
+  .mg-grid--3 .mg-cell--main,
   .mg-grid--4 .mg-cell--main,
   .mg-grid--5 .mg-cell--main {
     grid-row: 1 / -1;
@@ -2438,6 +2431,7 @@ nav ul li a.active {
     font-size: 1.5rem;
   }
 
+  .mg-grid--2,
   .mg-grid--3,
   .mg-grid--4,
   .mg-grid--5 {
@@ -2446,24 +2440,19 @@ nav ul li a.active {
     aspect-ratio: auto;
   }
 
+  .mg-grid--2 .mg-cell--main,
   .mg-grid--3 .mg-cell--main,
   .mg-grid--4 .mg-cell--main,
   .mg-grid--5 .mg-cell--main {
     grid-row: auto;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
   }
 
+  .mg-grid--2 .mg-cell:not(.mg-cell--main),
   .mg-grid--3 .mg-cell:not(.mg-cell--main),
   .mg-grid--4 .mg-cell:not(.mg-cell--main),
   .mg-grid--5 .mg-cell:not(.mg-cell--main) {
     display: none;
-  }
-
-  .mg-grid--3 .mg-cell:nth-child(2),
-  .mg-grid--4 .mg-cell:nth-child(2),
-  .mg-grid--5 .mg-cell:nth-child(2) {
-    display: block;
-    aspect-ratio: 16 / 9;
   }
 
   .poi-grid {

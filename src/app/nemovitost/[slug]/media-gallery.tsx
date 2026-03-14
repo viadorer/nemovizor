@@ -42,8 +42,8 @@ export function MediaGallery({
       : []),
   ];
 
-  // Max 5 visible in grid
-  const visibleCount = Math.min(images.length, 5);
+  // Max 3 visible in grid (1 main + 2 side)
+  const visibleCount = Math.min(images.length, 3);
   const extraCount = images.length - visibleCount;
 
   return (
