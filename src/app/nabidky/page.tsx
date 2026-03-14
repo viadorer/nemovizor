@@ -151,10 +151,11 @@ function MultiFilterDropdown({ label, values, options, groups, onChange }: Multi
     }
   }
 
-  function renderOption(opt: DropdownOption) {
+  function renderOption(opt: DropdownOption, keyPrefix = "") {
+    const k = keyPrefix ? `${keyPrefix}-${opt.value}` : opt.value;
     return (
       <button
-        key={opt.value}
+        key={k}
         className={`filter-dropdown-item ${values.includes(opt.value) ? "filter-dropdown-item--active" : ""}`}
         onClick={() => toggle(opt.value)}
       >
@@ -190,7 +191,19 @@ function MultiFilterDropdown({ label, values, options, groups, onChange }: Multi
             groups.map((g) => (
               <div key={g.groupLabel}>
                 <div className="filter-dropdown-group-label">{g.groupLabel}</div>
-                {g.options.map(renderOption)}
+                {g.options.map((opt) => (
+                  <button
+                    key={`${g.groupLabel}-${opt.value}`}
+                    className={`filter-dropdown-item ${values.includes(opt.value) ? "filter-dropdown-item--active" : ""}`}
+                    onClick={() => toggle(opt.value)}
+                  >
+                    <span className="filter-checkbox">{values.includes(opt.value) ? "\u2713" : ""}</span>
+                    {opt.label}
+                    {opt.count !== undefined && (
+                      <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{opt.count}</span>
+                    )}
+                  </button>
+                ))}
               </div>
             ))
           ) : (
