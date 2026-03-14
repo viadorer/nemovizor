@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    formats: ["image/webp", "image/avif"],
+    deviceSizes: [640, 750, 828, 1080, 1280],
+    imageSizes: [64, 128, 256, 384],
     remotePatterns: [
       {
         // Cloudflare R2 — custom domain (media.nemovizor.cz)
@@ -13,6 +16,12 @@ const nextConfig: NextConfig = {
         // Cloudflare R2 — fallback (přímý R2 endpoint)
         protocol: "https",
         hostname: "*.r2.cloudflarestorage.com",
+        pathname: "/**",
+      },
+      {
+        // Cloudflare R2 — public dev endpoint
+        protocol: "https",
+        hostname: "*.r2.dev",
         pathname: "/**",
       },
       {

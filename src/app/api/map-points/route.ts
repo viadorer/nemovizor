@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     if (!rpcError && rpcData) {
       return NextResponse.json(
         { points: rpcData, count: (rpcData as unknown[]).length },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } }
+        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
       );
     }
   } catch {
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     query = query.lte("longitude", Number(sp.get("ne_lon")));
   }
 
-  query = query.limit(Number(sp.get("limit") || "5000"));
+  query = query.limit(Math.min(Number(sp.get("limit") || "5000"), 5000));
 
   const { data, error } = await query;
   if (error) {
@@ -95,6 +95,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { points, count: points.length },
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } }
+    { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
   );
 }

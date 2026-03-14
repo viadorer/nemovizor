@@ -1,4 +1,6 @@
+import { memo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatPrice } from "@/lib/api";
 import { Property, PropertyCategories } from "@/lib/types";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -7,11 +9,19 @@ type PropertyCardProps = {
   property: Property;
 };
 
-export function PropertyCard({ property }: PropertyCardProps) {
+export const PropertyCard = memo(function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Link href={`/nemovitost/${property.slug}`} className="property-card">
       <div className="property-image-wrapper">
-        <img src={property.imageSrc} alt={property.imageAlt} className="property-image" />
+        <Image
+          src={property.imageSrc}
+          alt={property.imageAlt}
+          className="property-image"
+          width={400}
+          height={300}
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
         <FavoriteButton propertyId={property.id} />
         <span className={`property-badge property-badge--${property.listingType}`}>
           {property.listingType === "sale" ? "Prodej" : property.listingType === "rent" ? "Pronájem" : property.listingType === "auction" ? "Dražba" : property.listingType === "project" ? "Projekt" : "Podíly"}
@@ -78,4 +88,4 @@ export function PropertyCard({ property }: PropertyCardProps) {
       </div>
     </Link>
   );
-}
+});

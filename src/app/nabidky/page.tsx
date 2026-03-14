@@ -151,8 +151,8 @@ function MultiFilterDropdown({ label, values, options, groups, onChange }: Multi
     }
   }
 
-  function renderOption(opt: DropdownOption, keyPrefix = "") {
-    const k = keyPrefix ? `${keyPrefix}-${opt.value}` : opt.value;
+  function renderOption(opt: DropdownOption, keyPrefix: string | number = "") {
+    const k = typeof keyPrefix === "string" && keyPrefix ? `${keyPrefix}-${opt.value}` : opt.value;
     return (
       <button
         key={k}

@@ -73,6 +73,6 @@ async function fallbackFilterOptions(
       priceRange: { min: priceMin === Infinity ? 0 : priceMin, max: priceMax },
       areaRange: { min: areaMin === Infinity ? 0 : areaMin, max: areaMax },
     },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } }
   );
 }
