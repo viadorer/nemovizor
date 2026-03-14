@@ -71,16 +71,18 @@ function saveState(state) { writeFileSync(STATE_FILE, JSON.stringify(state, null
 // ===== Maps =====
 const CATEGORY_MAP = { 1: "apartment", 2: "house", 3: "land", 4: "commercial", 5: "other" };
 const TYPE_MAP = { 1: "sale", 2: "rent", 3: "auction" };
-const SUBTYPE_APT = { 2: "1+kk", 3: "1+1", 4: "2+kk", 5: "2+1", 6: "3+kk", 7: "3+1", 8: "4+kk", 9: "4+1", 10: "5+kk", 11: "5+1", 12: "6+", 16: "Atypicky" };
-const SUBTYPE_HOUSE = { 37: "Rodinny", 39: "Vila", 43: "Chalupa", 44: "Chata", 33: "Zemedelska usedlost", 35: "Na klic", 36: "Vicegeneracni" };
-const SUBTYPE_LAND = { 19: "Bydleni", 18: "Komercni", 20: "Pole", 22: "Lesy", 21: "Louky", 23: "Zahrady", 25: "Ostatni" };
-const SUBTYPE_COM = { 26: "Kancelare", 27: "Sklady", 28: "Vyroba", 29: "Obchodni prostory", 30: "Ubytovani", 31: "Restaurace", 38: "Cinzovni dum", 46: "Virtualni kancelar" };
+const SUBTYPE_APT = { 2: "1+kk", 3: "1+1", 4: "2+kk", 5: "2+1", 6: "3+kk", 7: "3+1", 8: "4+kk", 9: "4+1", 10: "5+kk", 11: "5+1", 12: "6+", 16: "atypicky", 47: "pokoj" };
+const SUBTYPE_HOUSE = { 37: "rodinny", 39: "vila", 43: "chalupa", 44: "chata", 33: "zemedelska_usedlost", 34: "pamatka", 35: "na_klic", 36: "vicegeneracni" };
+const SUBTYPE_LAND = { 19: "bydleni", 18: "komercni", 20: "pole", 22: "lesy", 21: "louky", 23: "zahrady", 24: "rybniky", 48: "sady_vinice", 25: "ostatni" };
+const SUBTYPE_COM = { 26: "kancelare", 27: "sklady", 28: "vyroba", 29: "obchodni_prostory", 30: "ubytovani", 31: "restaurace", 32: "zemedelsky", 38: "cinzovni_dum", 46: "virtualni_kancelar", 40: "ordinace", 41: "apartmany", 42: "ostatni" };
+const SUBTYPE_OTHER = { 52: "garaz", 53: "vinny_sklep", 55: "pudni_prostor", 56: "garazove_stani", 57: "mobilheim", 50: "ostatni" };
 function getSubtype(cat, sub) {
-  if (cat === 1) return SUBTYPE_APT[sub] || "Atypicky";
-  if (cat === 2) return SUBTYPE_HOUSE[sub] || "Rodinny";
-  if (cat === 3) return SUBTYPE_LAND[sub] || "Ostatni";
-  if (cat === 4) return SUBTYPE_COM[sub] || "Kancelare";
-  return "Ostatni";
+  if (cat === 1) return SUBTYPE_APT[sub] || "atypicky";
+  if (cat === 2) return SUBTYPE_HOUSE[sub] || "rodinny";
+  if (cat === 3) return SUBTYPE_LAND[sub] || "ostatni";
+  if (cat === 4) return SUBTYPE_COM[sub] || "kancelare";
+  if (cat === 5) return SUBTYPE_OTHER[sub] || "ostatni";
+  return "ostatni";
 }
 
 const COND = { "Velmi dobrý": "velmi_dobry", "Dobrý": "dobry", "Špatný": "spatny", "Novostavba": "novostavba", "Po rekonstrukci": "po_rekonstrukci", "Před rekonstrukcí": "pred_rekonstrukci", "Ve výstavbě": "ve_vystavbe", "Projekt": "projekt", "K demolici": "k_demolici", "V rekonstrukci": "v_rekonstrukci" };
@@ -276,7 +278,7 @@ async function insertProperty(detail, r2Images, brokerId) {
     listing_type: TYPE_MAP[typeCb] || "sale",
     category: CATEGORY_MAP[mainCat] || "apartment",
     subtype: getSubtype(mainCat, subCb),
-    rooms_label: mainCat === 1 ? (SUBTYPE_APT[subCb] || "Atypicky") : getSubtype(mainCat, subCb),
+    rooms_label: mainCat === 1 ? (SUBTYPE_APT[subCb] || "atypicky") : getSubtype(mainCat, subCb),
     price: detail.price_czk?.value_raw || 0,
     price_unit: typeCb === 2 ? "za_mesic" : undefined,
     price_note: getItem(items, "Poznámka k ceně") || undefined,
@@ -342,8 +344,11 @@ async function main() {
     { cat: 2, type: 1, label: "Prodej domu" },
     { cat: 2, type: 2, label: "Pronajem domu" },
     { cat: 3, type: 1, label: "Prodej pozemku" },
+    { cat: 3, type: 2, label: "Pronajem pozemku" },
     { cat: 4, type: 1, label: "Prodej komercni" },
     { cat: 4, type: 2, label: "Pronajem komercni" },
+    { cat: 5, type: 1, label: "Prodej ostatni" },
+    { cat: 5, type: 2, label: "Pronajem ostatni" },
   ];
 
   const ppc = Math.ceil(PAGES / categories.length);
