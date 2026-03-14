@@ -35,7 +35,7 @@ export default function DashboardPage() {
     <div className="dashboard-page">
       <div className="dashboard-welcome">
         <h1>Ahoj, {displayName.split(" ")[0] || displayName}</h1>
-        <p className="dashboard-welcome-sub">Vitejte v Nemovizoru</p>
+        <p className="dashboard-welcome-sub">Vítejte v Nemovizoru</p>
       </div>
 
       <div className="dashboard-stats">
@@ -46,7 +46,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{favCount}</span>
-          <span className="dashboard-stat-label">Oblibenych</span>
+          <span className="dashboard-stat-label">Oblíbených</span>
         </Link>
 
         <Link href="/dashboard/hledani" className="dashboard-stat-card">
@@ -56,7 +56,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{savedCount}</span>
-          <span className="dashboard-stat-label">Ulozenych hledani</span>
+          <span className="dashboard-stat-label">Uložených hledání</span>
         </Link>
 
         <Link href="/dashboard/historie" className="dashboard-stat-card">
@@ -67,7 +67,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{recentSearches.length}</span>
-          <span className="dashboard-stat-label">Poslednich hledani</span>
+          <span className="dashboard-stat-label">Posledních hledání</span>
         </Link>
       </div>
 
@@ -77,7 +77,7 @@ export default function DashboardPage() {
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          Prohlizet nabidky
+          Prohlížet nabídky
         </Link>
         <Link href="/oceneni" className="dashboard-action-btn dashboard-action-btn--secondary">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -86,7 +86,7 @@ export default function DashboardPage() {
             <path d="M8 10h8" />
             <path d="M8 14h4" />
           </svg>
-          Oceneni nemovitosti
+          Ocenění nemovitosti
         </Link>
       </div>
     </div>

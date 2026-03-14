@@ -28,8 +28,8 @@ export default function HistoryPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Historie hledani</h1>
-        <p className="dashboard-loading">Nacitani...</p>
+        <h1 className="dashboard-page-title">Historie hledání</h1>
+        <p className="dashboard-loading">Načítání...</p>
       </div>
     );
   }
@@ -37,10 +37,10 @@ export default function HistoryPage() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-page-header">
-        <h1 className="dashboard-page-title">Historie hledani</h1>
+        <h1 className="dashboard-page-title">Historie hledání</h1>
         {entries.length > 0 && (
           <button type="button" className="dashboard-clear-btn" onClick={handleClear}>
-            Smazat vse
+            Smazat vše
           </button>
         )}
       </div>
@@ -51,7 +51,7 @@ export default function HistoryPage() {
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <p>Zatim nemáte zadnou historii hledani</p>
+          <p>Zatím nemáte žádnou historii hledání</p>
           <Link href="/nabidky" className="dashboard-action-btn">Hledat nemovitosti</Link>
         </div>
       ) : (
@@ -72,7 +72,7 @@ export default function HistoryPage() {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                    {entry.result_count != null && ` \u00B7 ${entry.result_count} vysledku`}
+                    {entry.result_count != null && ` \u00B7 ${entry.result_count} výsledků`}
                   </span>
                 </div>
                 <Link href={`/nabidky?${params.toString()}`} className="dashboard-use-btn">

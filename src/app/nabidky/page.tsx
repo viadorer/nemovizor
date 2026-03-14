@@ -479,7 +479,7 @@ function ListingsContent() {
     if (!filterOptions) {
       return (Object.entries(listingTypeLabels) as [ListingType, string][]).map(([value, label]) => ({ value, label }));
     }
-    return filterOptions.listingTypes
+    return (filterOptions.listingTypes ?? [])
       .map((o) => ({
         value: o.value as ListingType,
         label: listingTypeLabels[o.value as ListingType] || o.value,
@@ -492,7 +492,7 @@ function ListingsContent() {
     if (!filterOptions) {
       return (Object.entries(categoryLabels) as [PropertyCategory, string][]).map(([value, label]) => ({ value, label }));
     }
-    return filterOptions.categories
+    return (filterOptions.categories ?? [])
       .map((o) => ({
         value: o.value as PropertyCategory,
         label: categoryLabels[o.value as PropertyCategory] || o.value,
@@ -516,7 +516,7 @@ function ListingsContent() {
   // DB cities for LocationSearch autocomplete
   const dbCities: DbCity[] = useMemo(() => {
     if (!filterOptions) return [];
-    return filterOptions.cities.slice(0, 100);
+    return (filterOptions.cities ?? []).slice(0, 100);
   }, [filterOptions]);
 
   const clearFilters = () => {

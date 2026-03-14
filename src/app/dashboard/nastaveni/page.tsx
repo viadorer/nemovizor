@@ -50,7 +50,7 @@ export default function SettingsPage() {
     if (!file || !user) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("Maximalni velikost souboru je 2 MB");
+      alert("Maximální velikost souboru je 2 MB");
       return;
     }
 
@@ -68,7 +68,7 @@ export default function SettingsPage() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Nastaveni profilu</h1>
+      <h1 className="dashboard-page-title">Nastavení profilu</h1>
 
       <div className="settings-avatar-section">
         <button
@@ -99,7 +99,7 @@ export default function SettingsPage() {
           onChange={handleAvatarUpload}
           style={{ display: "none" }}
         />
-        <span className="settings-avatar-hint">Kliknutim zmenite fotku</span>
+        <span className="settings-avatar-hint">Kliknutím změníte fotku</span>
       </div>
 
       <form onSubmit={handleSave} className="settings-form">
@@ -114,7 +114,7 @@ export default function SettingsPage() {
         </label>
 
         <label className="auth-label">
-          Jmeno a prijmeni
+          Jméno a příjmení
           <input
             type="text"
             value={fullName}
@@ -135,21 +135,21 @@ export default function SettingsPage() {
         </label>
 
         <label className="auth-label">
-          Preferovane mesto
+          Preferované město
           <input
             type="text"
             value={preferredCity}
             onChange={(e) => setPreferredCity(e.target.value)}
             className="auth-input"
-            placeholder="napr. Praha"
+            placeholder="např. Praha"
           />
         </label>
 
         <div className="settings-form-actions">
           <button type="submit" className="auth-submit" disabled={saving}>
-            {saving ? "Ukladam..." : "Ulozit zmeny"}
+            {saving ? "Ukládám..." : "Uložit změny"}
           </button>
-          {saved && <span className="settings-saved">Ulozeno</span>}
+          {saved && <span className="settings-saved">Uloženo</span>}
         </div>
       </form>
     </div>

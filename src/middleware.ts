@@ -33,23 +33,60 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+
   // Ochrana /dashboard — presmerovat neprihlasene na /prihlaseni
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!user && pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/prihlaseni";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
   // Presmerovat prihlasene z auth stranek na dashboard
   if (
     user &&
-    (request.nextUrl.pathname === "/prihlaseni" ||
-      request.nextUrl.pathname === "/registrace")
+    (pathname === "/prihlaseni" || pathname === "/registrace")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Role-based route protection for admin/broker sections
+  if (user && pathname.startsWith("/dashboard/sprava")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = profile?.role ?? "user";
+    if (role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (
+    user &&
+    (pathname.startsWith("/dashboard/moje-inzeraty") ||
+      pathname.startsWith("/dashboard/poptavky") ||
+      pathname.startsWith("/dashboard/moje-analytika"))
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = profile?.role ?? "user";
+    if (role !== "broker" && role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

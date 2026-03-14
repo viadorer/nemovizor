@@ -66,15 +66,15 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Upozorneni</h1>
-        <p className="dashboard-loading">Nacitani...</p>
+        <h1 className="dashboard-page-title">Upozornění</h1>
+        <p className="dashboard-loading">Načítání...</p>
       </div>
     );
   }
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Upozorneni</h1>
+      <h1 className="dashboard-page-title">Upozornění</h1>
 
       <div className="dashboard-info-banner">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,16 +82,16 @@ export default function NotificationsPage() {
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        Emailova upozorneni budou spustena brzy. Zde si muzete predem nastavit preference.
+        Emailová upozornění budou spuštěna brzy. Zde si můžete předem nastavit preference.
       </div>
 
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Globalni nastaveni</h2>
+        <h2 className="dashboard-section-title">Globální nastavení</h2>
 
         <div className="dashboard-toggle-row">
           <div className="dashboard-toggle-info">
-            <span>Emailova upozorneni</span>
-            <span className="dashboard-toggle-desc">Zasilat e-maily o novych nabidkach</span>
+            <span>Emailová upozornění</span>
+            <span className="dashboard-toggle-desc">Zasílat e-maily o nových nabídkách</span>
           </div>
           <button
             type="button"
@@ -115,7 +115,7 @@ export default function NotificationsPage() {
 
       {searches.length > 0 && (
         <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Upozorneni na ulozena hledani</h2>
+          <h2 className="dashboard-section-title">Upozornění na uložená hledání</h2>
 
           {searches.map((s) => (
             <div key={s.id} className="dashboard-toggle-row">
@@ -127,9 +127,9 @@ export default function NotificationsPage() {
                     value={s.notify_frequency}
                     onChange={(e) => changeFrequency(s.id, e.target.value)}
                   >
-                    <option value="instant">Okamzite</option>
-                    <option value="daily">Denne</option>
-                    <option value="weekly">Tydne</option>
+                    <option value="instant">Okamžitě</option>
+                    <option value="daily">Denně</option>
+                    <option value="weekly">Týdně</option>
                   </select>
                 )}
               </div>
