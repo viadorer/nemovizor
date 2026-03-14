@@ -53,7 +53,7 @@ html[data-theme="light"] {
   --map-bg: #e8e8ec;
   --glass-bg: rgba(255, 255, 255, 0.82);
   --glass-border: rgba(0, 0, 0, 0.06);
-  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(245, 245, 247, 1) 95%);
+  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.7) 98%);
 }
 
 @theme inline {
@@ -284,6 +284,12 @@ nav ul li a.active {
 .hero-search {
   max-width: 480px;
   margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .hero-search .location-search-input-wrap {
   background: rgba(255, 255, 255, 0.12);
