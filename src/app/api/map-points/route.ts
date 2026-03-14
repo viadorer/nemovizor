@@ -47,13 +47,17 @@ export async function GET(req: NextRequest) {
 
   const listingType = sp.get("listing_type");
   const category = sp.get("category");
+  const subtype = sp.get("subtype");
   const city = sp.get("city");
 
   if (listingType) query = query.eq("listing_type", listingType);
   if (category) query = query.eq("category", category);
+  if (subtype) query = query.eq("subtype", subtype);
   if (city) query = query.eq("city", city);
   if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
   if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));
+  if (sp.get("area_min")) query = query.gte("area", Number(sp.get("area_min")));
+  if (sp.get("area_max")) query = query.lte("area", Number(sp.get("area_max")));
 
   // Bounds filter (without PostGIS)
   if (sp.get("sw_lat")) {

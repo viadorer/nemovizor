@@ -494,12 +494,14 @@ function ListingsContent() {
 
   const subtypeOptions = useMemo(() => {
     if (!category) return [];
+    const subs = subtypesByCategory[category] || {};
     if (filterOptions?.subtypes?.length) {
-      const subs = subtypesByCategory[category] || {};
       return filterOptions.subtypes
-        .map((o) => ({ value: o.value, label: subs[o.value] || o.value, count: o.count }));
+        .filter((o) => subs[o.value]) // only subtypes belonging to selected category
+        .map((o) => ({ value: o.value, label: subs[o.value] || o.value, count: o.count }))
+        .sort((a, b) => (b.count || 0) - (a.count || 0));
     }
-    return Object.entries(subtypesByCategory[category] || {}).map(([value, label]) => ({ value, label }));
+    return Object.entries(subs).map(([value, label]) => ({ value, label }));
   }, [category, filterOptions]);
 
   // DB cities for LocationSearch autocomplete
