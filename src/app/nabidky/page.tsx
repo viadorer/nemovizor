@@ -53,7 +53,7 @@ export default function ListingsPage() {
   );
 }
 
-// ===== DROPDOWN COMPONENT =====
+// ===== DROPDOWN COMPONENT (single-select) =====
 type DropdownProps<T extends string> = {
   label: string;
   value: T | null;
@@ -100,6 +100,79 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
               className={`filter-dropdown-item ${value === opt.value ? "filter-dropdown-item--active" : ""}`}
               onClick={() => { onChange(value === opt.value ? null : opt.value); setOpen(false); }}
             >
+              {opt.label}
+              {opt.count !== undefined && (
+                <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{opt.count}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== MULTI-SELECT DROPDOWN =====
+type MultiDropdownProps = {
+  label: string;
+  values: string[];
+  options: { value: string; label: string; count?: number }[];
+  onChange: (values: string[]) => void;
+};
+
+function MultiFilterDropdown({ label, values, options, onChange }: MultiDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const isActive = values.length > 0;
+  const displayLabel = isActive
+    ? values.length === 1
+      ? options.find((o) => o.value === values[0])?.label ?? label
+      : `${label} (${values.length})`
+    : label;
+
+  function toggle(val: string) {
+    if (values.includes(val)) {
+      onChange(values.filter((v) => v !== val));
+    } else {
+      onChange([...values, val]);
+    }
+  }
+
+  return (
+    <div className="filter-dropdown" ref={ref}>
+      <button
+        className={`filter-dropdown-trigger ${isActive ? "filter-dropdown-trigger--active" : ""}`}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{displayLabel}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`filter-dropdown-chevron ${open ? "filter-dropdown-chevron--open" : ""}`}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="filter-dropdown-menu">
+          <button
+            className={`filter-dropdown-item ${!isActive ? "filter-dropdown-item--active" : ""}`}
+            onClick={() => { onChange([]); }}
+          >
+            Vše
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              className={`filter-dropdown-item ${values.includes(opt.value) ? "filter-dropdown-item--active" : ""}`}
+              onClick={() => toggle(opt.value)}
+            >
+              <span className="filter-checkbox">{values.includes(opt.value) ? "\u2713" : ""}</span>
               {opt.label}
               {opt.count !== undefined && (
                 <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{opt.count}</span>
@@ -210,8 +283,8 @@ type PropertiesResponse = {
 // ===== Helper: build query string from filters =====
 function buildFilterParams(filters: {
   listingType: string | null;
-  category: string | null;
-  subtype: string | null;
+  categories: string[];
+  subtypes: string[];
   city: string | null;
   priceMin: number | null;
   priceMax: number | null;
@@ -220,8 +293,8 @@ function buildFilterParams(filters: {
 }) {
   const p = new URLSearchParams();
   if (filters.listingType) p.set("listing_type", filters.listingType);
-  if (filters.category) p.set("category", filters.category);
-  if (filters.subtype) p.set("subtype", filters.subtype);
+  if (filters.categories.length) p.set("category", filters.categories.join(","));
+  if (filters.subtypes.length) p.set("subtype", filters.subtypes.join(","));
   if (filters.city) p.set("city", filters.city);
   if (filters.priceMin) p.set("price_min", String(filters.priceMin));
   if (filters.priceMax) p.set("price_max", String(filters.priceMax));
@@ -329,8 +402,8 @@ function ListingsContent() {
   const initialListingType = searchParams.get("listingType") as ListingType | null;
   // Filter state
   const [listingType, setListingType] = useState<ListingType | null>(initialListingType);
-  const [category, setCategory] = useState<PropertyCategory | null>(initialCategory);
-  const [subtype, setSubtype] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
+  const [subtypes, setSubtypes] = useState<string[]>([]);
   const [priceMin, setPriceMin] = useState<number | null>(null);
   const [priceMax, setPriceMax] = useState<number | null>(null);
   const [areaMin, setAreaMin] = useState<number | null>(null);
@@ -367,9 +440,9 @@ function ListingsContent() {
 
   // Build filter params object (no city — location is controlled by map bounds)
   const filters = useMemo(() => ({
-    listingType, category, subtype, city: null as string | null,
+    listingType, categories, subtypes, city: null as string | null,
     priceMin, priceMax, areaMin, areaMax,
-  }), [listingType, category, subtype, priceMin, priceMax, areaMin, areaMax]);
+  }), [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [filters]);
@@ -437,13 +510,13 @@ function ListingsContent() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (listingType) params.set("listing_type", listingType);
-    if (category) params.set("category", category);
+    if (categories.length) params.set("category", categories.join(","));
 
     fetch(`/api/filter-options?${params}`)
       .then((r) => r.json())
       .then((data: FilterOptionsResponse) => setFilterOptions(data))
       .catch(() => {});
-  }, [listingType, category]);
+  }, [listingType, categories]);
 
   // Location label for display
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
@@ -489,29 +562,48 @@ function ListingsContent() {
   }, [filterOptions]);
 
   const categoryOptions = useMemo(() => {
-    if (!filterOptions) {
-      return (Object.entries(categoryLabels) as [PropertyCategory, string][]).map(([value, label]) => ({ value, label }));
+    // Always show all categories, using counts from filterOptions when available
+    const countMap = new Map<string, number>();
+    if (filterOptions?.categories) {
+      for (const o of filterOptions.categories) {
+        countMap.set(o.value, o.count);
+      }
     }
-    return (filterOptions.categories ?? [])
-      .map((o) => ({
-        value: o.value as PropertyCategory,
-        label: categoryLabels[o.value as PropertyCategory] || o.value,
-        count: o.count,
-      }))
-      .filter((o) => o.label);
+    return (Object.entries(categoryLabels) as [PropertyCategory, string][]).map(([value, label]) => ({
+      value,
+      label,
+      count: countMap.get(value),
+    }));
   }, [filterOptions]);
 
+  // All subtype labels merged into a single lookup
+  const allSubtypeLabels = useMemo(() => {
+    const merged: Record<string, string> = {};
+    for (const subs of Object.values(subtypesByCategory)) {
+      Object.assign(merged, subs);
+    }
+    return merged;
+  }, []);
+
   const subtypeOptions = useMemo(() => {
-    if (!category) return [];
-    const subs = subtypesByCategory[category] || {};
+    // When categories are selected, show subtypes for those categories; otherwise show all
+    let subs: Record<string, string>;
+    if (categories.length > 0) {
+      subs = {};
+      for (const cat of categories) {
+        Object.assign(subs, subtypesByCategory[cat as PropertyCategory] || {});
+      }
+    } else {
+      subs = allSubtypeLabels;
+    }
     if (filterOptions?.subtypes?.length) {
       return filterOptions.subtypes
-        .filter((o) => subs[o.value]) // only subtypes belonging to selected category
+        .filter((o) => subs[o.value])
         .map((o) => ({ value: o.value, label: subs[o.value] || o.value, count: o.count }))
         .sort((a, b) => (b.count || 0) - (a.count || 0));
     }
     return Object.entries(subs).map(([value, label]) => ({ value, label }));
-  }, [category, filterOptions]);
+  }, [categories, filterOptions, allSubtypeLabels]);
 
   // DB cities for LocationSearch autocomplete
   const dbCities: DbCity[] = useMemo(() => {
@@ -520,7 +612,7 @@ function ListingsContent() {
   }, [filterOptions]);
 
   const clearFilters = () => {
-    setListingType(null); setCategory(null); setSubtype(null);
+    setListingType(null); setCategories([]); setSubtypes([]);
     setPriceMin(null); setPriceMax(null);
     setAreaMin(null); setAreaMax(null);
   };
@@ -529,8 +621,8 @@ function ListingsContent() {
   const handleRestoreSavedSearch = useCallback((search: SavedSearch) => {
     const f = search.filters;
     setListingType((f.listingType as ListingType) || null);
-    setCategory((f.category as PropertyCategory) || null);
-    setSubtype(f.subtype || null);
+    setCategories(f.category ? [f.category as string] : []);
+    setSubtypes(f.subtype ? [f.subtype as string] : []);
     setPriceMin(f.priceMin || null);
     setPriceMax(f.priceMax || null);
     setAreaMin(f.areaMin || null);
@@ -543,8 +635,8 @@ function ListingsContent() {
   // Handle AI search results
   const handleAiFilters = useCallback((aiFilters: Record<string, unknown>) => {
     if (aiFilters.listingType) setListingType(aiFilters.listingType as ListingType);
-    if (aiFilters.category) setCategory(aiFilters.category as PropertyCategory);
-    if (aiFilters.subtype) setSubtype(aiFilters.subtype as string);
+    if (aiFilters.category) setCategories([aiFilters.category as string]);
+    if (aiFilters.subtype) setSubtypes([aiFilters.subtype as string]);
     if (aiFilters.priceMin) setPriceMin(aiFilters.priceMin as number);
     if (aiFilters.priceMax) setPriceMax(aiFilters.priceMax as number);
     if (aiFilters.areaMin) setAreaMin(aiFilters.areaMin as number);
@@ -556,7 +648,7 @@ function ListingsContent() {
     }
   }, []);
 
-  const hasFilters = listingType || category || subtype || priceMin || priceMax || areaMin || areaMax;
+  const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || priceMin || priceMax || areaMin || areaMax;
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
   const areaPresets = [30, 50, 80, 100, 150, 200, 300];
@@ -571,12 +663,12 @@ function ListingsContent() {
               <AiSearch onFiltersReady={handleAiFilters} compact />
               <div className="search-filters-row">
               <FilterDropdown label="Typ nabídky" value={listingType} options={listingTypeOptions} onChange={setListingType} />
-              <FilterDropdown
-                label="Typ nemovitosti" value={category} options={categoryOptions}
-                onChange={(val) => { setCategory(val); setSubtype(null); }}
+              <MultiFilterDropdown
+                label="Typ nemovitosti" values={categories} options={categoryOptions}
+                onChange={(vals) => { setCategories(vals); setSubtypes([]); }}
               />
-              {category && subtypeOptions.length > 0 && (
-                <FilterDropdown label="Podtyp" value={subtype} options={subtypeOptions} onChange={setSubtype} />
+              {subtypeOptions.length > 0 && (
+                <MultiFilterDropdown label="Podtyp" values={subtypes} options={subtypeOptions} onChange={setSubtypes} />
               )}
               <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
               <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />

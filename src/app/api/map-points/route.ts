@@ -51,8 +51,14 @@ export async function GET(req: NextRequest) {
   const city = sp.get("city");
 
   if (listingType) query = query.eq("listing_type", listingType);
-  if (category) query = query.eq("category", category);
-  if (subtype) query = query.eq("subtype", subtype);
+  if (category) {
+    const cats = category.split(",");
+    query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
+  }
+  if (subtype) {
+    const subs = subtype.split(",");
+    query = subs.length === 1 ? query.eq("subtype", subs[0]) : query.in("subtype", subs);
+  }
   if (city) query = query.eq("city", city);
   if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
   if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));

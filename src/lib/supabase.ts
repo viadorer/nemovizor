@@ -36,7 +36,13 @@ export const supabaseAdmin: SupabaseClient<Database> | null =
     ? createClient<Database>(supabaseUrl, supabaseServiceKey)
     : null;
 
-/** Vrati nejlepsi dostupny klient (admin > anon) */
+/** Server-side klient s anon key — pro API routes kdyz neni service key */
+export const supabaseServer: SupabaseClient<Database> | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+    : null;
+
+/** Vrati nejlepsi dostupny klient (admin > server-anon > browser) */
 export function getSupabase(): SupabaseClient<Database> | null {
-  return supabaseAdmin ?? supabase;
+  return supabaseAdmin ?? supabaseServer ?? supabase;
 }

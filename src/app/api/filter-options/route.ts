@@ -34,7 +34,10 @@ async function fallbackFilterOptions(
     .eq("active", true);
 
   if (listingType) query = query.eq("listing_type", listingType as string);
-  if (category) query = query.eq("category", category as string);
+  if (category) {
+    const cats = category.split(",");
+    query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
