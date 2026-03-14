@@ -391,6 +391,7 @@ export const PriceCurrencies = {
   czk: "Kč",
   usd: "USD",
   eur: "EUR",
+  gbp: "GBP",
 } as const;
 export type PriceCurrency = keyof typeof PriceCurrencies;
 

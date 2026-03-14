@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   // Fallback: simple select (no PostGIS)
   let query = client
     .from("properties")
-    .select("id, latitude, longitude, price, category, listing_type, title, slug, rooms_label")
+    .select("id, latitude, longitude, price, price_currency, category, listing_type, title, slug, rooms_label")
     .eq("active", true);
 
   const listingType = sp.get("listing_type");
@@ -80,12 +80,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  type MapRow = { id: string; latitude: number; longitude: number; price: number; category: string; listing_type: string; title: string; slug: string; rooms_label: string };
+  type MapRow = { id: string; latitude: number; longitude: number; price: number; price_currency: string | null; category: string; listing_type: string; title: string; slug: string; rooms_label: string };
   const points = ((data || []) as MapRow[]).map((p) => ({
     id: p.id,
     lat: p.latitude,
     lon: p.longitude,
     price: p.price,
+    price_currency: p.price_currency,
     category: p.category,
     listing_type: p.listing_type,
     title: p.title,

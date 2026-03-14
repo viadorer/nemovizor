@@ -478,7 +478,7 @@ export interface Database {
       phase_distribution: "1_faze" | "3_faze";
       auction_kind: "nedobrovolna" | "dobrovolna" | "exekucni" | "aukce" | "obchodni_soutez";
       lease_type_cb: "najem" | "podnajem";
-      price_currency: "czk" | "usd" | "eur";
+      price_currency: "czk" | "usd" | "eur" | "gbp";
       price_unit: "za_nemovitost" | "za_mesic" | "za_m2" | "za_m2_mesic" | "za_m2_rok" | "za_rok" | "za_den" | "za_hodinu" | "za_m2_den" | "za_m2_hodinu";
       extra_info_status: "rezervovano" | "prodano";
       easy_access_type: "ano" | "ne";

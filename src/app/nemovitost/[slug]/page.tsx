@@ -95,7 +95,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 {property.district}
               </div>
             </div>
-            <div className="detail-price">{formatPrice(property.price)}</div>
+            <div className="detail-price">{formatPrice(property.price, property.priceCurrency)}</div>
           </div>
 
           <div className="detail-grid">

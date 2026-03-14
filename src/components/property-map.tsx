@@ -35,7 +35,7 @@ function createPopupContent(p: Property): string {
           ${badge}
           ${p.featured ? '<span style="background:#ffb800;color:#1a1a2e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">Premium</span>' : ""}
         </div>
-        <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">${formatPrice(p.price)}</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">${formatPrice(p.price, p.priceCurrency)}</div>
         <div style="font-size:0.85rem;color:#888;margin-bottom:2px;">${p.subtype} • ${p.roomsLabel} • ${p.area} m²</div>
         <div style="font-size:0.82rem;color:#999;">${p.district}</div>
         <a href="/nemovitost/${p.slug}" style="display:block;margin-top:8px;text-align:center;padding:6px;background:#ffb800;color:#1a1a2e;border-radius:6px;font-weight:600;font-size:0.8rem;text-decoration:none;">Detail nabídky</a>
@@ -46,11 +46,14 @@ function createPopupContent(p: Property): string {
 
 // ===== Cenový label marker (cena přímo na mapě) =====
 function createPriceLabel(p: Property) {
+  const cur = (p.priceCurrency ?? "czk").toLowerCase();
+  const prefix = cur === "gbp" ? "\u00A3" : cur === "eur" ? "\u20AC" : "";
+  const suffix = cur === "czk" ? " tis." : "k";
   const shortPrice = p.price >= 1000000
-    ? `${(p.price / 1000000).toFixed(1).replace(".0", "")} M`
+    ? `${prefix}${(p.price / 1000000).toFixed(1).replace(".0", "")} M`
     : p.price >= 1000
-    ? `${Math.round(p.price / 1000)} tis.`
-    : `${p.price}`;
+    ? `${prefix}${Math.round(p.price / 1000)}${suffix}`
+    : `${prefix}${p.price}`;
 
   return L.divIcon({
     html: `<div class="map-price-label ${p.featured ? "map-price-label--featured" : ""}">${shortPrice}</div>`,

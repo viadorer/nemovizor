@@ -1612,13 +1612,21 @@ export const reviews: Review[] = [
 
 // ===== UTILITY FUNCTIONS =====
 
-export function formatPrice(price: number) {
-  if (price < 100000) {
+export function formatPrice(price: number, currency?: string) {
+  const cur = (currency ?? "czk").toUpperCase();
+  const localeMap: Record<string, string> = { CZK: "cs-CZ", EUR: "de-DE", GBP: "en-GB", USD: "en-US" };
+  const locale = localeMap[cur] ?? "cs-CZ";
+  const suffixMap: Record<string, string> = { CZK: " Kč/měs.", EUR: " \u20AC/m\u011Bs.", GBP: "/mo" };
+
+  if (cur === "CZK" && price < 100000) {
     return new Intl.NumberFormat("cs-CZ").format(price) + " Kč/měs.";
   }
-  return new Intl.NumberFormat("cs-CZ", {
+  if (cur !== "CZK" && price < 5000) {
+    return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(price) + (suffixMap[cur] ? "/mo" : "");
+  }
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "CZK",
+    currency: cur,
     maximumFractionDigits: 0,
   }).format(price);
 }

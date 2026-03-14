@@ -295,6 +295,7 @@ type MapPoint = {
   lat: number;
   lon: number;
   price: number;
+  price_currency: string | null;
   category: string;
   listing_type: string;
   title: string;
@@ -345,6 +346,7 @@ function rowToProperty(row: Record<string, unknown>): Property {
     roomsLabel: (row.rooms_label as string) || "",
     price: (row.price as number) || 0,
     priceNote: (row.price_note as string) || undefined,
+    priceCurrency: (row.price_currency as string) || undefined,
     city: (row.city as string) || "",
     district: (row.district as string) || "",
     locationLabel: (row.location_label as string) || "",
@@ -398,6 +400,7 @@ function mapPointToMapProperty(pt: MapPoint) {
     subtype: "",
     roomsLabel: pt.rooms_label || "",
     price: pt.price,
+    priceCurrency: pt.price_currency || undefined,
     city: "",
     district: "",
     locationLabel: "",

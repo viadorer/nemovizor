@@ -70,7 +70,7 @@ export const PropertyCard = memo(function PropertyCard({ property }: PropertyCar
         )}
       </div>
       <div className="property-info">
-        <span className="property-price">{formatPrice(property.price)}</span>
+        <span className="property-price">{formatPrice(property.price, property.priceCurrency)}</span>
         <div className="property-meta">
           <span>{PropertyCategories[property.category] ?? property.category}</span>
           <span className="property-meta-divider" />

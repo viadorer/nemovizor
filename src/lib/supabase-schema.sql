@@ -49,7 +49,7 @@ CREATE TYPE auction_kind AS ENUM (
 );
 
 CREATE TYPE lease_type_cb AS ENUM ('najem', 'podnajem');
-CREATE TYPE price_currency AS ENUM ('czk', 'usd', 'eur');
+CREATE TYPE price_currency AS ENUM ('czk', 'usd', 'eur', 'gbp');
 
 CREATE TYPE price_unit AS ENUM (
   'za_nemovitost', 'za_mesic', 'za_m2', 'za_m2_mesic', 'za_m2_rok',

@@ -44,8 +44,11 @@ export default function FavoritesPage() {
     setItems((prev) => prev.filter((i) => i.property_id !== propertyId));
   }
 
-  function formatPrice(price: number): string {
-    return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 }).format(price);
+  function formatPrice(price: number, currency?: string): string {
+    const cur = (currency ?? "czk").toUpperCase();
+    const localeMap: Record<string, string> = { CZK: "cs-CZ", EUR: "de-DE", GBP: "en-GB", USD: "en-US" };
+    const locale = localeMap[cur] ?? "cs-CZ";
+    return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(price);
   }
 
   if (loading) {
