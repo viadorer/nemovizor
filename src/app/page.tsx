@@ -6,6 +6,8 @@ import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { LocationSearch } from "@/components/location-search";
+import { AiSearch } from "@/components/ai-search";
+import { filtersToSearchParams } from "@/lib/saved-searches";
 import { getFeaturedProperties, getLatestProperties, getAllProperties } from "@/lib/api";
 import { Property } from "@/lib/types";
 import Link from "next/link";
@@ -98,18 +100,18 @@ export default function Home() {
                   jak najít nový domov!
                 </h2>
 
-                <div className="hero-rating-badge">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span>4.9 hodnocení</span>
-                  <span className="hero-rating-separator">·</span>
-                  <span>500+ recenzí</span>
-                </div>
-
                 <div className="hero-search">
+                  <AiSearch
+                    onFiltersReady={(aiFilters) => {
+                      const params = filtersToSearchParams(aiFilters as Record<string, string | number | null | undefined>);
+                      router.push(`/nabidky?${params.toString()}`);
+                    }}
+                  />
+                  <div className="hero-search-divider">
+                    <span>nebo</span>
+                  </div>
                   <LocationSearch
-                    placeholder="Zadejte adresu nebo město…"
+                    placeholder="Zadejte adresu nebo město..."
                     onSelect={(item) => {
                       const city = item.city || item.name;
                       router.push(`/nabidky?location=${encodeURIComponent(city)}`);

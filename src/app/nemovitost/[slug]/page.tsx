@@ -7,6 +7,7 @@ import { formatPrice, getPropertyBySlug, getSimilarProperties, getBrokerById, ge
 import { DetailMap, WideDetailMap } from "./detail-map";
 import { MediaGallery } from "./media-gallery";
 import { PointsOfInterest } from "./points-of-interest";
+import { AutoSaveSearch } from "./auto-save-search";
 
 type PropertyDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -58,6 +59,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   return (
     <div className="page-shell">
       <SiteHeader />
+      <AutoSaveSearch />
       <main className="detail-page">
         <div className="detail-wide-layout">
         <div className="detail-wide-content">

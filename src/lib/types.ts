@@ -739,6 +739,25 @@ export type PropertyFilters = {
   subtype?: string;
 };
 
+/** Uložené hledání */
+export type SavedSearch = {
+  id: string;
+  name: string;
+  filters: {
+    listingType?: string | null;
+    category?: string | null;
+    subtype?: string | null;
+    city?: string | null;
+    priceMin?: number | null;
+    priceMax?: number | null;
+    areaMin?: number | null;
+    areaMax?: number | null;
+  };
+  locationLabel?: string | null;
+  createdAt: string;
+  lastUsedAt?: string;
+};
+
 /** Makléř */
 export type Broker = {
   id: string;

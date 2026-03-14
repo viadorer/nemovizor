@@ -14,6 +14,10 @@ import {
 } from "@/lib/types";
 import { LocationSearch } from "@/components/location-search";
 import type { DbCity } from "@/components/location-search";
+import { SavedSearches } from "@/components/saved-searches";
+import { AiSearch } from "@/components/ai-search";
+import { saveCurrentSearch } from "@/lib/saved-searches";
+import type { SavedSearch } from "@/lib/types";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -444,6 +448,11 @@ function ListingsContent() {
   // Location label for display
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
+  // Persist current search to sessionStorage (for auto-save on detail view)
+  useEffect(() => {
+    saveCurrentSearch(filters, locationLabel);
+  }, [filters, locationLabel]);
+
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds);
     if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
@@ -516,6 +525,37 @@ function ListingsContent() {
     setAreaMin(null); setAreaMax(null);
   };
 
+  // Restore a saved search
+  const handleRestoreSavedSearch = useCallback((search: SavedSearch) => {
+    const f = search.filters;
+    setListingType((f.listingType as ListingType) || null);
+    setCategory((f.category as PropertyCategory) || null);
+    setSubtype(f.subtype || null);
+    setPriceMin(f.priceMin || null);
+    setPriceMax(f.priceMax || null);
+    setAreaMin(f.areaMin || null);
+    setAreaMax(f.areaMax || null);
+    if (search.locationLabel) {
+      setLocationLabel(search.locationLabel);
+    }
+  }, []);
+
+  // Handle AI search results
+  const handleAiFilters = useCallback((aiFilters: Record<string, unknown>) => {
+    if (aiFilters.listingType) setListingType(aiFilters.listingType as ListingType);
+    if (aiFilters.category) setCategory(aiFilters.category as PropertyCategory);
+    if (aiFilters.subtype) setSubtype(aiFilters.subtype as string);
+    if (aiFilters.priceMin) setPriceMin(aiFilters.priceMin as number);
+    if (aiFilters.priceMax) setPriceMax(aiFilters.priceMax as number);
+    if (aiFilters.areaMin) setAreaMin(aiFilters.areaMin as number);
+    if (aiFilters.areaMax) setAreaMax(aiFilters.areaMax as number);
+    if (aiFilters.city) {
+      setLocationLabel(aiFilters.city as string);
+      // Fly to city via geocoding -- set a basic flyTo
+      setMapFlyTo({ lat: 50.08, lon: 14.42 }); // fallback, will be overridden by location search
+    }
+  }, []);
+
   const hasFilters = listingType || category || subtype || priceMin || priceMax || areaMin || areaMax;
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
@@ -528,6 +568,8 @@ function ListingsContent() {
         <div className="search-layout">
           <div className={`search-sidebar ${isMobile && mobileView === "map" ? "search-sidebar--mobile-hidden" : ""}`}>
             <div className="search-filters-bar">
+              <AiSearch onFiltersReady={handleAiFilters} compact />
+              <div className="search-filters-row">
               <FilterDropdown label="Typ nabídky" value={listingType} options={listingTypeOptions} onChange={setListingType} />
               <FilterDropdown
                 label="Typ nemovitosti" value={category} options={categoryOptions}
@@ -568,11 +610,18 @@ function ListingsContent() {
                 </button>
               )}
 
+              <SavedSearches
+                currentFilters={filters}
+                locationLabel={locationLabel}
+                onRestore={handleRestoreSavedSearch}
+              />
+
               <span className="search-results-count">
                 {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabídka" : totalResults < 5 ? "nabídky" : "nabídek"}
                 {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v této oblasti" : ""}
                 {totalPages > 1 && ` (str. ${page}/${totalPages})`}
               </span>
+              </div>
             </div>
 
             <div className="search-results-scroll">
