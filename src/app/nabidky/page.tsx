@@ -301,6 +301,10 @@ type MapPoint = {
   title: string;
   slug: string;
   rooms_label: string;
+  image_src: string | null;
+  subtype: string | null;
+  area: number | null;
+  district: string | null;
 };
 
 type PropertiesResponse = {
@@ -397,18 +401,18 @@ function mapPointToMapProperty(pt: MapPoint) {
     title: pt.title,
     listingType: pt.listing_type as ListingType,
     category: pt.category as PropertyCategory,
-    subtype: "",
+    subtype: pt.subtype || "",
     roomsLabel: pt.rooms_label || "",
     price: pt.price,
     priceCurrency: pt.price_currency || undefined,
     city: "",
-    district: "",
+    district: pt.district || "",
     locationLabel: "",
     latitude: pt.lat,
     longitude: pt.lon,
-    area: 0,
+    area: pt.area || 0,
     summary: "",
-    imageSrc: "",
+    imageSrc: pt.image_src || "/images/placeholder.jpg",
     imageAlt: "",
     images: [],
     featured: false,
