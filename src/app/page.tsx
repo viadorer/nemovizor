@@ -1,239 +1,250 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { LocationSearch } from "@/components/location-search";
 import { AiSearch } from "@/components/ai-search";
 import { filtersToSearchParams } from "@/lib/saved-searches";
-import { getFeaturedProperties, getLatestProperties, getAllProperties } from "@/lib/api";
 import { Property } from "@/lib/types";
 import Link from "next/link";
 
-/** Haversine vzdálenost v km */
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function useNearbyProperties(count = 6): { nearby: Property[]; cityLabel: string; loading: boolean } {
-  const [nearby, setNearby] = useState<Property[]>([]);
-  const [cityLabel, setCityLabel] = useState("");
+function useHomepageData() {
+  const [latest, setLatest] = useState<Property[]>([]);
+  const [stats, setStats] = useState({ total: 0, cities: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllProperties().then((allProps) => {
-      const fallback = (label = "Praha") => {
-        const sorted = allProps
-          .filter((p) => p.latitude && p.longitude)
-          .sort((a, b) => {
-            const dA = haversineKm(50.08, 14.42, a.latitude, a.longitude);
-            const dB = haversineKm(50.08, 14.42, b.latitude, b.longitude);
-            return dA - dB;
-          });
-        setNearby(sorted.slice(0, count));
-        setCityLabel(label);
+    // Fetch latest properties via API
+    fetch("/api/properties?sort=newest&limit=8")
+      .then((r) => r.json())
+      .then((d) => {
+        const rows = (d.data || []).map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          slug: row.slug as string,
+          title: row.title as string,
+          listingType: row.listing_type === "pronajem" ? "rent" : row.listing_type === "drazba" ? "auction" : "sale",
+          category: row.category as string,
+          roomsLabel: (row.rooms_label as string) || "",
+          price: (row.price as number) || 0,
+          area: (row.area as number) || 0,
+          city: (row.city as string) || "",
+          district: (row.district as string) || "",
+          locationLabel: (row.location_label as string) || "",
+          latitude: (row.latitude as number) || 0,
+          longitude: (row.longitude as number) || 0,
+          imageSrc: ((row.images as string[]) || [])[0] || "/branding/placeholder.png",
+          imageAlt: (row.title as string) || "",
+          featured: (row.featured as boolean) || false,
+          showAgencyLogo: false,
+          agencyName: "",
+          matterportUrl: (row.matterport_url as string) || "",
+          videoUrl: (row.video_url as string) || "",
+          viewsTrend: undefined,
+          summary: (row.summary as string) || "",
+        }));
+        setLatest(rows);
+        setStats((s) => ({ ...s, total: d.total || 0 }));
         setLoading(false);
-      };
+      })
+      .catch(() => setLoading(false));
 
-      if (!navigator.geolocation) {
-        fallback();
-        return;
-      }
+    // Fetch stats
+    fetch("/api/filter-options")
+      .then((r) => r.json())
+      .then((d) => {
+        setStats((s) => ({ ...s, cities: d.cities?.length || 0 }));
+      })
+      .catch(() => {});
+  }, []);
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude: uLat, longitude: uLon } = pos.coords;
-          const withDist = allProps
-            .filter((p) => p.latitude && p.longitude)
-            .map((p) => ({ p, dist: haversineKm(uLat, uLon, p.latitude, p.longitude) }))
-            .sort((a, b) => a.dist - b.dist);
-
-          const top = withDist.slice(0, count).map((x) => x.p);
-          const closestCity = top[0]?.city || "vás";
-          setNearby(top);
-          setCityLabel(closestCity);
-          setLoading(false);
-        },
-        () => fallback(),
-        { timeout: 5000, maximumAge: 300000 }
-      );
-    });
-  }, [count]);
-
-  return { nearby, cityLabel, loading };
+  return { latest, stats, loading };
 }
+
+const CATEGORIES = [
+  { key: "apartment", label: "Byty", icon: "M3 21h18M3 7v14M21 7v14M6 21V10M10 21V10M14 21V10M18 21V10M3 7l9-4 9 4", desc: "Prodej i pronájem" },
+  { key: "house", label: "Domy", icon: "M3 21V10l9-7 9 7v11H3zM9 21v-6h6v6", desc: "Rodinné, vily, chalupy" },
+  { key: "land", label: "Pozemky", icon: "M2 22l10-10M16 8l-4 4M22 2L12 12M2 22l4-2 2 4M22 2l-4 2-2-4M22 2l-2 4-4-2", desc: "Stavební i komerční" },
+  { key: "commercial", label: "Komerční", icon: "M2 20h20M4 20V8l8-4 8 4v12M8 20v-4h3v4M13 20v-4h3v4M8 12h.01M13 12h.01M8 8h.01M13 8h.01", desc: "Kanceláře, sklady, obchody" },
+];
+
+const POPULAR_CITIES = [
+  { name: "Praha", count: "500+" },
+  { name: "Brno", count: "200+" },
+  { name: "Ostrava", count: "150+" },
+  { name: "Plzeň", count: "80+" },
+  { name: "Olomouc", count: "60+" },
+  { name: "Liberec", count: "50+" },
+  { name: "České Budějovice", count: "45+" },
+  { name: "Hradec Králové", count: "40+" },
+];
 
 export default function Home() {
   const router = useRouter();
-  const { nearby, cityLabel, loading } = useNearbyProperties(6);
-  const [featured, setFeatured] = useState<Property[]>([]);
-  const [latest, setLatest] = useState<Property[]>([]);
+  const { latest, stats, loading } = useHomepageData();
 
-  useEffect(() => {
-    getFeaturedProperties().then(setFeatured);
-    getLatestProperties().then(setLatest);
-  }, []);
+  const latestSale = useMemo(() => latest.filter((p) => p.listingType === "sale").slice(0, 4), [latest]);
+  const latestRent = useMemo(() => latest.filter((p) => p.listingType === "rent").slice(0, 4), [latest]);
+  const latestAll = useMemo(() => {
+    if (latestSale.length >= 4) return latestSale;
+    if (latestRent.length >= 4) return latestRent;
+    return latest.slice(0, 4);
+  }, [latest, latestSale, latestRent]);
 
   return (
     <div className="page-shell">
       <SiteHeader />
       <main>
+        {/* ===== HERO ===== */}
         <section className="hero">
           <div className="hero-overlay" />
           <div className="hero-content">
-            <div className="hero-flex-container">
-              <div className="hero-text">
-                <h1>Sledujte Nemovizor</h1>
-                <h2>
-                  Nejlepší způsob,
-                  <br />
-                  jak najít nový domov!
-                </h2>
+            <div className="hero-center">
+              <h1 className="hero-headline">
+                Najděte svůj nový domov
+              </h1>
+              <p className="hero-sub">
+                {stats.total > 0 ? `${stats.total.toLocaleString("cs")} nemovitostí` : "Tisíce nemovitostí"} z celé České republiky na jednom místě
+              </p>
 
-                <div className="hero-search">
-                  <AiSearch
-                    onFiltersReady={(aiFilters) => {
-                      const params = filtersToSearchParams(aiFilters as Record<string, string | number | null | undefined>);
-                      router.push(`/nabidky?${params.toString()}`);
-                    }}
-                  />
-                  <div className="hero-search-divider">
-                    <span>nebo</span>
-                  </div>
-                  <LocationSearch
-                    placeholder="Zadejte adresu nebo město..."
-                    onSelect={(item) => {
-                      const city = item.city || item.name;
-                      router.push(`/nabidky?location=${encodeURIComponent(city)}`);
-                    }}
-                  />
-                </div>
-
-                <p className="signup-text">
-                  Staňte se členem.{" "}
-                  <span className="login-options">(přihlásit/registrovat)</span>
-                </p>
+              <div className="hero-search">
+                <AiSearch
+                  onFiltersReady={(aiFilters) => {
+                    const params = filtersToSearchParams(aiFilters as Record<string, string | number | null | undefined>);
+                    router.push(`/nabidky?${params.toString()}`);
+                  }}
+                />
               </div>
 
-              <div className="property-filters">
-                <Link href="/nabidky?category=apartment" className="filter-btn">
-                  Byt
-                </Link>
-                <Link href="/nabidky?category=house" className="filter-btn">
-                  Dům
-                </Link>
-                <Link href="/nabidky?category=land" className="filter-btn">
-                  Pozemek
-                </Link>
-                <Link href="/nabidky?category=commercial" className="filter-btn">
-                  Komerční
-                </Link>
+              <div className="hero-quick-links">
+                <Link href="/nabidky?listing_type=prodej" className="hero-quick-link">Prodej</Link>
+                <Link href="/nabidky?listing_type=pronajem" className="hero-quick-link">Pronájem</Link>
+                <Link href="/oceneni" className="hero-quick-link">Odhad ceny</Link>
+                <Link href="/specialiste" className="hero-quick-link">Specialisté</Link>
               </div>
-            </div>
-
-            <div className="scroll-indicator">
-              <div className="scroll-arrow" />
             </div>
           </div>
         </section>
 
-        {/* ===== Service CTA strip (reas-inspired) ===== */}
-        <section className="service-cards">
-          <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center", marginBottom: 8 }}>
-              Vyhledáte, oceníte i prodáte na jednom místě
-            </h2>
-            <p style={{ textAlign: "center", color: "var(--text-muted)", marginBottom: 32, fontSize: "1rem" }}>
-              Rychle, transparentně a bez stresu
-            </p>
-            <div className="service-cards-grid">
-              <Link href="/oceneni" className="service-card">
-                <span className="service-card-number">01</span>
-                <div className="service-card-content">
-                  <div className="service-card-title">Chytrý odhad ceny</div>
-                  <div className="service-card-desc">
-                    Zjistěte tržní hodnotu vaší nemovitosti zdarma do 24 hodin.
-                  </div>
-                </div>
-                <span className="service-card-arrow">&rarr;</span>
-              </Link>
-              <Link href="/specialiste" className="service-card">
-                <span className="service-card-number">02</span>
-                <div className="service-card-content">
-                  <div className="service-card-title">Ověření specialisté</div>
-                  <div className="service-card-desc">
-                    Najděte makléře a kanceláře podle lokality a zaměření.
-                  </div>
-                </div>
-                <span className="service-card-arrow">&rarr;</span>
-              </Link>
-              <Link href="/nabidky" className="service-card">
-                <span className="service-card-number">03</span>
-                <div className="service-card-content">
-                  <div className="service-card-title">Hlídač nabídek</div>
-                  <div className="service-card-desc">
-                    Sledujte nové nabídky ve vaší lokalitě. Nic vám neunikne.
-                  </div>
-                </div>
-                <span className="service-card-arrow">&rarr;</span>
-              </Link>
+        {/* ===== STATS STRIP ===== */}
+        <section className="hp-stats">
+          <div className="container hp-stats-grid">
+            <div className="hp-stat">
+              <span className="hp-stat-value">{stats.total > 0 ? stats.total.toLocaleString("cs") : "---"}</span>
+              <span className="hp-stat-label">aktivních nabídek</span>
+            </div>
+            <div className="hp-stat">
+              <span className="hp-stat-value">{stats.cities > 0 ? stats.cities : "---"}</span>
+              <span className="hp-stat-label">měst a obcí</span>
+            </div>
+            <div className="hp-stat">
+              <span className="hp-stat-value">AI</span>
+              <span className="hp-stat-label">chytré vyhledávání</span>
+            </div>
+            <div className="hp-stat">
+              <span className="hp-stat-value">24/7</span>
+              <span className="hp-stat-label">hlídač nabídek</span>
             </div>
           </div>
         </section>
 
-        <section className="property-listings">
+        {/* ===== CATEGORIES ===== */}
+        <section className="hp-categories">
           <div className="container">
-            <h2 className="section-title">Prémiové nabídky</h2>
-            <div className="property-row">
-              {featured.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+            <h2 className="hp-section-title">Hledáte nemovitost?</h2>
+            <div className="hp-cat-grid">
+              {CATEGORIES.map((cat) => (
+                <Link key={cat.key} href={`/nabidky?category=${cat.key}`} className="hp-cat-card">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={cat.icon} />
+                  </svg>
+                  <div>
+                    <div className="hp-cat-label">{cat.label}</div>
+                    <div className="hp-cat-desc">{cat.desc}</div>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== Novinky podle lokality ===== */}
-        {!loading && nearby.length > 0 && (
-          <section className="property-listings secondary-listings">
-            <div className="container">
-              <h2 className="section-title">
-                Novinky v okolí {cityLabel ? `– ${cityLabel}` : ""}
-              </h2>
-              <div className="property-grid">
-                {nearby.map((property) => (
+        {/* ===== LATEST LISTINGS ===== */}
+        <section className="hp-listings">
+          <div className="container">
+            <div className="hp-section-header">
+              <h2 className="hp-section-title">Nejnovější nabídky</h2>
+              <Link href="/nabidky?sort=newest" className="hp-section-link">
+                Zobrazit vše
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+              </Link>
+            </div>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>Načítání...</div>
+            ) : (
+              <div className="hp-property-grid">
+                {latestAll.map((property) => (
                   <PropertyCard key={property.id} property={property} />
                 ))}
               </div>
-              <div style={{ textAlign: "center", marginTop: 24 }}>
-                <Link
-                  href={cityLabel ? `/nabidky?location=${encodeURIComponent(cityLabel)}` : "/nabidky"}
-                  className="btn-primary"
-                  style={{ display: "inline-block", padding: "10px 28px", borderRadius: 8, fontWeight: 600, fontSize: "0.95rem", textDecoration: "none" }}
-                >
-                  Zobrazit vše v okolí →
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
+            )}
+          </div>
+        </section>
 
-        <section className="property-listings secondary-listings">
+        {/* ===== SERVICES ===== */}
+        <section className="hp-services">
           <div className="container">
-            <h2 className="section-title">Nové nabídky</h2>
-            <div className="property-grid">
-              {latest.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+            <h2 className="hp-section-title">Vyhledáte, oceníte i prodáte na jednom místě</h2>
+            <p className="hp-section-sub">Rychle, transparentně a bez stresu</p>
+            <div className="hp-services-grid">
+              <Link href="/oceneni" className="hp-service-card">
+                <div className="hp-service-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                </div>
+                <h3>Odhad ceny</h3>
+                <p>Zjistěte tržní hodnotu vaší nemovitosti zdarma do 24 hodin.</p>
+              </Link>
+              <Link href="/specialiste" className="hp-service-card">
+                <div className="hp-service-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                </div>
+                <h3>Ověření specialisté</h3>
+                <p>Najděte makléře a kanceláře podle lokality a zaměření.</p>
+              </Link>
+              <Link href="/nabidky" className="hp-service-card">
+                <div className="hp-service-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                </div>
+                <h3>Hlídač nabídek</h3>
+                <p>Sledujte nové nabídky ve vaší lokalitě. Nic vám neunikne.</p>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== POPULAR LOCATIONS ===== */}
+        <section className="hp-locations">
+          <div className="container">
+            <h2 className="hp-section-title">Populární lokality</h2>
+            <div className="hp-loc-grid">
+              {POPULAR_CITIES.map((city) => (
+                <Link key={city.name} href={`/nabidky?location=${encodeURIComponent(city.name)}`} className="hp-loc-card">
+                  <span className="hp-loc-name">{city.name}</span>
+                  <span className="hp-loc-count">{city.count} nabídek</span>
+                </Link>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== CTA ===== */}
+        <section className="hp-cta">
+          <div className="container hp-cta-inner">
+            <h2>Chcete prodat nebo pronajmout nemovitost?</h2>
+            <p>Získejte odhad ceny zdarma a oslovte tisíce zájemců.</p>
+            <div className="hp-cta-buttons">
+              <Link href="/oceneni" className="hp-cta-btn hp-cta-btn--primary">Zjistit hodnotu nemovitosti</Link>
+              <Link href="/specialiste" className="hp-cta-btn hp-cta-btn--secondary">Najít specialistu</Link>
             </div>
           </div>
         </section>
