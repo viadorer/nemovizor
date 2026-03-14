@@ -872,6 +872,8 @@ nav ul li a.active {
   top: calc(100% + 6px);
   left: 0;
   min-width: 180px;
+  max-height: 420px;
+  overflow-y: auto;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -936,6 +938,20 @@ nav ul li a.active {
 .filter-dropdown-item--active .filter-checkbox {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.filter-dropdown-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 10px 12px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.filter-dropdown-group-label:first-child {
+  border-top: none;
 }
 
 .search-results-count {

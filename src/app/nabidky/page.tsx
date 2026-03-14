@@ -113,14 +113,17 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
 }
 
 // ===== MULTI-SELECT DROPDOWN =====
+type DropdownOption = { value: string; label: string; count?: number };
+type DropdownGroup = { groupLabel: string; options: DropdownOption[] };
 type MultiDropdownProps = {
   label: string;
   values: string[];
-  options: { value: string; label: string; count?: number }[];
+  options: DropdownOption[];
+  groups?: DropdownGroup[];
   onChange: (values: string[]) => void;
 };
 
-function MultiFilterDropdown({ label, values, options, onChange }: MultiDropdownProps) {
+function MultiFilterDropdown({ label, values, options, groups, onChange }: MultiDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -132,10 +135,11 @@ function MultiFilterDropdown({ label, values, options, onChange }: MultiDropdown
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const allOpts = groups ? groups.flatMap((g) => g.options) : options;
   const isActive = values.length > 0;
   const displayLabel = isActive
     ? values.length === 1
-      ? options.find((o) => o.value === values[0])?.label ?? label
+      ? allOpts.find((o) => o.value === values[0])?.label ?? label
       : `${label} (${values.length})`
     : label;
 
@@ -145,6 +149,22 @@ function MultiFilterDropdown({ label, values, options, onChange }: MultiDropdown
     } else {
       onChange([...values, val]);
     }
+  }
+
+  function renderOption(opt: DropdownOption) {
+    return (
+      <button
+        key={opt.value}
+        className={`filter-dropdown-item ${values.includes(opt.value) ? "filter-dropdown-item--active" : ""}`}
+        onClick={() => toggle(opt.value)}
+      >
+        <span className="filter-checkbox">{values.includes(opt.value) ? "\u2713" : ""}</span>
+        {opt.label}
+        {opt.count !== undefined && (
+          <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{opt.count}</span>
+        )}
+      </button>
+    );
   }
 
   return (
@@ -166,19 +186,16 @@ function MultiFilterDropdown({ label, values, options, onChange }: MultiDropdown
           >
             Vše
           </button>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              className={`filter-dropdown-item ${values.includes(opt.value) ? "filter-dropdown-item--active" : ""}`}
-              onClick={() => toggle(opt.value)}
-            >
-              <span className="filter-checkbox">{values.includes(opt.value) ? "\u2713" : ""}</span>
-              {opt.label}
-              {opt.count !== undefined && (
-                <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{opt.count}</span>
-              )}
-            </button>
-          ))}
+          {groups ? (
+            groups.map((g) => (
+              <div key={g.groupLabel}>
+                <div className="filter-dropdown-group-label">{g.groupLabel}</div>
+                {g.options.map(renderOption)}
+              </div>
+            ))
+          ) : (
+            options.map(renderOption)
+          )}
         </div>
       )}
     </div>
@@ -590,25 +607,39 @@ function ListingsContent() {
     return merged;
   }, []);
 
-  const subtypeOptions = useMemo(() => {
-    // When categories are selected, show subtypes for those categories; otherwise show all
-    let subs: Record<string, string>;
-    if (categories.length > 0) {
-      subs = {};
-      for (const cat of categories) {
-        Object.assign(subs, subtypesByCategory[cat as PropertyCategory] || {});
-      }
-    } else {
-      subs = allSubtypeLabels;
-    }
+  // Subtype options grouped by category
+  const subtypeGroups = useMemo((): DropdownGroup[] => {
+    const activeCats = categories.length > 0
+      ? categories as PropertyCategory[]
+      : (Object.keys(subtypesByCategory) as PropertyCategory[]);
+
+    const countMap = new Map<string, number>();
     if (filterOptions?.subtypes?.length) {
-      return filterOptions.subtypes
-        .filter((o) => subs[o.value])
-        .map((o) => ({ value: o.value, label: subs[o.value] || o.value, count: o.count }))
-        .sort((a, b) => (b.count || 0) - (a.count || 0));
+      for (const o of filterOptions.subtypes) countMap.set(o.value, o.count || 0);
     }
-    return Object.entries(subs).map(([value, label]) => ({ value, label }));
-  }, [categories, filterOptions, allSubtypeLabels]);
+
+    return activeCats
+      .map((cat) => {
+        const subs = subtypesByCategory[cat] || {};
+        let opts = Object.entries(subs).map(([value, label]) => ({
+          value,
+          label,
+          count: countMap.get(value),
+        }));
+        // If we have filter counts, only show subtypes that exist and sort by count
+        if (countMap.size > 0) {
+          opts = opts.filter((o) => o.count !== undefined && o.count > 0)
+            .sort((a, b) => (b.count || 0) - (a.count || 0));
+        }
+        return { groupLabel: categoryLabels[cat], options: opts };
+      })
+      .filter((g) => g.options.length > 0);
+  }, [categories, filterOptions]);
+
+  // Flat list fallback (used when only 1 category selected)
+  const subtypeOptions = useMemo(() => {
+    return subtypeGroups.flatMap((g) => g.options);
+  }, [subtypeGroups]);
 
   // DB cities for LocationSearch autocomplete
   const dbCities: DbCity[] = useMemo(() => {
@@ -703,7 +734,7 @@ function ListingsContent() {
                 onChange={(vals) => { setCategories(vals); setSubtypes([]); }}
               />
               {subtypeOptions.length > 0 && (
-                <MultiFilterDropdown label="Podtyp" values={subtypes} options={subtypeOptions} onChange={setSubtypes} />
+                <MultiFilterDropdown label="Podtyp" values={subtypes} options={subtypeOptions} groups={subtypeGroups.length > 1 ? subtypeGroups : undefined} onChange={setSubtypes} />
               )}
               <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
               <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
