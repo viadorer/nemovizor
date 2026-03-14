@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="cs" data-theme="dark" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

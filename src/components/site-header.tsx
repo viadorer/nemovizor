@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-provider";
+import { useAuth } from "@/components/auth-provider";
 
 const navItems = [
   {
     href: "/nabidky",
-    label: "Nabídky",
+    label: "Nabidky",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="11" cy="11" r="8" />
@@ -18,7 +19,7 @@ const navItems = [
   },
   {
     href: "/specialiste",
-    label: "Specialisté",
+    label: "Specialiste",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -30,7 +31,7 @@ const navItems = [
   },
   {
     href: "/oceneni",
-    label: "Ocenění",
+    label: "Oceneni",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="4" y="2" width="16" height="20" rx="2" />
@@ -44,7 +45,11 @@ const navItems = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Body scroll lock
   useEffect(() => {
@@ -52,10 +57,33 @@ export function SiteHeader() {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  // Close menu on route change
+  // Close menus on route change
   useEffect(() => {
     setMenuOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [userMenuOpen]);
+
+  async function handleSignOut() {
+    await signOut();
+    setUserMenuOpen(false);
+    router.push("/");
+  }
+
+  const userInitial = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.charAt(0).toUpperCase()
+    : user?.email?.charAt(0).toUpperCase() || "?";
 
   return (
     <>
@@ -79,16 +107,73 @@ export function SiteHeader() {
           </nav>
           <div className="navbar-right">
             <ThemeToggle />
-            <button className="login-btn" type="button">
-              Přihlásit
-            </button>
+            {!loading && user ? (
+              <div className="user-menu-wrapper" ref={userMenuRef}>
+                <button
+                  className="user-avatar-btn"
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-label="Uzivatelske menu"
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt=""
+                      className="user-avatar-img"
+                    />
+                  ) : (
+                    <span className="user-avatar-initial">{userInitial}</span>
+                  )}
+                </button>
+                {userMenuOpen && (
+                  <div className="user-dropdown">
+                    <div className="user-dropdown-info">
+                      <span className="user-dropdown-name">
+                        {user.user_metadata?.full_name || user.email}
+                      </span>
+                      <span className="user-dropdown-email">{user.email}</span>
+                    </div>
+                    <div className="user-dropdown-divider" />
+                    <Link href="/dashboard" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                      </svg>
+                      Dashboard
+                    </Link>
+                    <Link href="/dashboard/nastaveni" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                      </svg>
+                      Nastaveni
+                    </Link>
+                    <div className="user-dropdown-divider" />
+                    <button type="button" className="user-dropdown-item user-dropdown-logout" onClick={handleSignOut}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      Odhlasit se
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : !loading ? (
+              <Link href="/prihlaseni" className="login-btn">
+                Prihlasit
+              </Link>
+            ) : null}
           </div>
 
           {/* Hamburger — pouze mobil */}
           <button
             className="hamburger-btn"
             onClick={() => setMenuOpen(true)}
-            aria-label="Otevřít menu"
+            aria-label="Otevrit menu"
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -100,7 +185,7 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {/* Mobilní fullscreen menu overlay */}
+      {/* Mobilni fullscreen menu overlay */}
       <div className={`mobile-menu-overlay ${menuOpen ? "mobile-menu-overlay--open" : ""}`}>
         <div className="mobile-menu-header">
           <Link href="/" onClick={() => setMenuOpen(false)}>
@@ -109,7 +194,7 @@ export function SiteHeader() {
           <button
             className="mobile-menu-close"
             onClick={() => setMenuOpen(false)}
-            aria-label="Zavřít menu"
+            aria-label="Zavrit menu"
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -138,15 +223,45 @@ export function SiteHeader() {
         <div className="mobile-menu-footer">
           <div className="mobile-menu-theme">
             <ThemeToggle />
-            <span>Přepnout režim</span>
+            <span>Prepnout rezim</span>
           </div>
-          <button className="mobile-menu-login" type="button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Přihlásit
-          </button>
+          {user ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="mobile-menu-login"
+                onClick={() => setMenuOpen(false)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                className="mobile-menu-login"
+                onClick={() => { handleSignOut(); setMenuOpen(false); }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Odhlasit se
+              </button>
+            </>
+          ) : (
+            <Link href="/prihlaseni" className="mobile-menu-login" onClick={() => setMenuOpen(false)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              Prihlasit
+            </Link>
+          )}
         </div>
       </div>
     </>

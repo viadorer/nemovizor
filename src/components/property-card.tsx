@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/api";
 import { Property, PropertyCategories } from "@/lib/types";
+import { FavoriteButton } from "@/components/favorite-button";
 
 type PropertyCardProps = {
   property: Property;
@@ -11,6 +12,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
     <Link href={`/nemovitost/${property.slug}`} className="property-card">
       <div className="property-image-wrapper">
         <img src={property.imageSrc} alt={property.imageAlt} className="property-image" />
+        <FavoriteButton propertyId={property.id} />
         <span className={`property-badge property-badge--${property.listingType}`}>
           {property.listingType === "sale" ? "Prodej" : property.listingType === "rent" ? "Pronájem" : property.listingType === "auction" ? "Dražba" : property.listingType === "project" ? "Projekt" : "Podíly"}
         </span>

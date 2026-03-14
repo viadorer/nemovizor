@@ -307,6 +307,155 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
       };
+      profiles: {
+        Row: {
+          id: string;
+          full_name: string | null;
+          phone: string | null;
+          avatar_url: string | null;
+          role: string;
+          preferred_city: string | null;
+          notification_email: boolean;
+          notification_push: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          full_name?: string | null;
+          phone?: string | null;
+          avatar_url?: string | null;
+          role?: string;
+          preferred_city?: string | null;
+          notification_email?: boolean;
+          notification_push?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string | null;
+          phone?: string | null;
+          avatar_url?: string | null;
+          role?: string;
+          preferred_city?: string | null;
+          notification_email?: boolean;
+          notification_push?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          property_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          property_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          property_id?: string;
+          created_at?: string;
+        };
+      };
+      saved_searches: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          listing_type: string | null;
+          category: string | null;
+          subtype: string | null;
+          city: string | null;
+          district: string | null;
+          price_min: number | null;
+          price_max: number | null;
+          area_min: number | null;
+          area_max: number | null;
+          rooms_min: number | null;
+          rooms_max: number | null;
+          notify_email: boolean;
+          notify_frequency: string;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name?: string;
+          listing_type?: string | null;
+          category?: string | null;
+          subtype?: string | null;
+          city?: string | null;
+          district?: string | null;
+          price_min?: number | null;
+          price_max?: number | null;
+          area_min?: number | null;
+          area_max?: number | null;
+          rooms_min?: number | null;
+          rooms_max?: number | null;
+          notify_email?: boolean;
+          notify_frequency?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          listing_type?: string | null;
+          category?: string | null;
+          subtype?: string | null;
+          city?: string | null;
+          district?: string | null;
+          price_min?: number | null;
+          price_max?: number | null;
+          area_min?: number | null;
+          area_max?: number | null;
+          rooms_min?: number | null;
+          rooms_max?: number | null;
+          notify_email?: boolean;
+          notify_frequency?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      search_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          filters: Record<string, unknown>;
+          location_label: string | null;
+          result_count: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          filters?: Record<string, unknown>;
+          location_label?: string | null;
+          result_count?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          filters?: Record<string, unknown>;
+          location_label?: string | null;
+          result_count?: number | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
