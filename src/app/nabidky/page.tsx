@@ -450,6 +450,9 @@ function ListingsContent() {
   // Reset page when bounds change
   useEffect(() => { setPage(1); }, [debouncedBounds]);
 
+  // On mobile list view, don't restrict by map bounds
+  const effectiveBounds = (isMobile && mobileView === "list") ? null : debouncedBounds;
+
   // Fetch properties (paginated grid) — filtered by dropdown filters + map bounds
   useEffect(() => {
     const controller = new AbortController();
@@ -459,12 +462,12 @@ function ListingsContent() {
     params.set("page", String(page));
     params.set("limit", "24");
 
-    // Add bounds from map viewport
-    if (debouncedBounds) {
-      params.set("sw_lat", String(debouncedBounds.south));
-      params.set("sw_lon", String(debouncedBounds.west));
-      params.set("ne_lat", String(debouncedBounds.north));
-      params.set("ne_lon", String(debouncedBounds.east));
+    // Add bounds from map viewport (skip on mobile list view)
+    if (effectiveBounds) {
+      params.set("sw_lat", String(effectiveBounds.south));
+      params.set("sw_lon", String(effectiveBounds.west));
+      params.set("ne_lat", String(effectiveBounds.north));
+      params.set("ne_lon", String(effectiveBounds.east));
     }
 
     fetch(`/api/properties?${params}`, { signal: controller.signal })
@@ -478,7 +481,7 @@ function ListingsContent() {
       .catch((e) => { if (e.name !== "AbortError") { setLoading(false); } });
 
     return () => controller.abort();
-  }, [filters, page, debouncedBounds]);
+  }, [filters, page, effectiveBounds]);
 
   // Fetch map points (all matching in viewport, lightweight)
   useEffect(() => {
@@ -527,6 +530,11 @@ function ListingsContent() {
   }, [filters, locationLabel]);
 
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    // Ignore degenerate bounds (e.g. when map is display:none on mobile)
+    const latSpan = Math.abs(bounds.north - bounds.south);
+    const lonSpan = Math.abs(bounds.east - bounds.west);
+    if (latSpan < 0.0001 || lonSpan < 0.0001) return;
+
     setMapBounds(bounds);
     if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
     boundsTimerRef.current = setTimeout(() => {
@@ -535,9 +543,9 @@ function ListingsContent() {
   }, []);
 
   // Check if map is zoomed in (not showing all of Czech Republic)
-  const isZoomed = debouncedBounds && (
-    (debouncedBounds.north - debouncedBounds.south) < 4 ||
-    (debouncedBounds.east - debouncedBounds.west) < 6
+  const isZoomed = effectiveBounds && (
+    (effectiveBounds.north - effectiveBounds.south) < 4 ||
+    (effectiveBounds.east - effectiveBounds.west) < 6
   );
 
   // Reset map to whole Czech Republic
