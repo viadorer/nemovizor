@@ -4,7 +4,7 @@
 // Properties + Agencies + Brokers + R2 images
 // Extracts ALL available info: 3D, video, boolean features, areas, etc.
 // Direct R2 upload (no dev server needed)
-// Usage: node scripts/scrape-sreality.mjs [--pages 50] [--delay 1000]
+// Usage: node scripts/scrape-sreality.mjs [--pages 50] [--delay 300]
 // ============================================================
 
 import { createClient } from "@supabase/supabase-js";
@@ -24,10 +24,10 @@ function getArg(name, def) {
 }
 
 const PAGES = Number(getArg("--pages", "50"));
-const DELAY_MS = Number(getArg("--delay", "1000"));
+const DELAY_MS = Number(getArg("--delay", "300"));
 const PER_PAGE = 20;
 const MAX_IMAGES = 8;
-const IMG_DELAY = 200; // ms between CDN image downloads
+const IMG_CONCURRENCY = 4; // parallel image downloads
 const SREALITY = "https://www.sreality.cz/api/cs/v2";
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 
@@ -104,12 +104,12 @@ async function fetchS(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const r = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
-      if (r.status === 429) { console.log(" [429 wait 30s]"); await sleep(30000); continue; }
+      if (r.status === 429) { console.log(" [429 wait 10s]"); await sleep(10000); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     } catch (e) {
       if (i === retries - 1) throw e;
-      await sleep(3000 * (i + 1));
+      await sleep(1000 * (i + 1));
     }
   }
 }
@@ -365,7 +365,7 @@ async function main() {
           ?._embedded?.estates ?? [];
       } catch (e) {
         console.error(`  Page error: ${e.message}`);
-        await sleep(5000);
+        await sleep(2000);
         continue;
       }
       if (!listings.length) { console.log("  Empty, next cat"); break; }
@@ -393,11 +393,15 @@ async function main() {
             .map(img => img._links?.view?.href || img._links?.gallery?.href)
             .filter(Boolean);
 
+          // Parallel image upload in batches
           const r2Urls = [];
-          for (const u of imgUrls) {
-            await sleep(IMG_DELAY);
-            const url = await uploadToR2(u, slugify(detail.name?.value || "p"));
-            if (url) { r2Urls.push(url); state.stats.images++; }
+          const imgSlug = slugify(detail.name?.value || "p");
+          for (let i = 0; i < imgUrls.length; i += IMG_CONCURRENCY) {
+            const batch = imgUrls.slice(i, i + IMG_CONCURRENCY);
+            const results = await Promise.all(batch.map(u => uploadToR2(u, imgSlug)));
+            for (const url of results) {
+              if (url) { r2Urls.push(url); state.stats.images++; }
+            }
           }
 
           // Property
