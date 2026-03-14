@@ -21,11 +21,11 @@ type PropertyRow = {
 const columns: Column<PropertyRow>[] = [
   {
     key: "title",
-    label: "Název",
+    label: "Nazev",
     render: (row) => (
       <div>
         <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {row.title || "Bez názvu"}
+          {row.title || "Bez nazvu"}
         </div>
         <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
           {row.city}
@@ -36,13 +36,13 @@ const columns: Column<PropertyRow>[] = [
   {
     key: "price",
     label: "Cena",
-    render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kč` : "-",
+    render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kc` : "-",
   },
   {
     key: "listing_type",
     label: "Typ",
     render: (row) => {
-      const labels: Record<string, string> = { sale: "Prodej", rent: "Pronájem", auction: "Dražba", project: "Projekt" };
+      const labels: Record<string, string> = { sale: "Prodej", rent: "Pronajem", auction: "Drazba", project: "Projekt" };
       return labels[row.listing_type] || row.listing_type;
     },
   },
@@ -50,7 +50,7 @@ const columns: Column<PropertyRow>[] = [
     key: "category",
     label: "Kategorie",
     render: (row) => {
-      const labels: Record<string, string> = { apartment: "Byt", house: "Dům", land: "Pozemek", commercial: "Komerční", other: "Ostatní" };
+      const labels: Record<string, string> = { apartment: "Byt", house: "Dum", land: "Pozemek", commercial: "Komercni", other: "Ostatni" };
       return labels[row.category] || row.category;
     },
   },
@@ -59,13 +59,13 @@ const columns: Column<PropertyRow>[] = [
     label: "Stav",
     render: (row) => (
       <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
-        {row.active ? "Aktivní" : "Neaktivní"}
+        {row.active ? "Aktivni" : "Neaktivni"}
       </span>
     ),
   },
   {
     key: "brokers",
-    label: "Makléř",
+    label: "Makler",
     sortable: false,
     render: (row) => row.brokers?.name || "-",
   },
@@ -121,29 +121,61 @@ export default function AdminPropertiesPage() {
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle názvu, města..."
-        onRowClick={(row) => router.push(`/nemovitost/${row.id}`)}
+        searchPlaceholder="Hledat podle nazvu, mesta..."
+        onRowClick={(row) => router.push(`/dashboard/sprava/nemovitosti/${row.id}/upravit`)}
+        actions={
+          <button
+            className="admin-btn admin-btn--primary"
+            onClick={() => router.push("/dashboard/sprava/nemovitosti/novy")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nova nemovitost
+          </button>
+        }
         rowActions={(row) => (
           <div style={{ display: "flex", gap: 4 }}>
+            <button
+              className="admin-btn admin-btn--secondary admin-btn--sm"
+              onClick={() => router.push(`/dashboard/sprava/nemovitosti/${row.id}/upravit`)}
+              title="Upravit"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
             <button
               className="admin-btn admin-btn--secondary admin-btn--sm"
               onClick={() => handleToggleActive(row)}
               title={row.active ? "Deaktivovat" : "Aktivovat"}
             >
-              {row.active ? "Skrýt" : "Zobrazit"}
+              {row.active ? "Skryt" : "Zobrazit"}
             </button>
             <button
               className="admin-btn admin-btn--secondary admin-btn--sm"
               onClick={() => handleToggleFeatured(row)}
-              title={row.featured ? "Odebrat z doporučený" : "Doporučit"}
+              title={row.featured ? "Odebrat z doporucenych" : "Doporucit"}
             >
-              {row.featured ? "★" : "☆"}
+              {row.featured ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              )}
             </button>
             <button
               className="admin-btn admin-btn--danger admin-btn--sm"
               onClick={() => setDeleteId(row.id)}
             >
-              Smazat
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
             </button>
           </div>
         )}
@@ -152,7 +184,7 @@ export default function AdminPropertiesPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Smazat nemovitost"
-        message="Opravdu chcete tuto nemovitost smazat? Tuto akci nelze vrátit."
+        message="Opravdu chcete tuto nemovitost smazat? Tuto akci nelze vratit."
         confirmLabel="Smazat"
         danger
         onConfirm={handleDelete}

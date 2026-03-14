@@ -9,6 +9,15 @@ export async function GET(request: NextRequest) {
   const { supabase } = auth;
 
   const { searchParams } = new URL(request.url);
+
+  // Single property by ID (for edit form)
+  const id = searchParams.get("id");
+  if (id) {
+    const { data, error } = await supabase.from("properties").select("*").eq("id", id).single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data });
+  }
+
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
   const search = searchParams.get("search") || "";
@@ -31,6 +40,25 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ data: data ?? [], total: count ?? 0 });
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireAuth(["admin"]);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+  const { supabase } = auth;
+
+  const body = await request.json();
+
+  if (!body.title || !body.slug) {
+    return NextResponse.json({ error: "Nazev a slug jsou povinne" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase.from("properties").insert(body).select().single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ data });
 }
 
 export async function PATCH(request: NextRequest) {

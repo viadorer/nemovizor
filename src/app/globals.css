@@ -4730,3 +4730,484 @@ table.admin-table tr:hover td {
 .admin-empty p {
   font-size: 0.9rem;
 }
+
+/* ===== PROPERTY FORM (MULTI-STEP) ===== */
+.pf-wrap {
+  max-width: 900px;
+}
+
+.pf-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pf-header h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* Steps navigation */
+.pf-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.pf-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.pf-step:hover {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.pf-step--active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.pf-step--active:hover {
+  background: var(--accent-hover);
+  color: var(--accent-text);
+}
+
+.pf-step--done {
+  color: var(--text);
+}
+
+.pf-step--done .pf-step-num {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.pf-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-input);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pf-step--active .pf-step-num {
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+}
+
+.pf-step-label {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .pf-step-label {
+    display: inline;
+  }
+}
+
+/* Content area */
+.pf-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.pf-section h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.pf-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 24px 0 12px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.pf-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: -8px 0 12px 0;
+}
+
+.pf-required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.pf-suffix {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* Slug row */
+.pf-slug-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pf-slug-row input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+/* Checkbox field */
+.pf-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text);
+  padding: 6px 0;
+}
+
+.pf-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pf-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px;
+}
+
+/* Multi-select field */
+.pf-multi-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.pf-multi-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pf-multi-option:hover {
+  background: var(--bg-card-hover);
+}
+
+.pf-multi-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Tags field */
+.pf-tags-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.pf-tag button {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+}
+
+.pf-tag button:hover {
+  color: #ef4444;
+}
+
+.pf-tags-input {
+  display: flex;
+  gap: 8px;
+}
+
+.pf-tags-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+/* Image list */
+.pf-image-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pf-image-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.pf-image-thumb {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.pf-image-url {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-image-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pf-image-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pf-image-actions button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-card-hover);
+}
+
+.pf-image-actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pf-image-remove:hover {
+  color: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+
+.pf-main-image-preview {
+  margin-top: 8px;
+}
+
+.pf-main-image-preview img {
+  max-width: 300px;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* Conditional section */
+.pf-conditional {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.pf-conditional .pf-subtitle {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Navigation bar */
+.pf-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.pf-nav-info {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Error */
+.pf-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.88rem;
+}
+
+.pf-error-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+}
+
+/* Loading / Success */
+.pf-loading,
+.pf-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.pf-success h3 {
+  color: #22c55e;
+  margin: 16px 0 8px;
+}
+
+.pf-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pf-spin 0.6s linear infinite;
+}
+
+.pf-spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pf-spin 0.6s linear infinite;
+}
+
+@keyframes pf-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Form groups within property form — fix nested spacing */
+.pf-section .admin-form-group {
+  margin-bottom: 16px;
+}
+
+.pf-section .admin-form-row {
+  margin-bottom: 0;
+}
+
+.pf-section .admin-form-row .admin-form-group {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .pf-content {
+    padding: 16px;
+  }
+
+  .pf-steps {
+    padding: 8px;
+  }
+
+  .pf-step {
+    padding: 4px 8px;
+  }
+
+  .pf-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
