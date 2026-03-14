@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/api";
-import { Property } from "@/lib/types";
+import { Property, PropertyCategories } from "@/lib/types";
 
 type PropertyCardProps = {
   property: Property;
@@ -60,7 +60,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
       <div className="property-info">
         <span className="property-price">{formatPrice(property.price)}</span>
         <div className="property-meta">
-          <span>{property.subtype}</span>
+          <span>{PropertyCategories[property.category] ?? property.category}</span>
           <span className="property-meta-divider" />
           <span>{property.roomsLabel}</span>
           <span className="property-meta-divider" />

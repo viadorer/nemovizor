@@ -5,27 +5,94 @@ function getClient() {
   return supabaseAdmin ?? supabase;
 }
 
-/** GET /api/properties – seznam nemovitostí */
+/**
+ * GET /api/properties – paginated, server-side filtered property list
+ *
+ * Query params:
+ *   page (default 1), limit (default 24)
+ *   listing_type, category, subtype, city
+ *   price_min, price_max, area_min, area_max
+ *   sort: price_asc | price_desc | newest | area_desc (default: featured)
+ *
+ * Returns: { data, total, page, pages, limit }
+ */
 export async function GET(req: NextRequest) {
   const client = getClient();
   if (!client) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
   }
 
-  const { searchParams } = req.nextUrl;
-  const limit = Number(searchParams.get("limit") ?? "50");
+  const sp = req.nextUrl.searchParams;
+  const page = Math.max(1, Number(sp.get("page") ?? "1"));
+  const limit = Math.min(100, Math.max(1, Number(sp.get("limit") ?? "24")));
+  const offset = (page - 1) * limit;
 
-  const { data, error } = await client
+  // Build query with server-side filters
+  let query = client
     .from("properties")
-    .select("id, slug, title, listing_type, category, city, price, active, featured")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .select("*, brokers(id, name, phone, photo, slug, agency_name)", { count: "exact" })
+    .eq("active", true);
+
+  // Apply filters
+  const listingType = sp.get("listing_type");
+  const category = sp.get("category");
+  const subtype = sp.get("subtype");
+  const city = sp.get("city");
+
+  if (listingType) query = query.eq("listing_type", listingType);
+  if (category) query = query.eq("category", category);
+  if (subtype) query = query.eq("subtype", subtype);
+  if (city) query = query.eq("city", city);
+  if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
+  if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));
+  if (sp.get("area_min")) query = query.gte("area", Number(sp.get("area_min")));
+  if (sp.get("area_max")) query = query.lte("area", Number(sp.get("area_max")));
+
+  // Bounds filter (map viewport)
+  if (sp.get("sw_lat")) {
+    query = query.gte("latitude", Number(sp.get("sw_lat")));
+    query = query.lte("latitude", Number(sp.get("ne_lat")));
+    query = query.gte("longitude", Number(sp.get("sw_lon")));
+    query = query.lte("longitude", Number(sp.get("ne_lon")));
+  }
+
+  // Sort
+  const sort = sp.get("sort") || "featured";
+  switch (sort) {
+    case "price_asc":
+      query = query.order("price", { ascending: true });
+      break;
+    case "price_desc":
+      query = query.order("price", { ascending: false });
+      break;
+    case "newest":
+      query = query.order("created_at", { ascending: false });
+      break;
+    case "area_desc":
+      query = query.order("area", { ascending: false });
+      break;
+    default: // "featured"
+      query = query.order("featured", { ascending: false }).order("created_at", { ascending: false });
+  }
+
+  // Pagination
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ count: data.length, data });
+  const total = count ?? 0;
+
+  return NextResponse.json({
+    data,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    limit,
+  });
 }
 
 /** POST /api/properties – vložit novou nemovitost */
@@ -55,4 +122,54 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, data }, { status: 201 });
+}
+
+/** PATCH /api/properties?id=xxx – update nemovitosti */
+export async function PATCH(req: NextRequest) {
+  const client = getClient();
+  if (!client) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing ?id parameter" }, { status: 400 });
+  }
+
+  const body = await req.json();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client as any)
+    .from("properties")
+    .update(body)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message, details: error }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, data });
+}
+
+/** DELETE /api/properties?id=xxx – smazat nemovitost */
+export async function DELETE(req: NextRequest) {
+  const client = getClient();
+  if (!client) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing ?id parameter" }, { status: 400 });
+  }
+
+  const { error } = await client.from("properties").delete().eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

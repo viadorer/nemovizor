@@ -1,0 +1,75 @@
+
+  Sreality Scraper v3 | Pages: 50 | Delay: 1000ms | Max imgs: 8
+  Target: ~1000 properties
+
+
+== Prodej bytu (8 pages) ==
+
+  Page 1/8
+dddddd
+  Err 1967674188: HTTP 410
+xddd
+  Err 213672780: HTTP 410
+xddddddddd
+  [2.1m] P:0 A:13 B:16 I:134 S:18
+
+  Page 2/8
+....................
+  [5.0m] P:20 A:19 B:24 I:294 S:18
+
+  Page 3/8
+.............ddddddd
+  [8.4m] P:33 A:30 B:36 I:450 S:25
+
+  Page 4/8
+ddd.ddddddd.........
+  [11.3m] P:43 A:37 B:47 I:600 S:35
+
+  Page 5/8
+.d.....d............
+  [14.2m] P:61 A:42 B:59 I:760 S:37
+
+  Page 6/8
+....................
+  [17.1m] P:81 A:45 B:74 I:916 S:37
+
+  Page 7/8
+ssssssssssssssssssss
+  [17.1m] P:81 A:45 B:74 I:916 S:37
+
+  Page 8/8
+...........ddddddddd
+  [19.5m] P:92 A:51 B:88 I:1070 S:46
+
+== Pronajem bytu (8 pages) ==
+
+  Page 1/8
+....................
+  [22.3m] P:112 A:61 B:99 I:1227 S:46
+
+  Page 2/8
+ssssssssssssssssssss
+  [22.3m] P:112 A:61 B:99 I:1227 S:46
+
+  Page 3/8
+....................
+  [24.6m] P:132 A:70 B:111 I:1387 S:46
+
+  Page 4/8
+....................
+  [27.5m] P:152 A:78 B:120 I:1545 S:46
+
+  Page 5/8
+...ddddddddddddddddd
+  [29.7m] P:155 A:89 B:133 I:1703 S:63
+
+  Page 6/8
+...
+  Err 272847692: HTTP 410
+x
+  Err 1900237644: HTTP 410
+x...............
+  [32.9m] P:173 A:100 B:145 I:1847 S:63
+
+  Page 7/8
+dddddddddddd....
