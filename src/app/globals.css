@@ -1090,7 +1090,7 @@ nav ul li a.active {
 
 .mg-grid--1 {
   grid-template-columns: 1fr;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 4 / 3;
 }
 
 .mg-grid--2,
@@ -1099,7 +1099,7 @@ nav ul li a.active {
 .mg-grid--5 {
   grid-template-columns: 2fr 1fr;
   grid-template-rows: 1fr 1fr;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 2 / 1;
 }
 
 .mg-grid--2 .mg-cell--main,

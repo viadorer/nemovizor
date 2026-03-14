@@ -72,7 +72,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
           </Link>
 
           <MediaGallery
-            images={[property.imageSrc, ...property.images]}
+            images={property.images.length > 0 ? property.images : [property.imageSrc]}
             alt={property.imageAlt}
             videoUrl={property.videoUrl}
             matterportUrl={property.matterportUrl}
