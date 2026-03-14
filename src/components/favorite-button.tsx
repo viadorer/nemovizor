@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { addFavorite, removeFavorite, isFavorite } from "@/lib/favorites";
+import { useFavorites } from "@/components/favorites-provider";
 
 type FavoriteButtonProps = {
   propertyId: string;
@@ -10,13 +9,8 @@ type FavoriteButtonProps = {
 
 export function FavoriteButton({ propertyId }: FavoriteButtonProps) {
   const { user } = useAuth();
-  const [favorited, setFavorited] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    isFavorite(user.id, propertyId).then(setFavorited);
-  }, [user, propertyId]);
+  const { favoriteIds, toggle } = useFavorites();
+  const favorited = favoriteIds.has(propertyId);
 
   async function handleToggle(e: React.MouseEvent) {
     e.preventDefault();
@@ -27,16 +21,7 @@ export function FavoriteButton({ propertyId }: FavoriteButtonProps) {
       return;
     }
 
-    setLoading(true);
-    const newState = !favorited;
-    setFavorited(newState); // optimistic
-
-    const success = newState
-      ? await addFavorite(user.id, propertyId)
-      : await removeFavorite(user.id, propertyId);
-
-    if (!success) setFavorited(!newState); // revert
-    setLoading(false);
+    await toggle(propertyId);
   }
 
   return (
@@ -44,7 +29,6 @@ export function FavoriteButton({ propertyId }: FavoriteButtonProps) {
       type="button"
       className={`favorite-btn ${favorited ? "favorite-btn--active" : ""}`}
       onClick={handleToggle}
-      disabled={loading}
       title={favorited ? "Odebrat z oblibenych" : "Pridat do oblibenych"}
       aria-label={favorited ? "Odebrat z oblibenych" : "Pridat do oblibenych"}
     >

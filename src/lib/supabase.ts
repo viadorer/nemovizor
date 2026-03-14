@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "./supabase-types";
 
 // ===== SUPABASE CLIENT =====
@@ -17,11 +18,12 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && (supabaseAnonKey || s
 // ===== Browser client (singleton) =====
 let browserClient: SupabaseClient<Database> | null = null;
 
-/** Klient pro browser (client components) — singleton, session se refreshne v middleware */
+/** Klient pro browser (client components) — singleton, session uklada do cookies pro middleware */
 export function createBrowserSupabase(): SupabaseClient<Database> | null {
+  if (typeof window === "undefined") return null;
   if (!supabaseUrl || !supabaseAnonKey) return null;
   if (browserClient) return browserClient;
-  browserClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
   return browserClient;
 }
 
