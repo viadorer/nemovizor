@@ -128,6 +128,9 @@ export default function PropertyMap({
   const initialFitDoneRef = useRef(false);
   const restoredFromSessionRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const onFlyToDoneRef = useRef(onFlyToDone);
+  onFlyToDoneRef.current = onFlyToDone;
+  const flyToActiveRef = useRef(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     if (typeof window === "undefined") return "dark";
     try {
@@ -269,14 +272,16 @@ export default function PropertyMap({
       markersGroup.addLayer(marker);
     });
 
-    // Auto-zoom to fit all markers — přeskočit pokud jsme obnovili stav z sessionStorage
+    // Auto-zoom to fit all markers — skip if session restored or flyTo is active
     if (restoredFromSessionRef.current) {
-      // Mapa už je na správné pozici z sessionStorage — nepřesouvat
       restoredFromSessionRef.current = false;
+    } else if (flyToActiveRef.current) {
+      // flyTo is in progress — don't override with fitBounds
     } else if (validProperties.length === 1 || singleProperty) {
       const p = validProperties[0];
       map.setView([p.latitude, p.longitude], 15, { animate: true });
-    } else {
+    } else if (!initialFitDoneRef.current) {
+      // Only fitBounds on initial load, not on every data refresh
       const bounds = L.latLngBounds(
         validProperties.map((p) => [p.latitude, p.longitude] as [number, number])
       );
@@ -330,10 +335,11 @@ export default function PropertyMap({
     try { sessionStorage.setItem("nemovizor-map-style", mapStyle); } catch {}
   }, [mapStyle]);
 
-  // FlyTo from location search
+  // FlyTo from location search — only depend on flyTo, use ref for callback
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !flyTo) return;
+    flyToActiveRef.current = true;
 
     if (flyTo.bbox) {
       // bbox = [minLon, minLat, maxLon, maxLat]
@@ -346,8 +352,12 @@ export default function PropertyMap({
       map.flyTo([flyTo.lat, flyTo.lon], 13, { duration: 1.2 });
     }
 
-    onFlyToDone?.();
-  }, [flyTo, onFlyToDone]);
+    // Clear flyTo flag after animation completes, then notify parent
+    setTimeout(() => {
+      flyToActiveRef.current = false;
+      onFlyToDoneRef.current?.();
+    }, 2000);
+  }, [flyTo]);
 
   return (
     <div style={{ position: "relative", width: "100%", height, minHeight: singleProperty ? "250px" : "400px" }}>

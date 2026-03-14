@@ -2580,6 +2580,28 @@ nav ul li a.active {
   flex-shrink: 0;
 }
 
+.location-search-group-label {
+  padding: 6px 12px 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.location-search-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 4px 0;
+}
+
+.location-search-item-count {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 .location-search-footer {
   display: flex;
   align-items: center;
@@ -2591,6 +2613,18 @@ nav ul li a.active {
   opacity: 0.6;
   border-top: 1px solid var(--border-light);
   margin-top: 4px;
+}
+
+.filter-pill--location {
+  background: var(--accent);
+  color: var(--accent-fg, #000);
+  border: none;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.filter-pill--location:hover {
+  opacity: 0.85;
 }
 
 /* ===== MAP STYLES ===== */

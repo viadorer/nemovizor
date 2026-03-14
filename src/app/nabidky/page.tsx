@@ -13,6 +13,7 @@ import {
   ApartmentSubtypes, HouseSubtypes, LandSubtypes, CommercialSubtypes, OtherSubtypes,
 } from "@/lib/types";
 import { LocationSearch } from "@/components/location-search";
+import type { DbCity } from "@/components/location-search";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -322,13 +323,10 @@ function ListingsContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") as PropertyCategory | null;
   const initialListingType = searchParams.get("listingType") as ListingType | null;
-  const initialCity = searchParams.get("city");
-
   // Filter state
   const [listingType, setListingType] = useState<ListingType | null>(initialListingType);
   const [category, setCategory] = useState<PropertyCategory | null>(initialCategory);
   const [subtype, setSubtype] = useState<string | null>(null);
-  const [selectedCity, setSelectedCity] = useState<string | null>(initialCity);
   const [priceMin, setPriceMin] = useState<number | null>(null);
   const [priceMax, setPriceMax] = useState<number | null>(null);
   const [areaMin, setAreaMin] = useState<number | null>(null);
@@ -363,11 +361,11 @@ function ListingsContent() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Build filter params object
+  // Build filter params object (no city — location is controlled by map bounds)
   const filters = useMemo(() => ({
-    listingType, category, subtype, city: selectedCity,
+    listingType, category, subtype, city: null as string | null,
     priceMin, priceMax, areaMin, areaMax,
-  }), [listingType, category, subtype, selectedCity, priceMin, priceMax, areaMin, areaMax]);
+  }), [listingType, category, subtype, priceMin, priceMax, areaMin, areaMax]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [filters]);
@@ -443,12 +441,28 @@ function ListingsContent() {
       .catch(() => {});
   }, [listingType, category]);
 
+  // Location label for display
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds);
     if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
     boundsTimerRef.current = setTimeout(() => {
       setDebouncedBounds(bounds);
     }, 400);
+  }, []);
+
+  // Check if map is zoomed in (not showing all of Czech Republic)
+  const isZoomed = debouncedBounds && (
+    (debouncedBounds.north - debouncedBounds.south) < 4 ||
+    (debouncedBounds.east - debouncedBounds.west) < 6
+  );
+
+  // Reset map to whole Czech Republic
+  const handleResetLocation = useCallback(() => {
+    setLocationLabel(null);
+    // Fly to Czech Republic bounds
+    setMapFlyTo({ lat: 49.8, lon: 15.5, bbox: [12.09, 48.55, 18.86, 51.06] });
   }, []);
 
   // Build dropdown options from filter-options API
@@ -488,20 +502,19 @@ function ListingsContent() {
     return Object.entries(subtypesByCategory[category] || {}).map(([value, label]) => ({ value, label }));
   }, [category, filterOptions]);
 
-  const cityOptions = useMemo(() => {
+  // DB cities for LocationSearch autocomplete
+  const dbCities: DbCity[] = useMemo(() => {
     if (!filterOptions) return [];
-    return filterOptions.cities
-      .slice(0, 80)
-      .map((o) => ({ value: o.value, label: o.value, count: o.count }));
+    return filterOptions.cities.slice(0, 100);
   }, [filterOptions]);
 
   const clearFilters = () => {
     setListingType(null); setCategory(null); setSubtype(null);
-    setSelectedCity(null); setPriceMin(null); setPriceMax(null);
+    setPriceMin(null); setPriceMax(null);
     setAreaMin(null); setAreaMax(null);
   };
 
-  const hasFilters = listingType || category || subtype || selectedCity || priceMin || priceMax || areaMin || areaMax;
+  const hasFilters = listingType || category || subtype || priceMin || priceMax || areaMin || areaMax;
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
   const areaPresets = [30, 50, 80, 100, 150, 200, 300];
@@ -521,17 +534,28 @@ function ListingsContent() {
               {category && subtypeOptions.length > 0 && (
                 <FilterDropdown label="Podtyp" value={subtype} options={subtypeOptions} onChange={setSubtype} />
               )}
-              <FilterDropdown label="Mesto" value={selectedCity} options={cityOptions} onChange={setSelectedCity} />
               <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kc" />
               <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
 
               <LocationSearch
-                placeholder="Hledat lokalitu..."
+                placeholder="Hledat mesto, ulici..."
+                dbCities={dbCities}
                 onSelect={(item) => {
                   setMapFlyTo({ lat: item.lat, lon: item.lon, bbox: item.bbox });
-                  if (item.city) setSelectedCity(item.city);
+                  setLocationLabel(item.name);
                 }}
+                onClear={handleResetLocation}
               />
+
+              {isZoomed && (
+                <button className="filter-pill filter-pill--location" onClick={handleResetLocation}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  {locationLabel || "Cele Cesko"}
+                </button>
+              )}
 
               {hasFilters && (
                 <button className="filter-pill filter-pill--clear" onClick={clearFilters}>
@@ -544,6 +568,7 @@ function ListingsContent() {
 
               <span className="search-results-count">
                 {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabidka" : totalResults < 5 ? "nabidky" : "nabidek"}
+                {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v teto oblasti" : ""}
                 {totalPages > 1 && ` (str. ${page}/${totalPages})`}
               </span>
             </div>
