@@ -632,8 +632,34 @@ function ListingsContent() {
     }
   }, []);
 
+  // Geocode a city name via Mapy.cz Suggest API
+  const geocodeCity = useCallback(async (cityName: string) => {
+    const apiKey = process.env.NEXT_PUBLIC_MAPY_API_KEY ?? "";
+    if (!apiKey) return null;
+    try {
+      const params = new URLSearchParams({
+        query: cityName, lang: "cs", limit: "1", type: "regional",
+        locality: "cz", apikey: apiKey,
+      });
+      const res = await fetch(`https://api.mapy.cz/v1/suggest?${params}`, {
+        headers: { "X-Mapy-Api-Key": apiKey },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const item = data.items?.[0];
+      if (!item) return null;
+      return {
+        lat: item.position.lat as number,
+        lon: item.position.lon as number,
+        bbox: item.bbox as [number, number, number, number] | undefined,
+      };
+    } catch {
+      return null;
+    }
+  }, []);
+
   // Handle AI search results
-  const handleAiFilters = useCallback((aiFilters: Record<string, unknown>) => {
+  const handleAiFilters = useCallback(async (aiFilters: Record<string, unknown>) => {
     if (aiFilters.listingType) setListingType(aiFilters.listingType as ListingType);
     if (aiFilters.category) setCategories([aiFilters.category as string]);
     if (aiFilters.subtype) setSubtypes([aiFilters.subtype as string]);
@@ -642,11 +668,15 @@ function ListingsContent() {
     if (aiFilters.areaMin) setAreaMin(aiFilters.areaMin as number);
     if (aiFilters.areaMax) setAreaMax(aiFilters.areaMax as number);
     if (aiFilters.city) {
-      setLocationLabel(aiFilters.city as string);
-      // Fly to city via geocoding -- set a basic flyTo
-      setMapFlyTo({ lat: 50.08, lon: 14.42 }); // fallback, will be overridden by location search
+      const cityName = aiFilters.city as string;
+      setLocationLabel(cityName);
+      // Geocode the city via Mapy.cz to get real coordinates
+      const geo = await geocodeCity(cityName);
+      if (geo) {
+        setMapFlyTo({ lat: geo.lat, lon: geo.lon, bbox: geo.bbox });
+      }
     }
-  }, []);
+  }, [geocodeCity]);
 
   const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || priceMin || priceMax || areaMin || areaMax;
 
