@@ -723,6 +723,17 @@ function ListingsContent() {
       const geo = await geocodeCity(cityName);
       if (geo) {
         setMapFlyTo({ lat: geo.lat, lon: geo.lon, bbox: geo.bbox });
+        // Also set bounds directly so list view filters even when map is hidden (mobile)
+        if (geo.bbox && geo.bbox.length >= 4) {
+          const bounds: MapBounds = {
+            south: geo.bbox[1],
+            west: geo.bbox[0],
+            north: geo.bbox[3],
+            east: geo.bbox[2],
+          };
+          setDebouncedBounds(bounds);
+          setMapBounds(bounds);
+        }
       }
     }
   }, [geocodeCity]);
@@ -746,7 +757,7 @@ function ListingsContent() {
                 label="Typ nemovitosti" values={categories} options={categoryOptions}
                 onChange={(vals) => { setCategories(vals); setSubtypes([]); }}
               />
-              {subtypeOptions.length > 0 && (
+              {categories.length > 0 && subtypeOptions.length > 0 && (
                 <MultiFilterDropdown label="Podtyp" values={subtypes} options={subtypeOptions} groups={subtypeGroups.length > 1 ? subtypeGroups : undefined} onChange={setSubtypes} />
               )}
               <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
