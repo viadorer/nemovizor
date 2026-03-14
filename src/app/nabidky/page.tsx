@@ -673,21 +673,6 @@ function ListingsContent() {
     setAreaMin(null); setAreaMax(null);
   };
 
-  // Restore a saved search
-  const handleRestoreSavedSearch = useCallback((search: SavedSearch) => {
-    const f = search.filters;
-    setListingType((f.listingType as ListingType) || null);
-    setCategories(f.category ? [f.category as string] : []);
-    setSubtypes(f.subtype ? [f.subtype as string] : []);
-    setPriceMin(f.priceMin || null);
-    setPriceMax(f.priceMax || null);
-    setAreaMin(f.areaMin || null);
-    setAreaMax(f.areaMax || null);
-    if (search.locationLabel) {
-      setLocationLabel(search.locationLabel);
-    }
-  }, []);
-
   // Geocode a city name via Mapy.cz Suggest API
   const geocodeCity = useCallback(async (cityName: string) => {
     const apiKey = process.env.NEXT_PUBLIC_MAPY_API_KEY ?? "";
@@ -713,6 +698,38 @@ function ListingsContent() {
       return null;
     }
   }, []);
+
+  // Restore a saved search
+  const handleRestoreSavedSearch = useCallback(async (search: SavedSearch) => {
+    const f = search.filters;
+    setListingType((f.listingType as ListingType) || null);
+    setCategories(f.category ? [f.category as string] : []);
+    setSubtypes(f.subtype ? [f.subtype as string] : []);
+    setPriceMin(f.priceMin || null);
+    setPriceMax(f.priceMax || null);
+    setAreaMin(f.areaMin || null);
+    setAreaMax(f.areaMax || null);
+    if (search.locationLabel) {
+      setLocationLabel(search.locationLabel);
+      // Geocode to set map bounds
+      const geo = await geocodeCity(search.locationLabel);
+      if (geo) {
+        setMapFlyTo({ lat: geo.lat, lon: geo.lon, bbox: geo.bbox });
+        if (geo.bbox && geo.bbox.length >= 4) {
+          const bounds: MapBounds = {
+            south: geo.bbox[1], west: geo.bbox[0],
+            north: geo.bbox[3], east: geo.bbox[2],
+          };
+          setDebouncedBounds(bounds);
+          setMapBounds(bounds);
+        }
+      }
+    } else {
+      setLocationLabel(null);
+      setDebouncedBounds(null);
+      setMapBounds(null);
+    }
+  }, [geocodeCity, setMapFlyTo, setDebouncedBounds, setMapBounds]);
 
   // Handle AI search results
   const handleAiFilters = useCallback(async (aiFilters: Record<string, unknown>) => {

@@ -3487,7 +3487,7 @@ nav ul li a.active {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface);
+  background: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: 10px;
   padding: 6px 10px;
@@ -3599,7 +3599,7 @@ nav ul li a.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
+  background: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: 8px;
   width: 36px;
@@ -3635,7 +3635,7 @@ nav ul li a.active {
   top: calc(100% + 6px);
   right: 0;
   width: 320px;
-  background: var(--surface);
+  background: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
