@@ -63,10 +63,10 @@ function useHomepageData() {
 }
 
 const CATEGORIES = [
-  { key: "apartment", label: "Byty", icon: "M3 21h18M3 7v14M21 7v14M6 21V10M10 21V10M14 21V10M18 21V10M3 7l9-4 9 4", desc: "Prodej i pronájem" },
-  { key: "house", label: "Domy", icon: "M3 21V10l9-7 9 7v11H3zM9 21v-6h6v6", desc: "Rodinné, vily, chalupy" },
-  { key: "land", label: "Pozemky", icon: "M2 22l10-10M16 8l-4 4M22 2L12 12M2 22l4-2 2 4M22 2l-4 2-2-4M22 2l-2 4-4-2", desc: "Stavební i komerční" },
-  { key: "commercial", label: "Komerční", icon: "M2 20h20M4 20V8l8-4 8 4v12M8 20v-4h3v4M13 20v-4h3v4M8 12h.01M13 12h.01M8 8h.01M13 8h.01", desc: "Kanceláře, sklady, obchody" },
+  { key: "apartment", label: "Byty", desc: "Prodej i pronájem" },
+  { key: "house", label: "Domy", desc: "Rodinné, vily, chalupy" },
+  { key: "land", label: "Pozemky", desc: "Stavební i komerční" },
+  { key: "commercial", label: "Komerční", desc: "Kanceláře, sklady, obchody" },
 ];
 
 const POPULAR_CITIES = [
@@ -156,13 +156,8 @@ export default function Home() {
             <div className="hp-cat-grid">
               {CATEGORIES.map((cat) => (
                 <Link key={cat.key} href={`/nabidky?category=${cat.key}`} className="hp-cat-card">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={cat.icon} />
-                  </svg>
-                  <div>
-                    <div className="hp-cat-label">{cat.label}</div>
-                    <div className="hp-cat-desc">{cat.desc}</div>
-                  </div>
+                  <div className="hp-cat-label">{cat.label}</div>
+                  <div className="hp-cat-desc">{cat.desc}</div>
                 </Link>
               ))}
             </div>

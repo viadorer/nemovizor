@@ -2722,6 +2722,7 @@ nav ul li a.active {
   .search-sidebar {
     width: 100% !important;
     height: auto;
+    overflow: visible;
   }
 
   .search-resize-handle {
@@ -2827,6 +2828,7 @@ nav ul li a.active {
   flex: 1;
   min-width: 200px;
   max-width: 320px;
+  z-index: 61;
 }
 
 .location-search-input-wrap {
@@ -2901,7 +2903,7 @@ nav ul li a.active {
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  min-width: 300px;
+  min-width: min(300px, 90vw);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -2911,6 +2913,7 @@ nav ul li a.active {
   animation: dropdown-in 0.15s ease;
   max-height: 380px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .location-search-item {

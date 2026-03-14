@@ -769,6 +769,15 @@ function ListingsContent() {
                 onSelect={(item) => {
                   setMapFlyTo({ lat: item.lat, lon: item.lon, bbox: item.bbox });
                   setLocationLabel(item.name);
+                  // Set bounds directly so list filters even when map is hidden (mobile)
+                  if (item.bbox && item.bbox.length >= 4) {
+                    const bounds: MapBounds = {
+                      south: item.bbox[1], west: item.bbox[0],
+                      north: item.bbox[3], east: item.bbox[2],
+                    };
+                    setDebouncedBounds(bounds);
+                    setMapBounds(bounds);
+                  }
                 }}
                 onClear={handleResetLocation}
               />
