@@ -3272,6 +3272,31 @@ nav ul li a.active {
     font-size: 1.5rem;
   }
 
+  /* Detail page mobile: icon-only nav + full-width gallery */
+  .detail-page .container {
+    width: 100%;
+    padding: 0 16px;
+  }
+  .detail-top-nav {
+    margin-bottom: 8px;
+  }
+  .detail-back span {
+    display: none;
+  }
+  .listing-nav-btn span {
+    display: none;
+  }
+  .listing-nav-btn {
+    padding: 6px 8px;
+  }
+
+  .mg-grid {
+    border-radius: 0;
+    margin-left: -16px;
+    margin-right: -16px;
+    margin-bottom: 20px;
+  }
+
   .detail-header {
     flex-direction: column;
   }

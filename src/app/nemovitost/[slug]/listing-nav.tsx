@@ -34,7 +34,7 @@ export function ListingNav({ currentSlug }: ListingNavProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          Predchozi
+          <span>{"\u0050\u0159edchoz\u00ed"}</span>
         </Link>
       ) : (
         <span />
@@ -42,7 +42,7 @@ export function ListingNav({ currentSlug }: ListingNavProps) {
       {position && <span className="listing-nav-pos">{position}</span>}
       {nextSlug ? (
         <Link href={`/nemovitost/${nextSlug}`} className="listing-nav-btn">
-          Dalsi
+          <span>{"\u0044al\u0161\u00ed"}</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 18l6-6-6-6" />
           </svg>
