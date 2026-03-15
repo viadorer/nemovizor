@@ -24,7 +24,7 @@
   --map-bg: #1a1a24;
   --glass-bg: rgba(15, 15, 25, 0.82);
   --glass-border: rgba(255, 255, 255, 0.06);
-  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(10, 10, 15, 1) 98%);
+  --overlay-gradient: linear-gradient(transparent 0%, rgba(10, 10, 15, 0.3) 60%, rgba(10, 10, 15, 0.7) 100%);
 }
 
 html[data-theme="light"] .hero::before {
@@ -53,7 +53,7 @@ html[data-theme="light"] {
   --map-bg: #e8e8ec;
   --glass-bg: rgba(255, 255, 255, 0.82);
   --glass-border: rgba(0, 0, 0, 0.06);
-  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.7) 98%);
+  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.15) 40%, rgba(0, 0, 0, 0.65) 98%);
 }
 
 @theme inline {
@@ -128,6 +128,15 @@ a {
 .logo {
   height: 32px;
   width: auto;
+}
+.logo--dark {
+  display: none;
+}
+[data-theme="dark"] .logo--light {
+  display: none;
+}
+[data-theme="dark"] .logo--dark {
+  display: block;
 }
 
 nav ul {
@@ -212,6 +221,19 @@ nav ul li a.active {
   animation: zoomEffect 20s ease-in-out infinite alternate;
 }
 
+.hero--map::before {
+  display: none;
+}
+.hero-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+.hero-map.leaflet-container {
+  background: var(--bg);
+}
 .hero-overlay {
   position: absolute;
   inset: 0;
@@ -282,8 +304,8 @@ nav ul li a.active {
   opacity: 0.5;
 }
 .hero-search {
-  max-width: 480px;
-  margin-bottom: 12px;
+  max-width: 540px;
+  margin: 0 auto 12px;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -310,10 +332,12 @@ nav ul li a.active {
   border-color: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
 }
-.hero-search .ai-search-input {
+.hero-search .ai-search-input,
+.hero-search .ai-search-textarea {
   color: #ffffff;
 }
-.hero-search .ai-search-input::placeholder {
+.hero-search .ai-search-input::placeholder,
+.hero-search .ai-search-textarea::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
 .hero-search .ai-search-icon {
@@ -535,20 +559,19 @@ nav ul li a.active {
 .hero-quick-link {
   padding: 8px 20px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent-text);
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s;
-  backdrop-filter: blur(8px);
 }
 
 .hero-quick-link:hover {
-  background: var(--accent);
+  background: var(--accent-hover);
   color: var(--accent-text);
-  border-color: var(--accent);
+  border-color: var(--accent-hover);
 }
 
 .hp-stats {
@@ -664,9 +687,20 @@ nav ul li a.active {
 }
 
 .hp-property-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.hp-property-grid::-webkit-scrollbar {
+  display: none;
+}
+.hp-property-grid > * {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
 }
 
 .hp-steps {
@@ -841,7 +875,6 @@ nav ul li a.active {
   .hero-sub { font-size: 1rem; }
   .hp-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .hp-cat-grid { grid-template-columns: repeat(2, 1fr); }
-  .hp-property-grid { grid-template-columns: repeat(2, 1fr); }
   .hp-services-grid { grid-template-columns: 1fr; }
   .hp-loc-grid { grid-template-columns: repeat(2, 1fr); }
   .hp-section-title { font-size: 1.3rem; }
@@ -849,7 +882,6 @@ nav ul li a.active {
 
 @media (max-width: 480px) {
   .hero-headline { font-size: 1.7rem; }
-  .hp-property-grid { grid-template-columns: 1fr; }
   .hp-cat-grid { grid-template-columns: 1fr; }
   .hp-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -3732,6 +3764,29 @@ nav ul li a.active {
   padding: 6px 10px;
   transition: border-color 0.2s;
 }
+.ai-search-input-wrapper--hero {
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+.ai-search-input-wrapper--hero .ai-search-icon {
+  margin-top: 4px;
+}
+.ai-search-input-wrapper--hero .ai-search-submit {
+  margin-top: 2px;
+}
+.ai-search-textarea {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-family: inherit;
+  min-width: 0;
+  resize: none;
+  line-height: 1.5;
+}
 .ai-search-input-wrapper:focus-within {
   border-color: var(--accent);
 }
@@ -4004,6 +4059,398 @@ nav ul li a.active {
   color: rgba(255,255,255,0.5);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* ===== SELL / PRODAT PAGE ===== */
+.sell-hero {
+  padding: 120px 0 80px;
+  background: var(--bg);
+}
+.sell-hero-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 60px;
+  align-items: center;
+}
+.sell-hero-text h1 {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+.sell-hero-sub {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+.sell-hero-stats {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+.sell-hero-stat {
+  display: flex;
+  flex-direction: column;
+}
+.sell-hero-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.sell-hero-stat-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.sell-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.sell-hero-cta:hover {
+  background: var(--accent-hover);
+}
+.sell-value-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+}
+.sell-value-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.sell-value-price {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.sell-value-sub {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.sell-value-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.sell-value-btn:hover {
+  background: var(--accent-hover);
+}
+
+.sell-steps {
+  padding: 72px 0;
+  background: var(--bg-secondary);
+}
+.sell-section-title {
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 48px;
+  color: var(--text);
+}
+.sell-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.sell-step {
+  text-align: center;
+  padding: 32px 24px;
+}
+.sell-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 1.3rem;
+  font-weight: 800;
+  border-radius: 50%;
+  margin-bottom: 16px;
+}
+.sell-step h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.sell-step p {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.sell-benefits {
+  padding: 72px 0;
+  background: var(--bg);
+}
+.sell-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+.sell-benefit {
+  padding: 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color 0.2s;
+}
+.sell-benefit:hover {
+  border-color: var(--accent);
+}
+.sell-benefit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 184, 0, 0.12);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+.sell-benefit h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.sell-benefit p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.sell-form-section {
+  padding: 72px 0;
+  background: var(--bg-secondary);
+}
+.sell-form-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 48px;
+  align-items: start;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.sell-form-info h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.sell-form-info p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.sell-form-checklist {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sell-form-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sell-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+}
+.sell-form-row {
+  display: flex;
+  flex-direction: column;
+}
+.sell-form-row--half {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.sell-form label span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.sell-form input,
+.sell-form select,
+.sell-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.sell-form input:focus,
+.sell-form select:focus,
+.sell-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.sell-form textarea {
+  resize: vertical;
+}
+.sell-form-submit {
+  padding: 14px 24px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sell-form-submit:hover {
+  background: var(--accent-hover);
+}
+.sell-form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.sell-form-disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sell-form-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 48px 32px;
+}
+.sell-form-success h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.sell-form-success p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.sell-form-back {
+  margin-top: 8px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.sell-faq {
+  padding: 72px 0;
+  background: var(--bg);
+}
+.sell-faq-list {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sell-faq-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sell-faq-item summary {
+  padding: 16px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sell-faq-item summary::after {
+  content: "+";
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.sell-faq-item[open] summary::after {
+  content: "-";
+}
+.sell-faq-item p {
+  padding: 0 20px 16px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .sell-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sell-hero-text h1 {
+    font-size: 1.8rem;
+  }
+  .sell-hero-stats {
+    gap: 20px;
+  }
+  .sell-steps-grid {
+    grid-template-columns: 1fr;
+  }
+  .sell-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+  .sell-form-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .sell-form-row--half {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== AUTH PAGES ===== */

@@ -285,11 +285,9 @@ export default function PropertyMap({
       const p = validProperties[0];
       map.setView([p.latitude, p.longitude], 15, { animate: true });
     } else if (!initialFitDoneRef.current && !flyToActiveRef.current) {
-      // First load only — fit all markers
-      const bounds = L.latLngBounds(
-        validProperties.map((p) => [p.latitude, p.longitude] as [number, number])
-      );
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
+      // First load — show Czech Republic bounds (not all markers which may span multiple countries)
+      const czBounds = L.latLngBounds([[48.55, 12.09], [51.06, 18.86]]);
+      map.fitBounds(czBounds, { padding: [40, 40], maxZoom: 14, animate: true });
     }
     // After first fit, never auto-zoom again (user controls the viewport)
     initialFitDoneRef.current = true;

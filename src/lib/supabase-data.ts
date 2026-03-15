@@ -30,6 +30,7 @@ function dbPropertyToApp(row: DbProperty, broker?: DbBroker | null): Property {
     zip: row.zip ?? undefined,
     region: row.region ?? undefined,
     cityPart: row.city_part ?? undefined,
+    country: row.country ?? undefined,
     locationLabel: row.location_label,
     latitude: row.latitude,
     longitude: row.longitude,

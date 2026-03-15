@@ -468,10 +468,16 @@ function ListingsContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") as PropertyCategory | null;
   const initialListingType = searchParams.get("listingType") as ListingType | null;
+  const initialCity = searchParams.get("city");
+  const initialSubtype = searchParams.get("subtype");
+  const initialPriceMin = searchParams.get("priceMin");
+  const initialPriceMax = searchParams.get("priceMax");
+  const initialAreaMin = searchParams.get("areaMin");
+  const initialAreaMax = searchParams.get("areaMax");
 
   // Load persisted filters (URL params override persisted values)
   const persisted = useMemo(() => loadPersistedFilters(), []);
-  const hasUrlParams = initialCategory !== null || initialListingType !== null;
+  const hasUrlParams = initialCategory !== null || initialListingType !== null || initialCity !== null;
 
   // Filter state — URL params > persisted > defaults
   const [listingType, setListingType] = useState<ListingType | null>(
@@ -480,11 +486,11 @@ function ListingsContent() {
   const [categories, setCategories] = useState<string[]>(
     initialCategory ? [initialCategory] : (hasUrlParams ? [] : persisted?.categories ?? [])
   );
-  const [subtypes, setSubtypes] = useState<string[]>(hasUrlParams ? [] : persisted?.subtypes ?? []);
-  const [priceMin, setPriceMin] = useState<number | null>(hasUrlParams ? null : persisted?.priceMin ?? null);
-  const [priceMax, setPriceMax] = useState<number | null>(hasUrlParams ? null : persisted?.priceMax ?? null);
-  const [areaMin, setAreaMin] = useState<number | null>(hasUrlParams ? null : persisted?.areaMin ?? null);
-  const [areaMax, setAreaMax] = useState<number | null>(hasUrlParams ? null : persisted?.areaMax ?? null);
+  const [subtypes, setSubtypes] = useState<string[]>(initialSubtype ? [initialSubtype] : (hasUrlParams ? [] : persisted?.subtypes ?? []));
+  const [priceMin, setPriceMin] = useState<number | null>(initialPriceMin ? Number(initialPriceMin) : (hasUrlParams ? null : persisted?.priceMin ?? null));
+  const [priceMax, setPriceMax] = useState<number | null>(initialPriceMax ? Number(initialPriceMax) : (hasUrlParams ? null : persisted?.priceMax ?? null));
+  const [areaMin, setAreaMin] = useState<number | null>(initialAreaMin ? Number(initialAreaMin) : (hasUrlParams ? null : persisted?.areaMin ?? null));
+  const [areaMax, setAreaMax] = useState<number | null>(initialAreaMax ? Number(initialAreaMax) : (hasUrlParams ? null : persisted?.areaMax ?? null));
 
   // Sort
   const [sortBy, setSortBy] = useState<string>(hasUrlParams ? "featured" : persisted?.sortBy ?? "featured");
@@ -762,10 +768,12 @@ function ListingsContent() {
     }
   }, []);
 
-  // Restore map position from persisted locationLabel on mount
+  // Restore map position from URL city param or persisted locationLabel on mount
   useEffect(() => {
-    if (!hasUrlParams && persisted?.locationLabel) {
-      geocodeCity(persisted.locationLabel).then((geo) => {
+    const cityToGeocode = initialCity || (!hasUrlParams && persisted?.locationLabel ? persisted.locationLabel : null);
+    if (cityToGeocode) {
+      if (initialCity) setLocationLabel(initialCity);
+      geocodeCity(cityToGeocode).then((geo) => {
         if (geo) {
           setMapFlyTo({ lat: geo.lat, lon: geo.lon, bbox: geo.bbox });
           if (geo.bbox && geo.bbox.length >= 4) {

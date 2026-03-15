@@ -542,6 +542,7 @@ export type Property = {
   zip?: string;
   region?: string;
   cityPart?: string;
+  country?: string;
   locationLabel: string;
   latitude: number;
   longitude: number;

@@ -23,7 +23,7 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
   const [loading, setLoading] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
 
   // Auto-dismiss explanation after 8s
   useEffect(() => {
@@ -75,21 +75,39 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
 
   return (
     <div className={`ai-search ${compact ? "ai-search--compact" : ""}`}>
-      <div className="ai-search-input-wrapper">
+      <div className={`ai-search-input-wrapper ${!compact ? "ai-search-input-wrapper--hero" : ""}`}>
         <svg className="ai-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 3v2m0 14v2m-7-9H3m18 0h-2M5.6 5.6l1.4 1.4m9.9 9.9l1.4 1.4M5.6 18.4l1.4-1.4m9.9-9.9l1.4-1.4" />
           <circle cx="12" cy="12" r="4" />
         </svg>
-        <input
-          ref={inputRef}
-          className="ai-search-input"
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={compact ? "Popište, co hledáte..." : "Popište vlastními slovy, co hledáte... (např. \"Byt 3+kk v Praze do 8M\")"}
-          disabled={loading}
-        />
+        {compact ? (
+          <input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            className="ai-search-input"
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Popiste, co hledáte..."
+            disabled={loading}
+          />
+        ) : (
+          <textarea
+            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+            className="ai-search-input ai-search-textarea"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder={'Popiste vlastními slovy, co hledáte...\nnapř. "Byt 3+kk v Praze do 8M" nebo "Dům se zahradou na Moravě"'}
+            disabled={loading}
+            rows={3}
+          />
+        )}
         <button
           className="ai-search-submit"
           onClick={handleSubmit}

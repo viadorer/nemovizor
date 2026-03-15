@@ -32,6 +32,7 @@ export interface Database {
           zip: string | null;
           region: string | null;
           city_part: string | null;
+          country: string | null;
           location_label: string;
           latitude: number;
           longitude: number;
@@ -306,6 +307,33 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
+      };
+      leads: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string;
+          property_type: string;
+          intent: string;
+          address: string;
+          note: string;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name?: string;
+          email?: string;
+          phone?: string;
+          property_type?: string;
+          intent?: string;
+          address?: string;
+          note?: string;
+          source?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
       };
       profiles: {
         Row: {

@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 const navItems = [
   {
     href: "/nabidky",
-    label: "Nabidky",
+    label: "Nab\u00EDdky",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="11" cy="11" r="8" />
@@ -18,8 +18,8 @@ const navItems = [
     ),
   },
   {
-    href: "/specialiste",
-    label: "Specialiste",
+    href: "/makleri",
+    label: "RK / makl\u00E9\u0159i",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -31,7 +31,7 @@ const navItems = [
   },
   {
     href: "/oceneni",
-    label: "Oceneni",
+    label: "Ocen\u011Bn\u00ED",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="4" y="2" width="16" height="20" rx="2" />
@@ -91,7 +91,7 @@ export function SiteHeader() {
         <div className="navbar">
           <div className="logo-container">
             <Link href="/">
-              <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo" />
+              <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt="Nemovizor Logo" className="logo logo--dark" />
             </Link>
           </div>
           <nav className="navbar-desktop-nav">
@@ -189,7 +189,7 @@ export function SiteHeader() {
       <div className={`mobile-menu-overlay ${menuOpen ? "mobile-menu-overlay--open" : ""}`}>
         <div className="mobile-menu-header">
           <Link href="/" onClick={() => setMenuOpen(false)}>
-            <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo" />
+            <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt="Nemovizor Logo" className="logo logo--dark" />
           </Link>
           <button
             className="mobile-menu-close"

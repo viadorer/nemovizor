@@ -225,7 +225,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
                   <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
                     Kancelář
                   </h3>
-                  <Link href={`/kancelare/${agency.slug}`} style={{ color: "var(--text)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <Link href={`/kancelare/${agency.slug}`} style={{ color: "var(--text)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                     <div className="agency-list-logo" style={{ width: 40, height: 40, marginBottom: 0 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
@@ -234,8 +234,41 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
                     {agency.name}
                   </Link>
                   {hqBranch && (
-                    <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                      {hqBranch.address}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "0.85rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        {hqBranch.address}, {hqBranch.city}
+                      </div>
+                      {hqBranch.phone && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                          </svg>
+                          {hqBranch.phone}
+                        </div>
+                      )}
+                      {hqBranch.email && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <path d="M22 6l-10 7L2 6" />
+                          </svg>
+                          {hqBranch.email}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {agency.website && (
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                      <a href={agency.website} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none" }}>
+                        {agency.website.replace(/^https?:\/\//, "")}
+                      </a>
                     </div>
                   )}
                 </div>

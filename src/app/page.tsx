@@ -9,6 +9,9 @@ import { AiSearch } from "@/components/ai-search";
 import { filtersToSearchParams } from "@/lib/saved-searches";
 import { Property } from "@/lib/types";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const HeroMap = dynamic(() => import("@/components/hero-map"), { ssr: false });
 
 function useHomepageData() {
   const [latest, setLatest] = useState<Property[]>([]);
@@ -97,7 +100,8 @@ export default function Home() {
       <SiteHeader />
       <main>
         {/* ===== HERO ===== */}
-        <section className="hero">
+        <section className="hero hero--map">
+          <HeroMap />
           <div className="hero-overlay" />
           <div className="hero-content">
             <div className="hero-center">
@@ -120,8 +124,8 @@ export default function Home() {
               <div className="hero-quick-links">
                 <Link href="/nabidky?listing_type=prodej" className="hero-quick-link">Prodej</Link>
                 <Link href="/nabidky?listing_type=pronajem" className="hero-quick-link">Pronájem</Link>
+                <Link href="/prodat" className="hero-quick-link">Prodat / Pronajmout</Link>
                 <Link href="/oceneni" className="hero-quick-link">Odhad ceny</Link>
-                <Link href="/specialiste" className="hero-quick-link">Specialisté</Link>
               </div>
             </div>
           </div>

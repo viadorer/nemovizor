@@ -11,6 +11,36 @@ import { AutoSaveSearch } from "./auto-save-search";
 import { MortgageCalculator } from "./mortgage-calculator";
 import { ListingNav } from "./listing-nav";
 
+function buildAddress(parts: (string | undefined)[]): string {
+  const seen = new Set<string>();
+  return parts.filter((p): p is string => {
+    if (!p) return false;
+    const lower = p.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  }).join(", ");
+}
+
+const COUNTRY_LABELS: Record<string, string> = {
+  cz: "\u010Cesk\u00E1 republika",
+  sk: "Slovensko",
+  at: "Rakousko",
+  de: "N\u011Bmecko",
+  hr: "Chorvatsko",
+  cy: "Kypr",
+  bg: "Bulharsko",
+  al: "Alb\u00E1nie",
+  es: "\u0160pan\u011Blsko",
+  it: "It\u00E1lie",
+  gr: "\u0158ecko",
+  fr: "Francie",
+  me: "\u010Cern\u00E1 Hora",
+  tr: "Turecko",
+  pt: "Portugalsko",
+  hu: "Ma\u010Farsko",
+};
+
 type PropertyDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
@@ -34,6 +64,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
     ...(property.landArea ? [{ label: "Pozemek", value: `${property.landArea} m²` }] : []),
     { label: "Město", value: property.city },
     { label: "Městská část", value: property.district },
+    ...(property.country && property.country !== "cz" ? [{ label: "Země", value: COUNTRY_LABELS[property.country] || property.country.toUpperCase() }] : []),
     { label: "Stav", value: property.condition },
     { label: "Vlastnictví", value: property.ownership },
     { label: "Vybavení", value: property.furnishing },
@@ -97,7 +128,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {property.district}
+                {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? COUNTRY_LABELS[property.country] || property.country.toUpperCase() : undefined])}
               </div>
             </div>
             <div className="detail-price">{formatPrice(property.price, property.priceCurrency)}</div>
@@ -231,7 +262,9 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
                   Lokalita
                 </h3>
-                <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>{property.district}</div>
+                <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
+                  {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? COUNTRY_LABELS[property.country] || property.country.toUpperCase() : undefined])}
+                </div>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16 }}>
                   {property.latitude.toFixed(4)}, {property.longitude.toFixed(4)}
                 </div>

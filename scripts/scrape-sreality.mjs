@@ -61,7 +61,8 @@ const r2 = (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY)
 if (!r2) console.warn("WARNING: R2 not configured — images skipped");
 
 // ===== State =====
-const STATE_FILE = resolve(ROOT, "scripts/.scrape-state.json");
+const isForeign = process.argv.includes("--foreign");
+const STATE_FILE = resolve(ROOT, isForeign ? "scripts/.scrape-state-foreign.json" : "scripts/.scrape-state.json");
 function loadState() {
   try { return JSON.parse(readFileSync(STATE_FILE, "utf8")); }
   catch { return { seen: {}, stats: { properties: 0, agencies: 0, brokers: 0, images: 0, skipped: 0 } }; }
@@ -230,7 +231,18 @@ async function insertProperty(detail, r2Images, brokerId) {
   const name = detail.name?.value || "Nemovitost";
   const locality = detail.locality?.value || "";
   const parts = locality.split(",").map(s => s.trim());
-  const city = parts[parts.length - 1] || "Praha";
+  const lastPart = parts[parts.length - 1] || "";
+
+  // Detect foreign country from locality (e.g. "Bergstraße, Treffen, Rakousko")
+  const COUNTRY_MAP = {
+    "Rakousko": "at", "Chorvatsko": "hr", "Bulharsko": "bg",
+    "Albánie": "al", "Kypr": "cy", "Francie": "fr",
+    "Španělsko": "es", "Itálie": "it", "Řecko": "gr",
+    "Slovensko": "sk", "Německo": "de", "Maďarsko": "hu",
+    "Portugalsko": "pt", "Černá Hora": "me", "Turecko": "tr",
+  };
+  const detectedCountry = COUNTRY_MAP[lastPart] || null;
+  const city = detectedCountry ? (parts.length > 2 ? parts[parts.length - 2] : parts[0]) : (lastPart || "Praha");
   const district = parts.length > 1 ? parts[0] : city;
   const slug = slugify(name + "-" + city) + `-sr${hashId}`;
 
@@ -318,6 +330,8 @@ async function insertProperty(detail, r2Images, brokerId) {
     images: r2Images,
     featured: false, active: true,
     broker_id: brokerId || null,
+    source: "sreality",
+    country: detectedCountry || "cz",
   };
 
   // Skip listings without photos
@@ -341,7 +355,7 @@ async function main() {
   const state = loadState();
   const t0 = Date.now();
 
-  const categories = [
+  const allCategories = [
     { cat: 1, type: 1, label: "Prodej bytu" },
     { cat: 1, type: 2, label: "Pronajem bytu" },
     { cat: 2, type: 1, label: "Prodej domu" },
@@ -353,18 +367,48 @@ async function main() {
     { cat: 5, type: 1, label: "Prodej ostatni" },
     { cat: 5, type: 2, label: "Pronajem ostatni" },
   ];
+  const onlyCat = getArg("--only-cat", null);
+  const categories = onlyCat ? allCategories.filter(c => c.cat === Number(onlyCat)) : allCategories;
 
-  const ppc = Math.ceil(PAGES / categories.length);
+  // Foreign countries support: --foreign scrapes listings from abroad
+  const foreignMode = args.includes("--foreign");
+  // Sreality country IDs: 8=Albania, 40=Austria, 100=Bulgaria, 191=Croatia, 196=Cyprus
+  const FOREIGN_COUNTRIES = [
+    { id: 40, code: "at", label: "Rakousko" },
+    { id: 191, code: "hr", label: "Chorvatsko" },
+    { id: 196, code: "cy", label: "Kypr" },
+    { id: 100, code: "bg", label: "Bulharsko" },
+    { id: 8, code: "al", label: "Albánie" },
+    { id: 724, code: "es", label: "Španělsko" },
+    { id: 380, code: "it", label: "Itálie" },
+    { id: 300, code: "gr", label: "Řecko" },
+    { id: 276, code: "de", label: "Německo" },
+    { id: 250, code: "fr", label: "Francie" },
+    { id: 703, code: "sk", label: "Slovensko" },
+    { id: 499, code: "me", label: "Černá Hora" },
+    { id: 792, code: "tr", label: "Turecko" },
+    { id: 620, code: "pt", label: "Portugalsko" },
+    { id: 348, code: "hu", label: "Maďarsko" },
+  ];
+  // In foreign mode, iterate each country separately (multi-value country_id doesn't work)
+  const countryIds = foreignMode ? FOREIGN_COUNTRIES.map(c => c.id) : [null];
+
+  const ppc = Math.ceil(PAGES / (categories.length * countryIds.length));
+
+  for (const countryId of countryIds) {
+    const countryLabel = countryId ? FOREIGN_COUNTRIES.find(c => c.id === countryId)?.label : "";
+    if (countryLabel) console.log(`\n>>> ${countryLabel} <<<`);
 
   for (const c of categories) {
-    console.log(`\n== ${c.label} (${ppc} pages) ==`);
+    console.log(`\n== ${c.label}${countryLabel ? ` (${countryLabel})` : ""} (${ppc} pages) ==`);
 
     for (let page = 0; page < ppc; page++) {
       console.log(`\n  Page ${page + 1}/${ppc}`);
 
       let listings;
+      const countryQ = countryId ? `&locality_country_id=${countryId}` : "";
       try {
-        listings = (await fetchS(`${SREALITY}/estates?category_main_cb=${c.cat}&category_type_cb=${c.type}&per_page=${PER_PAGE}&page=${page}`))
+        listings = (await fetchS(`${SREALITY}/estates?category_main_cb=${c.cat}&category_type_cb=${c.type}&per_page=${PER_PAGE}&page=${page}${countryQ}`))
           ?._embedded?.estates ?? [];
       } catch (e) {
         console.error(`  Page error: ${e.message}`);
@@ -426,6 +470,7 @@ async function main() {
       saveState(state);
     }
   }
+  } // end countryIds loop
 
   saveState(state);
   const totalMin = ((Date.now() - t0) / 60000).toFixed(1);
