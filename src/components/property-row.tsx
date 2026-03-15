@@ -31,11 +31,16 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
         {property.featured && (
           <span className="property-badge property-badge--featured">Premium</span>
         )}
-        {property.showAgencyLogo && (
-          <div className="property-broker-avatar">
+        <div className="property-broker-avatar">
+          {property.showAgencyLogo ? (
             <img src="/branding/logo.png" alt={property.agencyName} />
-          </div>
-        )}
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          )}
+        </div>
         {(property.matterportUrl || property.videoUrl || property.viewsTrend === "hot") && (
           <div className="property-media-badges">
             {property.viewsTrend === "hot" && (
@@ -68,17 +73,15 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
       </div>
 
       <div className="property-row__body">
-        <div className="property-row__header">
-          <Link href={`/nemovitost/${property.slug}`} className="property-row__title">
-            {property.summary || property.imageAlt || "Nemovitost"}
-          </Link>
-        </div>
+        <Link href={`/nemovitost/${property.slug}`} className="property-row__title">
+          {property.summary || property.imageAlt || "Nemovitost"}
+        </Link>
 
-        <div className="property-row__price">
+        <span className="property-price">
           {formatPrice(property.price, property.priceCurrency)}
-        </div>
+        </span>
 
-        <div className="property-row__meta">
+        <div className="property-meta">
           <span>{PropertyCategories[property.category] ?? property.category}</span>
           {property.roomsLabel && (
             <>
@@ -94,13 +97,13 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
           )}
         </div>
 
-        <div className="property-row__location">
+        <span className="property-location">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
           {property.locationLabel || property.city || property.district}
-        </div>
+        </span>
 
         {property.description && (
           <p className="property-row__desc">
@@ -128,7 +131,7 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
               href={`mailto:${property.brokerEmail}`}
               className="property-row__action"
               onClick={(e) => e.stopPropagation()}
-              title="Napsat e-mail"
+              title={"Napsat e-mail"}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect width="20" height="16" x="2" y="4" rx="2" />
