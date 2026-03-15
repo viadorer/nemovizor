@@ -432,22 +432,62 @@ function mapPointToMapProperty(pt: MapPoint) {
   } as Property;
 }
 
+// ===== FILTER PERSISTENCE =====
+const FILTERS_KEY = "nemovizor-filters";
+
+type PersistedFilters = {
+  listingType: string | null;
+  categories: string[];
+  subtypes: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  areaMin: number | null;
+  areaMax: number | null;
+  sortBy: string;
+  locationLabel: string | null;
+};
+
+function loadPersistedFilters(): PersistedFilters | null {
+  try {
+    const raw = localStorage.getItem(FILTERS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function savePersistedFilters(f: PersistedFilters) {
+  try { localStorage.setItem(FILTERS_KEY, JSON.stringify(f)); } catch {}
+}
+
+function clearPersistedFilters() {
+  try { localStorage.removeItem(FILTERS_KEY); } catch {}
+}
+
 // ===== MAIN CONTENT =====
 function ListingsContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") as PropertyCategory | null;
   const initialListingType = searchParams.get("listingType") as ListingType | null;
-  // Filter state
-  const [listingType, setListingType] = useState<ListingType | null>(initialListingType);
-  const [categories, setCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
-  const [subtypes, setSubtypes] = useState<string[]>([]);
-  const [priceMin, setPriceMin] = useState<number | null>(null);
-  const [priceMax, setPriceMax] = useState<number | null>(null);
-  const [areaMin, setAreaMin] = useState<number | null>(null);
-  const [areaMax, setAreaMax] = useState<number | null>(null);
+
+  // Load persisted filters (URL params override persisted values)
+  const persisted = useMemo(() => loadPersistedFilters(), []);
+  const hasUrlParams = initialCategory !== null || initialListingType !== null;
+
+  // Filter state — URL params > persisted > defaults
+  const [listingType, setListingType] = useState<ListingType | null>(
+    initialListingType ?? (hasUrlParams ? null : (persisted?.listingType as ListingType | null) ?? null)
+  );
+  const [categories, setCategories] = useState<string[]>(
+    initialCategory ? [initialCategory] : (hasUrlParams ? [] : persisted?.categories ?? [])
+  );
+  const [subtypes, setSubtypes] = useState<string[]>(hasUrlParams ? [] : persisted?.subtypes ?? []);
+  const [priceMin, setPriceMin] = useState<number | null>(hasUrlParams ? null : persisted?.priceMin ?? null);
+  const [priceMax, setPriceMax] = useState<number | null>(hasUrlParams ? null : persisted?.priceMax ?? null);
+  const [areaMin, setAreaMin] = useState<number | null>(hasUrlParams ? null : persisted?.areaMin ?? null);
+  const [areaMax, setAreaMax] = useState<number | null>(hasUrlParams ? null : persisted?.areaMax ?? null);
 
   // Sort
-  const [sortBy, setSortBy] = useState<string>("featured");
+  const [sortBy, setSortBy] = useState<string>(hasUrlParams ? "featured" : persisted?.sortBy ?? "featured");
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -562,7 +602,18 @@ function ListingsContent() {
   }, [listingType, categories]);
 
   // Location label for display
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(
+    hasUrlParams ? null : persisted?.locationLabel ?? null
+  );
+
+  // Persist filters to localStorage whenever they change
+  useEffect(() => {
+    savePersistedFilters({
+      listingType, categories, subtypes,
+      priceMin, priceMax, areaMin, areaMax,
+      sortBy, locationLabel,
+    });
+  }, [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax, sortBy, locationLabel]);
 
   // Persist current search to sessionStorage (for auto-save on detail view)
   useEffect(() => {
@@ -678,6 +729,11 @@ function ListingsContent() {
     setPriceMin(null); setPriceMax(null);
     setAreaMin(null); setAreaMax(null);
     setSortBy("featured");
+    setLocationLabel(null);
+    setDebouncedBounds(null);
+    setMapBounds(null);
+    setMapFlyTo({ lat: 49.8, lon: 15.5, bbox: [12.09, 48.55, 18.86, 51.06] });
+    clearPersistedFilters();
   };
 
   // Geocode a city name via Mapy.cz Suggest API
@@ -704,6 +760,26 @@ function ListingsContent() {
     } catch {
       return null;
     }
+  }, []);
+
+  // Restore map position from persisted locationLabel on mount
+  useEffect(() => {
+    if (!hasUrlParams && persisted?.locationLabel) {
+      geocodeCity(persisted.locationLabel).then((geo) => {
+        if (geo) {
+          setMapFlyTo({ lat: geo.lat, lon: geo.lon, bbox: geo.bbox });
+          if (geo.bbox && geo.bbox.length >= 4) {
+            const bounds: MapBounds = {
+              south: geo.bbox[1], west: geo.bbox[0],
+              north: geo.bbox[3], east: geo.bbox[2],
+            };
+            setDebouncedBounds(bounds);
+            setMapBounds(bounds);
+          }
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Restore a saved search

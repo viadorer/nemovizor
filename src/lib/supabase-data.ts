@@ -294,9 +294,12 @@ export async function fetchAdjacentProperties(propertyId: string): Promise<{ pre
     sb.from("properties").select("slug, title").eq("active", true).gt("id", propertyId).order("id", { ascending: true }).limit(1),
   ]);
 
+  const prevRow = prevRes.data?.[0] as { slug: string; title: string } | undefined;
+  const nextRow = nextRes.data?.[0] as { slug: string; title: string } | undefined;
+
   return {
-    prev: prevRes.data?.[0] ? { slug: prevRes.data[0].slug, title: prevRes.data[0].title } : null,
-    next: nextRes.data?.[0] ? { slug: nextRes.data[0].slug, title: nextRes.data[0].title } : null,
+    prev: prevRow ? { slug: prevRow.slug, title: prevRow.title } : null,
+    next: nextRow ? { slug: nextRow.slug, title: nextRow.title } : null,
   };
 }
 
