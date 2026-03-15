@@ -288,15 +288,21 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
       "regional.district": (v) => set("district", v),
     };
 
-    for (const item of s.regionalStructure) {
-      const handler = regionMap[item.type];
-      if (handler) handler(item.name);
+    if (s.regionalStructure) {
+      for (const item of s.regionalStructure) {
+        const handler = regionMap[item.type];
+        if (handler) handler(item.name);
+      }
     }
 
-    // Try to extract ZIP from label (Czech format: 5 digits)
-    const zipMatch = s.label.match(/\b(\d{3}\s?\d{2})\b/);
-    if (zipMatch) {
-      set("zip", zipMatch[1].replace(/\s/g, ""));
+    // Use ZIP from suggestion or try to extract from label
+    if (s.zip) {
+      set("zip", s.zip.replace(/\s/g, ""));
+    } else {
+      const zipMatch = s.label?.match(/\b(\d{3}\s?\d{2})\b/);
+      if (zipMatch) {
+        set("zip", zipMatch[1].replace(/\s/g, ""));
+      }
     }
 
     set("latitude", s.position.lat);
