@@ -56,9 +56,13 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
 
           <div className="agency-profile-header">
             <div className="agency-profile-logo">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
-              </svg>
+              {agency.logo ? (
+                <img src={agency.logo} alt={agency.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              ) : (
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
+                </svg>
+              )}
             </div>
             <div>
               <h1 className="agency-profile-name">{agency.name}</h1>
@@ -107,10 +111,14 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                           <div className="broker-list-avatar">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                              <circle cx="12" cy="7" r="4" />
-                            </svg>
+                            {broker.photo ? (
+                              <img src={broker.photo} alt={broker.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                            ) : (
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                              </svg>
+                            )}
                           </div>
                           <div>
                             <div className="broker-list-name">{broker.name}</div>

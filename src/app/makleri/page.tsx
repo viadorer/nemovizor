@@ -187,10 +187,14 @@ export default function BrokersPage() {
             {filtered.map((broker) => (
               <Link key={broker.id} href={`/makleri/${broker.slug}`} className="broker-list-card" style={{ textDecoration: "none" }}>
                 <div className="broker-list-avatar">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
+                  {broker.photo ? (
+                    <img src={broker.photo} alt={broker.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )}
                 </div>
                 <div className="broker-list-name">{broker.name}</div>
                 <div className="broker-list-agency">{broker.agencyName}</div>

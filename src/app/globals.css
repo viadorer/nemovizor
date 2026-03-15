@@ -2386,6 +2386,8 @@ nav ul li a.active {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
   font-size: 28px;
   color: var(--text-muted);
   margin: 0 auto 16px;
@@ -2450,6 +2452,7 @@ nav ul li a.active {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   color: var(--text-muted);
   flex-shrink: 0;
   border: 3px solid var(--border-light);
@@ -2529,11 +2532,10 @@ nav ul li a.active {
 .agency-list-logo {
   width: 64px;
   height: 64px;
-  border-radius: 12px;
-  background: var(--bg-filter);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   margin-bottom: 16px;
   color: var(--text-muted);
 }
@@ -2569,14 +2571,12 @@ nav ul li a.active {
 .agency-profile-logo {
   width: 96px;
   height: 96px;
-  border-radius: 16px;
-  background: var(--bg-filter);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   color: var(--text-muted);
   flex-shrink: 0;
-  border: 2px solid var(--border-light);
 }
 .agency-profile-name {
   font-size: 1.8rem;

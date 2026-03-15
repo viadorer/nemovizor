@@ -89,6 +89,21 @@ const brokerItems: SidebarItem[] = [
     ),
   },
   {
+    href: "/dashboard/moje-struktura",
+    label: "Moje struktura",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="4" y="2" width="16" height="6" rx="1" />
+        <rect x="1" y="16" width="10" height="6" rx="1" />
+        <rect x="13" y="16" width="10" height="6" rx="1" />
+        <path d="M12 8v4" />
+        <path d="M6 12h12" />
+        <path d="M6 12v4" />
+        <path d="M18 12v4" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/poptavky",
     label: "Poptávky",
     icon: (

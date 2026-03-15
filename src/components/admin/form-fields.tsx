@@ -74,6 +74,7 @@ export function NumberField({
   placeholder,
   step,
   min,
+  max,
   suffix,
 }: {
   label: string;
@@ -82,6 +83,7 @@ export function NumberField({
   placeholder?: string;
   step?: string;
   min?: number;
+  max?: number;
   suffix?: string;
 }) {
   return (
@@ -100,6 +102,7 @@ export function NumberField({
         placeholder={placeholder}
         step={step ?? "any"}
         min={min}
+        max={max}
       />
     </div>
   );

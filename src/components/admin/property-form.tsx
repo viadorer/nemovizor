@@ -53,9 +53,13 @@ import { LivePreview } from "./live-preview";
 type PropertyFormProps = {
   mode: "create" | "edit";
   propertyId?: string;
+  /** When true, auto-assigns broker_id from logged-in user and hides broker selector */
+  brokerMode?: boolean;
+  /** Override redirect after save (default: /dashboard/sprava/nemovitosti) */
+  redirectTo?: string;
 };
 
-export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
+export function PropertyForm({ mode, propertyId, brokerMode, redirectTo }: PropertyFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<PropertyFormData>({ ...EMPTY_FORM });
   const [loading, setLoading] = useState(false);
@@ -63,6 +67,8 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [brokers, setBrokers] = useState<{ id: string; name: string }[]>([]);
+  /** In broker mode: filtered list of brokers from same agency (if any) */
+  const [agencyBrokers, setAgencyBrokers] = useState<{ id: string; name: string }[] | null>(null);
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
 
   // Accordion state: sections 1-3 open by default, 4-5 collapsed
@@ -86,7 +92,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   useEffect(() => {
     if (mode === "edit" && propertyId) {
       setLoading(true);
-      fetch(`/api/admin/properties?id=${propertyId}`)
+      fetch(`/api/${brokerMode ? "broker" : "admin"}/properties?id=${propertyId}`)
         .then((r) => r.json())
         .then((res) => {
           if (res.data) {
@@ -250,6 +256,54 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
       });
   }, []);
 
+  // In broker mode: detect logged-in user's broker/agency and load team brokers
+  useEffect(() => {
+    if (!brokerMode) return;
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+
+      // 1) Check if user is a broker
+      const { data: myBroker } = await supabase
+        .from("brokers")
+        .select("id, name, agency_id")
+        .eq("user_id", user.id)
+        .single();
+
+      // 2) Check if user is an agency owner
+      const { data: myAgency } = await supabase
+        .from("agencies")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      const agencyId = myAgency?.id || myBroker?.agency_id || null;
+
+      // Pre-select broker_id for create mode
+      if (mode === "create" && myBroker) {
+        setForm((prev) => ({ ...prev, broker_id: prev.broker_id || myBroker.id }));
+      }
+
+      // 3) If agency found, load all brokers in that agency
+      if (agencyId) {
+        const { data: teamBrokers } = await supabase
+          .from("brokers")
+          .select("id, name")
+          .eq("agency_id", agencyId)
+          .order("name");
+
+        if (teamBrokers && teamBrokers.length > 1) {
+          setAgencyBrokers(teamBrokers as { id: string; name: string }[]);
+        } else {
+          // Only one broker (self) — no need for selector
+          setAgencyBrokers(null);
+        }
+      }
+    });
+  }, [brokerMode, mode]);
+
   // Update field helper
   const set = useCallback(
     <K extends keyof PropertyFormData>(key: K, value: PropertyFormData[K]) => {
@@ -310,11 +364,18 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   }
 
   // Build payload
+  // These text columns are NOT NULL DEFAULT '' in the DB — must send "" not null
+  const NOT_NULL_TEXT_FIELDS = new Set([
+    "title", "slug", "subtype", "rooms_label", "city", "district",
+    "location_label", "summary", "image_src", "image_alt",
+    "street", "zip", "region", "city_part",
+  ]);
+
   function buildPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(form)) {
-      if (value === "" && key !== "title" && key !== "slug" && key !== "summary" && key !== "image_src" && key !== "image_alt") {
+      if (value === "" && !NOT_NULL_TEXT_FIELDS.has(key)) {
         payload[key] = null;
         continue;
       }
@@ -357,7 +418,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
     try {
       const payload = buildPayload();
 
-      const url = "/api/admin/properties";
+      const url = brokerMode ? "/api/broker/properties" : "/api/admin/properties";
       const method = mode === "create" ? "POST" : "PATCH";
 
       if (mode === "edit") {
@@ -377,7 +438,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push("/dashboard/sprava/nemovitosti");
+        router.push(redirectTo || "/dashboard/sprava/nemovitosti");
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chyba p\u0159i ukl\u00e1d\u00e1n\u00ed");
@@ -928,15 +989,28 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             />
 
             <h4 className="pf-subtitle">{"Makl\u00e9\u0159 a publikace"}</h4>
-            <div className="admin-form-group">
-              <label>{"P\u0159i\u0159azen\u00fd makl\u00e9\u0159"}</label>
-              <select value={form.broker_id} onChange={(e) => set("broker_id", e.target.value)}>
-                <option value="">{"-- Bez makl\u00e9\u0159e --"}</option>
-                {brokers.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
+            {!brokerMode ? (
+              /* Admin mode: full broker list */
+              <div className="admin-form-group">
+                <label>{"P\u0159i\u0159azen\u00fd makl\u00e9\u0159"}</label>
+                <select value={form.broker_id} onChange={(e) => set("broker_id", e.target.value)}>
+                  <option value="">{"-- Bez makl\u00e9\u0159e --"}</option>
+                  {brokers.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : agencyBrokers && agencyBrokers.length > 1 ? (
+              /* Broker mode with agency team: show team brokers */
+              <div className="admin-form-group">
+                <label>{"P\u0159i\u0159adit makl\u00e9\u0159i"}</label>
+                <select value={form.broker_id} onChange={(e) => set("broker_id", e.target.value)}>
+                  {agencyBrokers.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null /* Solo broker: broker_id auto-assigned, no selector */}
             <div className="admin-form-group">
               <label>Projekt</label>
               <select value={form.project_id} onChange={(e) => set("project_id", e.target.value)}>

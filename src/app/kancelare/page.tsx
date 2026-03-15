@@ -170,9 +170,13 @@ export default function AgenciesPage() {
             {filtered.map((agency) => (
               <Link key={agency.id} href={`/kancelare/${agency.slug}`} className="agency-list-card">
                 <div className="agency-list-logo">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
-                  </svg>
+                  {agency.logo ? (
+                    <img src={agency.logo} alt={agency.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
+                    </svg>
+                  )}
                 </div>
                 <div className="agency-list-name">{agency.name}</div>
                 <div className="agency-list-desc">{agency.description}</div>

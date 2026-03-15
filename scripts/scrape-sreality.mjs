@@ -144,7 +144,8 @@ async function upsertAgency(premise) {
   const pid = String(premise.id);
   if (agencyCache.has(pid)) return agencyCache.get(pid);
 
-  const agencyName = premise.ask?.name || premise.address?.split(",")[0] || "";
+  // FIXED: premise.address je ulice, ne nazev kancelare
+  const agencyName = premise.ask?.name || premise.company_name || premise.name || "";
   const slug = slugify(agencyName || `agency-${pid}`) + `-sr${pid}`;
 
   const { data: existing } = await sb.from("agencies").select("id").eq("slug", slug).maybeSingle();
@@ -204,7 +205,7 @@ async function upsertBroker(seller, agencyId) {
     phone: mob ? `+${mob.code}${mob.number}` : "",
     email: seller.email || "",
     photo: photoUrl || seller.image || null,
-    agency_name: premise?.ask?.name || premise?.address?.split(",")[0] || "",
+    agency_name: premise?.ask?.name || premise?.company_name || premise?.name || "",
     agency_id: agencyId || null,
     specialization: "", active_listings: 0, rating: 0, total_deals: 0, bio: "",
   }).select("id").single();

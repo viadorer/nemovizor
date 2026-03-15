@@ -227,10 +227,14 @@ export default function SpecialistePage() {
                 <Link key={`b-${item.data.id}`} href={`/makleri/${item.data.slug}`} className="specialist-card" style={{ textDecoration: "none" }}>
                   <span className="specialist-badge specialist-badge--broker">Makléř</span>
                   <div className="broker-list-avatar">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                    {item.data.photo ? (
+                      <img src={item.data.photo} alt={item.data.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    ) : (
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    )}
                   </div>
                   <div className="broker-list-name">{item.data.name}</div>
                   <div className="broker-list-agency">{item.data.agencyName}</div>
@@ -254,9 +258,13 @@ export default function SpecialistePage() {
                 <Link key={`a-${item.data.id}`} href={`/kancelare/${(item.data as Agency).slug}`} className="specialist-card" style={{ textDecoration: "none" }}>
                   <span className="specialist-badge specialist-badge--agency">Kancelář</span>
                   <div className="agency-list-logo">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
-                    </svg>
+                    {(item.data as Agency).logo ? (
+                      <img src={(item.data as Agency).logo} alt={(item.data as Agency).name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    ) : (
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
+                      </svg>
+                    )}
                   </div>
                   <div className="agency-list-name">{(item.data as Agency).name}</div>
                   <div className="agency-list-desc">{(item.data as Agency).description}</div>

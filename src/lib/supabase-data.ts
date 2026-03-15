@@ -362,17 +362,39 @@ export async function fetchBrokers(): Promise<Broker[]> {
 export async function fetchBrokerById(id: string): Promise<Broker | null> {
   if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("id", id).single();
+  const sb = getSupabase()!;
+  const { data, error } = await sb.from("brokers").select("*").eq("id", id).single();
   if (error || !data) return null;
-  return dbBrokerToApp(data);
+  const broker = dbBrokerToApp(data);
+
+  // Dynamically count active listings
+  const { count } = await sb
+    .from("properties")
+    .select("id", { count: "exact", head: true })
+    .eq("broker_id", id)
+    .eq("active", true);
+  broker.activeListings = count ?? 0;
+
+  return broker;
 }
 
 export async function fetchBrokerBySlug(slug: string): Promise<Broker | null> {
   if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("slug", slug).single();
+  const sb = getSupabase()!;
+  const { data, error } = await sb.from("brokers").select("*").eq("slug", slug).single();
   if (error || !data) return null;
-  return dbBrokerToApp(data);
+  const broker = dbBrokerToApp(data);
+
+  // Dynamically count active listings
+  const { count } = await sb
+    .from("properties")
+    .select("id", { count: "exact", head: true })
+    .eq("broker_id", broker.id)
+    .eq("active", true);
+  broker.activeListings = count ?? 0;
+
+  return broker;
 }
 
 export async function fetchBrokerProperties(brokerId: string): Promise<Property[]> {
@@ -439,20 +461,50 @@ export async function fetchAgencies(): Promise<Agency[]> {
   return agencies;
 }
 
+async function enrichAgencyStats(sb: ReturnType<typeof getSupabase> & object, agency: Agency): Promise<Agency> {
+  // Count brokers
+  const { count: brokerCount } = await sb
+    .from("brokers")
+    .select("id", { count: "exact", head: true })
+    .eq("agency_id", agency.id);
+  agency.totalBrokers = brokerCount ?? 0;
+
+  // Count active listings via brokers
+  const { data: brokerIds } = await sb
+    .from("brokers")
+    .select("id")
+    .eq("agency_id", agency.id);
+  if (brokerIds && brokerIds.length > 0) {
+    const ids = brokerIds.map((b: { id: string }) => b.id);
+    const { count: listingCount } = await sb
+      .from("properties")
+      .select("id", { count: "exact", head: true })
+      .in("broker_id", ids)
+      .eq("active", true);
+    agency.totalListings = listingCount ?? 0;
+  } else {
+    agency.totalListings = 0;
+  }
+
+  return agency;
+}
+
 export async function fetchAgencyById(id: string): Promise<Agency | null> {
   if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await getSupabase()!.from("agencies").select("*").eq("id", id).single();
+  const sb = getSupabase()!;
+  const { data, error } = await sb.from("agencies").select("*").eq("id", id).single();
   if (error || !data) return null;
-  return dbAgencyToApp(data);
+  return enrichAgencyStats(sb, dbAgencyToApp(data));
 }
 
 export async function fetchAgencyBySlug(slug: string): Promise<Agency | null> {
   if (!isSupabaseConfigured || !getSupabase()) return null;
 
-  const { data, error } = await getSupabase()!.from("agencies").select("*").eq("slug", slug).single();
+  const sb = getSupabase()!;
+  const { data, error } = await sb.from("agencies").select("*").eq("slug", slug).single();
   if (error || !data) return null;
-  return dbAgencyToApp(data);
+  return enrichAgencyStats(sb, dbAgencyToApp(data));
 }
 
 export async function fetchAgencyBrokers(agencyId: string): Promise<Broker[]> {
