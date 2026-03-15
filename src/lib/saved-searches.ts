@@ -116,14 +116,19 @@ export function generateSearchName(
     parts.push(ListingTypes[filters.listingType as ListingType] || filters.listingType);
   }
 
-  if (filters.category) {
-    const catLabel = PropertyCategories[filters.category as PropertyCategory];
-    if (filters.subtype && filters.category) {
-      const subs = subtypesByCategory[filters.category] || {};
-      parts.push(subs[filters.subtype] || filters.subtype);
-    } else if (catLabel) {
-      parts.push(catLabel);
-    }
+  const cats = filters.categories?.length ? filters.categories : filters.category ? [filters.category] : [];
+  const subs = filters.subtypes?.length ? filters.subtypes : filters.subtype ? [filters.subtype] : [];
+  if (subs.length) {
+    const labels = subs.map((s) => {
+      for (const cat of cats) {
+        const catSubs = subtypesByCategory[cat] || {};
+        if (catSubs[s]) return catSubs[s];
+      }
+      return s;
+    });
+    parts.push(labels.join(", "));
+  } else if (cats.length) {
+    parts.push(cats.map((c) => PropertyCategories[c as PropertyCategory] || c).join(", "));
   }
 
   if (locationLabel) {
@@ -150,12 +155,15 @@ export function generateSearchName(
 export function filtersToSearchParams(filters: SearchFilters): URLSearchParams {
   const p = new URLSearchParams();
   if (filters.listingType) p.set("listingType", filters.listingType);
-  if (filters.category) p.set("category", filters.category);
-  if (filters.subtype) p.set("subtype", filters.subtype);
+  const cats = filters.categories?.length ? filters.categories : filters.category ? [filters.category] : [];
+  if (cats.length) p.set("category", cats.join(","));
+  const subs = filters.subtypes?.length ? filters.subtypes : filters.subtype ? [filters.subtype] : [];
+  if (subs.length) p.set("subtype", subs.join(","));
   if (filters.city) p.set("city", filters.city);
   if (filters.priceMin) p.set("priceMin", String(filters.priceMin));
   if (filters.priceMax) p.set("priceMax", String(filters.priceMax));
   if (filters.areaMin) p.set("areaMin", String(filters.areaMin));
   if (filters.areaMax) p.set("areaMax", String(filters.areaMax));
+  if (filters.sortBy) p.set("sortBy", filters.sortBy);
   return p;
 }

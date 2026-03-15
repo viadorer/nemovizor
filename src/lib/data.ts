@@ -1613,6 +1613,7 @@ export const reviews: Review[] = [
 // ===== UTILITY FUNCTIONS =====
 
 export function formatPrice(price: number, currency?: string) {
+  if (!price) return "Na dotaz";
   const cur = (currency ?? "czk").toUpperCase();
   const localeMap: Record<string, string> = { CZK: "cs-CZ", EUR: "de-DE", GBP: "en-GB", USD: "en-US" };
   const locale = localeMap[cur] ?? "cs-CZ";

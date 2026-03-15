@@ -528,8 +528,8 @@ function ListingsContent() {
   // Build filter params object (no city — location is controlled by map bounds)
   const filters = useMemo(() => ({
     listingType, categories, subtypes, city: null as string | null,
-    priceMin, priceMax, areaMin, areaMax,
-  }), [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax]);
+    priceMin, priceMax, areaMin, areaMax, sortBy,
+  }), [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax, sortBy]);
 
   // Reset page when filters or sort change
   useEffect(() => { setPage(1); }, [filters, sortBy]);
@@ -794,12 +794,13 @@ function ListingsContent() {
   const handleRestoreSavedSearch = useCallback(async (search: SavedSearch) => {
     const f = search.filters;
     setListingType((f.listingType as ListingType) || null);
-    setCategories(f.category ? [f.category as string] : []);
-    setSubtypes(f.subtype ? [f.subtype as string] : []);
+    setCategories(f.categories?.length ? f.categories : f.category ? [f.category as string] : []);
+    setSubtypes(f.subtypes?.length ? f.subtypes : f.subtype ? [f.subtype as string] : []);
     setPriceMin(f.priceMin || null);
     setPriceMax(f.priceMax || null);
     setAreaMin(f.areaMin || null);
     setAreaMax(f.areaMax || null);
+    if (f.sortBy) setSortBy(f.sortBy);
     if (search.locationLabel) {
       setLocationLabel(search.locationLabel);
       // Geocode to set map bounds

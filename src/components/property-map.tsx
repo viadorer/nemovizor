@@ -46,6 +46,15 @@ function createPopupContent(p: Property): string {
 
 // ===== Cenový label marker (cena přímo na mapě) =====
 function createPriceLabel(p: Property) {
+  if (!p.price) {
+    return L.divIcon({
+      html: `<div class="map-price-label ${p.featured ? "map-price-label--featured" : ""}">N/A</div>`,
+      className: "map-price-wrapper",
+      iconSize: [48, 28],
+      iconAnchor: [24, 28],
+      popupAnchor: [0, -28],
+    });
+  }
   const cur = (p.priceCurrency ?? "czk").toLowerCase();
   const prefix = cur === "gbp" ? "\u00A3" : cur === "eur" ? "\u20AC" : "";
   const suffix = cur === "czk" ? " tis." : "k";

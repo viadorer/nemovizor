@@ -748,12 +748,15 @@ export type SavedSearch = {
   filters: {
     listingType?: string | null;
     category?: string | null;
+    categories?: string[];
     subtype?: string | null;
+    subtypes?: string[];
     city?: string | null;
     priceMin?: number | null;
     priceMax?: number | null;
     areaMin?: number | null;
     areaMax?: number | null;
+    sortBy?: string | null;
   };
   locationLabel?: string | null;
   createdAt: string;

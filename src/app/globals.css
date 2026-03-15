@@ -3765,27 +3765,15 @@ nav ul li a.active {
   transition: border-color 0.2s;
 }
 .ai-search-input-wrapper--hero {
-  align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
 }
-.ai-search-input-wrapper--hero .ai-search-icon {
-  margin-top: 4px;
-}
-.ai-search-input-wrapper--hero .ai-search-submit {
-  margin-top: 2px;
-}
-.ai-search-textarea {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 0.92rem;
-  font-family: inherit;
-  min-width: 0;
-  resize: none;
-  line-height: 1.5;
+.ai-search-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  letter-spacing: 0.01em;
 }
 .ai-search-input-wrapper:focus-within {
   border-color: var(--accent);
@@ -3814,9 +3802,9 @@ nav ul li a.active {
   background: var(--accent);
   color: var(--accent-text);
   border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;

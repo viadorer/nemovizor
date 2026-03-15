@@ -80,34 +80,16 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
           <circle cx="11" cy="11" r="8" />
           <path d="M21 21l-4.35-4.35" />
         </svg>
-        {compact ? (
-          <input
-            ref={inputRef as React.RefObject<HTMLInputElement>}
-            className="ai-search-input"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={"Popi\u0161te, co hled\u00e1te..."}
-            disabled={loading}
-          />
-        ) : (
-          <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            className="ai-search-input ai-search-textarea"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder={'Popi\u0161te vlastn\u00edmi slovy, co hled\u00e1te...\nnap\u0159. "Byt 3+kk v Praze do 8M" nebo "D\u016fm se zahradou na Morav\u011b"'}
-            disabled={loading}
-            rows={3}
-          />
-        )}
+        <input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          className="ai-search-input"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={"Popi\u0161te, co hled\u00e1te..."}
+          disabled={loading}
+        />
         <button
           className="ai-search-submit"
           onClick={handleSubmit}
@@ -123,6 +105,12 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
           )}
         </button>
       </div>
+
+      {!compact && (
+        <p className="ai-search-hint">
+          {"nap\u0159. \u201eByt 3+kk v Praze do 8M\u201c nebo \u201eD\u016fm se zahradou na Morav\u011b\u201c"}
+        </p>
+      )}
 
       {explanation && (
         <div className="ai-search-explanation">
