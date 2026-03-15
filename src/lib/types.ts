@@ -707,6 +707,7 @@ export type Property = {
   brokerName: string;
   brokerPhone: string;
   brokerEmail: string;
+  brokerPhoto?: string;
   agencyName: string;
   showAgencyLogo?: boolean;
   brokerId?: string;

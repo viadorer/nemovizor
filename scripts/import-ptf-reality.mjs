@@ -306,6 +306,7 @@ function convertProperty(ptf, r2Images, brokerId) {
     featured: ptf.is_featured || false,
     active: true,
     broker_id: brokerId || null,
+    created_by: "3c160468-02ec-418f-8109-4dbc3c849a8d",
     source: "ptf-reality",
     country: "cz",
   };

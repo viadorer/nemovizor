@@ -208,11 +208,15 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   Makléř
                 </h3>
                 <div className="broker-card-header">
-                  <div className="broker-avatar">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                  <div className="broker-avatar" style={{ overflow: "hidden", flexShrink: 0 }}>
+                    {broker?.photo ? (
+                      <img src={broker.photo} alt={property.brokerName} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    ) : (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <div className="broker-name">{property.brokerName}</div>
@@ -225,19 +229,23 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     )}
                   </div>
                 </div>
-                <div className="broker-contact-row">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  {property.brokerPhone}
-                </div>
-                <div className="broker-contact-row">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <path d="M22 6l-10 7L2 6" />
-                  </svg>
-                  {property.brokerEmail}
-                </div>
+                {property.brokerPhone && (
+                  <div className="broker-contact-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                    <a href={`tel:${property.brokerPhone}`} style={{ color: "inherit", textDecoration: "none" }}>{property.brokerPhone}</a>
+                  </div>
+                )}
+                {property.brokerEmail && (
+                  <div className="broker-contact-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <path d="M22 6l-10 7L2 6" />
+                    </svg>
+                    <a href={`mailto:${property.brokerEmail}`} style={{ color: "inherit", textDecoration: "none" }}>{property.brokerEmail}</a>
+                  </div>
+                )}
                 <div style={{ marginTop: 16 }}>
                   <button className="detail-cta-btn detail-cta-btn--primary">
                     Mám zájem o nabídku
@@ -253,6 +261,70 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   )}
                 </div>
               </div>
+
+              {agency && (
+                <div className="detail-sidebar-card">
+                  <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+                    Kancelář
+                  </h3>
+                  <Link href={`/kancelare/${agency.slug}`} style={{ textDecoration: "none", display: "block" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+                      <div style={{ width: 56, height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                        {agency.logo ? (
+                          <img src={agency.logo} alt={agency.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        ) : (
+                          <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--bg-filter)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5">
+                              <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "var(--text)", fontSize: "1rem" }}>{agency.name}</div>
+                        {agency.specializations.length > 0 && (
+                          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            {agency.specializations.slice(0, 2).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                  {agency.phone && (
+                    <div className="broker-contact-row">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <a href={`tel:${agency.phone}`} style={{ color: "inherit", textDecoration: "none" }}>{agency.phone}</a>
+                    </div>
+                  )}
+                  {agency.email && (
+                    <div className="broker-contact-row">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <path d="M22 6l-10 7L2 6" />
+                      </svg>
+                      <a href={`mailto:${agency.email}`} style={{ color: "inherit", textDecoration: "none" }}>{agency.email}</a>
+                    </div>
+                  )}
+                  {agency.website && (
+                    <div className="broker-contact-row">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                      <a href={agency.website} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                        {agency.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                      </a>
+                    </div>
+                  )}
+                  <div style={{ marginTop: 12 }}>
+                    <Link href={`/kancelare/${agency.slug}`} className="detail-cta-btn detail-cta-btn--secondary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+                      Zobrazit profil kanceláře
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {property.listingType === "sale" && (
                 <MortgageCalculator propertyPrice={property.price} priceCurrency={property.priceCurrency} />

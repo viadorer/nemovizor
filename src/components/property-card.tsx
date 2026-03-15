@@ -30,7 +30,9 @@ export const PropertyCard = memo(function PropertyCard({ property }: PropertyCar
           <span className="property-badge property-badge--featured">Premium</span>
         )}
         <div className="property-broker-avatar">
-          {property.showAgencyLogo ? (
+          {property.brokerPhoto ? (
+            <img src={property.brokerPhoto} alt={property.brokerName} />
+          ) : property.showAgencyLogo ? (
             <img src="/branding/logo.png" alt={property.agencyName} />
           ) : (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

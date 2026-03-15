@@ -139,6 +139,7 @@ function dbPropertyToApp(row: DbProperty, broker?: DbBroker | null): Property {
     brokerName: broker?.name ?? "",
     brokerPhone: broker?.phone ?? "",
     brokerEmail: broker?.email ?? "",
+    brokerPhoto: broker?.photo ?? undefined,
     agencyName: broker?.agency_name ?? "",
     brokerId: row.broker_id ?? undefined,
     featured: row.featured,
