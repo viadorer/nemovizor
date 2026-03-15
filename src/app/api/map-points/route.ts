@@ -45,6 +45,24 @@ export async function GET(req: NextRequest) {
   const subtype = sp.get("subtype");
   const city = sp.get("city");
 
+  // Broker / Agency filter
+  let brokerIds: string[] | null = null;
+  const brokerId = sp.get("broker_id");
+  const agencyId = sp.get("agency_id");
+  if (brokerId) {
+    brokerIds = [brokerId];
+  } else if (agencyId) {
+    const { data: agencyBrokers } = await client
+      .from("brokers")
+      .select("id")
+      .eq("agency_id", agencyId);
+    if (agencyBrokers && agencyBrokers.length > 0) {
+      brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
+    } else {
+      return NextResponse.json({ points: [], count: 0, total: 0, truncated: false });
+    }
+  }
+
   function buildQuery() {
     let q = client!
       .from("properties")
@@ -63,6 +81,7 @@ export async function GET(req: NextRequest) {
       q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
     }
     if (city) q = q.eq("city", city);
+    if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
     if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
     if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
     if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
@@ -103,6 +122,7 @@ export async function GET(req: NextRequest) {
       q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
     }
     if (city) q = q.eq("city", city);
+    if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
     if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
     if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
     if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));

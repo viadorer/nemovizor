@@ -14,16 +14,38 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const listingType = sp.get("listing_type") || null;
   const category = sp.get("category") || null;
+  const brokerId = sp.get("broker_id") || null;
+  const agencyId = sp.get("agency_id") || null;
+
+  // Resolve broker IDs for agency filter
+  let brokerIds: string[] | null = null;
+  if (brokerId) {
+    brokerIds = [brokerId];
+  } else if (agencyId) {
+    const { data: agencyBrokers } = await client
+      .from("brokers")
+      .select("id")
+      .eq("agency_id", agencyId);
+    if (agencyBrokers && agencyBrokers.length > 0) {
+      brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
+    } else {
+      return NextResponse.json({
+        categories: [], cities: [], subtypes: [], listingTypes: [],
+        priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
+      });
+    }
+  }
 
   // Use fallback approach (standard Supabase queries, no custom RPC needed)
-  return await fallbackFilterOptions(client, listingType, category);
+  return await fallbackFilterOptions(client, listingType, category, brokerIds);
 }
 
 /** Fallback using standard Supabase queries (no custom RPC needed) */
 async function fallbackFilterOptions(
   client: ReturnType<typeof getSupabase>,
   listingType: string | null,
-  category: string | null
+  category: string | null,
+  brokerIds: string[] | null = null,
 ) {
   if (!client) return NextResponse.json({ error: "No client" }, { status: 503 });
 
@@ -37,6 +59,9 @@ async function fallbackFilterOptions(
   if (category) {
     const cats = category.split(",");
     query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
+  }
+  if (brokerIds) {
+    query = brokerIds.length === 1 ? query.eq("broker_id", brokerIds[0]) : query.in("broker_id", brokerIds);
   }
 
   const { data, error } = await query;

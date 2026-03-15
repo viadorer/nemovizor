@@ -35,6 +35,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) { console.error("Missing SUPABASE env vars")
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DRY_RUN = process.argv.includes("--dry-run");
+const FORCE = process.argv.includes("--force");
 
 // Detekce: nazev vypada jako adresa
 function looksLikeAddress(name) {
@@ -141,15 +142,19 @@ async function main() {
   }
 
   // Potvrdit
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await new Promise(resolve => {
-    rl.question(`\nProvest ${autoFixes.length} oprav? (y/n): `, resolve);
-  });
-  rl.close();
+  if (!FORCE) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise(resolve => {
+      rl.question(`\nProvest ${autoFixes.length} oprav? (y/n): `, resolve);
+    });
+    rl.close();
 
-  if (answer.toLowerCase() !== "y") {
-    console.log("Zruseno.");
-    return;
+    if (answer.toLowerCase() !== "y") {
+      console.log("Zruseno.");
+      return;
+    }
+  } else {
+    console.log(`\n--force: provadim ${autoFixes.length} oprav...`);
   }
 
   // Provest opravy

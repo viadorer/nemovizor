@@ -49,6 +49,26 @@ export async function GET(req: NextRequest) {
     query = subs.length === 1 ? query.eq("subtype", subs[0]) : query.in("subtype", subs);
   }
   if (city) query = query.eq("city", city);
+
+  // Broker / Agency filter
+  const brokerId = sp.get("broker_id");
+  const agencyId = sp.get("agency_id");
+  if (brokerId) {
+    query = query.eq("broker_id", brokerId);
+  } else if (agencyId) {
+    const { data: agencyBrokers } = await client
+      .from("brokers")
+      .select("id")
+      .eq("agency_id", agencyId);
+    if (agencyBrokers && agencyBrokers.length > 0) {
+      const ids = agencyBrokers.map((b: { id: string }) => b.id);
+      query = query.in("broker_id", ids);
+    } else {
+      // No brokers in agency → no results
+      return NextResponse.json({ data: [], total: 0, page, pages: 0, limit });
+    }
+  }
+
   if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
   if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));
   if (sp.get("area_min")) query = query.gte("area", Number(sp.get("area_min")));

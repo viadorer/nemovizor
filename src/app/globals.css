@@ -1106,6 +1106,88 @@ nav ul li a.active {
   height: calc(100vh - 64px);
 }
 
+/* Embedded listings in broker/agency profile pages */
+.profile-listings .search-layout {
+  height: calc(100vh - 200px);
+  min-height: 500px;
+}
+
+.profile-listings .search-page {
+  padding: 0;
+}
+
+/* ===== PROFILE TABS ===== */
+.profile-tabs-wrapper {
+  margin-top: 24px;
+}
+
+.profile-tabs-bar {
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  background: var(--bg);
+}
+
+.profile-tabs-list {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.profile-tabs-list::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-tab-btn:hover {
+  color: var(--text);
+}
+
+.profile-tab-btn--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.profile-tab-count {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.profile-tab-btn--active .profile-tab-count {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.profile-tab-content--fullwidth {
+  /* listings tab takes full viewport width */
+}
+
+.profile-tab-content:not(.profile-tab-content--fullwidth) {
+  /* container-width tabs are handled by their own .container inside */
+}
+
 .search-sidebar {
   width: 55%;
   height: 100%;
@@ -2370,6 +2452,8 @@ nav ul li a.active {
   padding: 24px;
   text-align: center;
   transition: all 0.25s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .broker-list-card:hover {

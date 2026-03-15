@@ -2,6 +2,49 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Property, Broker, Agency, Branch, Review, PropertyFilters } from "./types";
 import type { Database } from "./supabase-types";
 
+// ===== Helpers: paginated fetching (Supabase 1000-row limit) =====
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function countPropertiesPerBroker(sb: any): Promise<Record<string, number>> {
+  const countMap: Record<string, number> = {};
+  let from = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data } = await sb
+      .from("properties")
+      .select("broker_id")
+      .eq("active", true)
+      .not("broker_id", "is", null)
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    for (const p of data as { broker_id: string }[]) {
+      countMap[p.broker_id] = (countMap[p.broker_id] || 0) + 1;
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return countMap;
+}
+
+async function fetchAllFromTable(sb: any, table: string, select: string, orderBy = "name"): Promise<any[]> {
+  const all: any[] = [];
+  let from = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data } = await sb
+      .from(table)
+      .select(select)
+      .order(orderBy)
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 // ===== Supabase → App konverze =====
 
 type DbProperty = Database["public"]["Tables"]["properties"]["Row"];
@@ -336,25 +379,15 @@ export async function fetchBrokers(): Promise<Broker[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
   const sb = getSupabase()!;
-  const { data, error } = await sb.from("brokers").select("*").order("name");
-  if (error) return [];
+  const allData = await fetchAllFromTable(sb, "brokers", "*", "name");
+  if (!allData.length) return [];
 
-  const brokers = (data ?? []).map(dbBrokerToApp);
+  const brokers = allData.map(dbBrokerToApp);
 
-  // Dynamically count active listings per broker
-  const { data: props } = await sb
-    .from("properties")
-    .select("broker_id")
-    .eq("active", true)
-    .not("broker_id", "is", null);
-  if (props) {
-    const countMap: Record<string, number> = {};
-    for (const p of props as { broker_id: string }[]) {
-      countMap[p.broker_id] = (countMap[p.broker_id] || 0) + 1;
-    }
-    for (const b of brokers) {
-      b.activeListings = countMap[b.id] ?? 0;
-    }
+  // Dynamically count active listings per broker (paginated)
+  const countMap = await countPropertiesPerBroker(sb);
+  for (const b of brokers) {
+    b.activeListings = countMap[b.id] ?? 0;
   }
 
   return brokers;
@@ -374,7 +407,7 @@ export async function fetchBrokerById(id: string): Promise<Broker | null> {
     .select("id", { count: "exact", head: true })
     .eq("broker_id", id)
     .eq("active", true);
-  broker.activeListings = count ?? 0;
+  if (count !== null) broker.activeListings = count;
 
   return broker;
 }
@@ -393,7 +426,7 @@ export async function fetchBrokerBySlug(slug: string): Promise<Broker | null> {
     .select("id", { count: "exact", head: true })
     .eq("broker_id", broker.id)
     .eq("active", true);
-  broker.activeListings = count ?? 0;
+  if (count !== null) broker.activeListings = count;
 
   return broker;
 }
@@ -420,43 +453,33 @@ export async function fetchAgencies(): Promise<Agency[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
   const sb = getSupabase()!;
-  const { data, error } = await sb.from("agencies").select("*").order("name");
-  if (error) return [];
+  const allData = await fetchAllFromTable(sb, "agencies", "*", "name");
+  if (!allData.length) return [];
 
-  const agencies = (data ?? []).map(dbAgencyToApp);
+  const agencies = allData.map(dbAgencyToApp);
 
-  // Dynamically count brokers per agency and listings via broker->property
-  const { data: brokersData } = await sb.from("brokers").select("id, agency_id");
-  if (brokersData) {
-    const brokersByAgency: Record<string, string[]> = {};
-    for (const b of brokersData as { id: string; agency_id: string }[]) {
-      if (!b.agency_id) continue;
-      (brokersByAgency[b.agency_id] ??= []).push(b.id);
-    }
-    for (const a of agencies) {
-      a.totalBrokers = brokersByAgency[a.id]?.length ?? 0;
-    }
+  // Dynamically count brokers per agency
+  const brokersData = await fetchAllFromTable(sb, "brokers", "id, agency_id", "name");
+  const brokersByAgency: Record<string, string[]> = {};
+  const brokerToAgency: Record<string, string> = {};
+  for (const b of brokersData as { id: string; agency_id: string }[]) {
+    if (!b.agency_id) continue;
+    (brokersByAgency[b.agency_id] ??= []).push(b.id);
+    brokerToAgency[b.id] = b.agency_id;
+  }
+  for (const a of agencies) {
+    a.totalBrokers = brokersByAgency[a.id]?.length ?? 0;
+  }
 
-    // Count listings per agency (via broker_id)
-    const { data: props } = await sb
-      .from("properties")
-      .select("broker_id")
-      .eq("active", true)
-      .not("broker_id", "is", null);
-    if (props) {
-      const brokerToAgency: Record<string, string> = {};
-      for (const b of brokersData as { id: string; agency_id: string }[]) {
-        if (b.agency_id) brokerToAgency[b.id] = b.agency_id;
-      }
-      const listingsByAgency: Record<string, number> = {};
-      for (const p of props as { broker_id: string }[]) {
-        const aid = brokerToAgency[p.broker_id];
-        if (aid) listingsByAgency[aid] = (listingsByAgency[aid] || 0) + 1;
-      }
-      for (const a of agencies) {
-        a.totalListings = listingsByAgency[a.id] ?? 0;
-      }
-    }
+  // Count listings per agency (via broker_id) — paginated
+  const countMap = await countPropertiesPerBroker(sb);
+  const listingsByAgency: Record<string, number> = {};
+  for (const [brokerId, cnt] of Object.entries(countMap)) {
+    const aid = brokerToAgency[brokerId];
+    if (aid) listingsByAgency[aid] = (listingsByAgency[aid] || 0) + cnt;
+  }
+  for (const a of agencies) {
+    a.totalListings = listingsByAgency[a.id] ?? 0;
   }
 
   return agencies;
@@ -511,9 +534,18 @@ export async function fetchAgencyBySlug(slug: string): Promise<Agency | null> {
 export async function fetchAgencyBrokers(agencyId: string): Promise<Broker[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await getSupabase()!.from("brokers").select("*").eq("agency_id", agencyId).order("name");
+  const sb = getSupabase()!;
+  const { data, error } = await sb.from("brokers").select("*").eq("agency_id", agencyId).order("name");
   if (error) return [];
-  return (data ?? []).map(dbBrokerToApp);
+  const brokers = (data ?? []).map(dbBrokerToApp);
+
+  // Dynamically count active listings per broker (paginated to avoid 1000-row limit)
+  const countMap = await countPropertiesPerBroker(sb);
+  for (const b of brokers) {
+    b.activeListings = countMap[b.id] ?? 0;
+  }
+
+  return brokers;
 }
 
 export async function fetchAgencyBranches(agencyId: string): Promise<Branch[]> {
