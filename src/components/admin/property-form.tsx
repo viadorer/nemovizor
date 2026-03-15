@@ -472,7 +472,13 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
               <SelectField
                 label="Podtyp"
                 value={form.subtype}
-                onChange={(v) => set("subtype", v)}
+                onChange={(v) => {
+                  set("subtype", v);
+                  // Auto-fill rooms_label for apartments
+                  if (form.category === "apartment" && v && /^\d\+/.test(v)) {
+                    set("rooms_label", v);
+                  }
+                }}
                 options={currentSubtypes}
               />
               <TextField
