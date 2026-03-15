@@ -1430,7 +1430,6 @@ nav ul li a.active {
 
 .property-row {
   display: flex;
-  gap: 16px;
   background: var(--bg-primary);
   border: 1px solid var(--border-light);
   border-radius: 12px;
@@ -1444,11 +1443,9 @@ nav ul li a.active {
 
 .property-row__image-wrapper {
   position: relative;
-  flex: 0 0 260px;
-  aspect-ratio: 4 / 3;
+  flex: 0 0 280px;
   overflow: hidden;
-  border-radius: 12px;
-  margin: 10px 0 10px 10px;
+  border-radius: 12px 0 0 12px;
 }
 .property-row__image-link {
   display: block;
@@ -1460,7 +1457,6 @@ nav ul li a.active {
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px;
 }
 .property-row__image-wrapper .property-badge {
   position: absolute;
@@ -1489,7 +1485,7 @@ nav ul li a.active {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 14px 16px 14px 0;
+  padding: 14px 16px;
   min-width: 0;
 }
 
