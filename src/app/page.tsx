@@ -109,7 +109,7 @@ export default function Home() {
                 Najděte svůj nový domov
               </h1>
               <p className="hero-sub">
-                {stats.total > 0 ? `${stats.total.toLocaleString("cs")} nemovitostí` : "Tisíce nemovitostí"} z celé České republiky na jednom místě
+                {stats.total > 0 ? `${stats.total.toLocaleString("cs")} nemovitost\u00ed` : "Tis\u00edce nemovitost\u00ed"} na jednom m\u00edst\u011b
               </p>
 
               <div className="hero-search">

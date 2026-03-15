@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { PropertyCard } from "@/components/property-card";
+import { PropertyRow } from "@/components/property-row";
 import { SiteHeader } from "@/components/site-header";
 import type { Property } from "@/lib/types";
 import type { MapBounds } from "@/components/property-map";
@@ -515,6 +516,7 @@ function ListingsContent() {
   const [debouncedBounds, setDebouncedBounds] = useState<MapBounds | null>(null);
   const boundsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -934,14 +936,40 @@ function ListingsContent() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <option value="featured">Doporučené</option>
-                  <option value="newest">Nejnovější</option>
-                  <option value="oldest">Nejstarší</option>
-                  <option value="price_desc">Nejdražší</option>
-                  <option value="price_asc">Nejlevnější</option>
-                  <option value="area_desc">Největší plocha</option>
-                  <option value="area_asc">Nejmenší plocha</option>
+                  <option value="featured">{"Doporu\u010den\u00e9"}</option>
+                  <option value="newest">{"Nejnov\u011bj\u0161\u00ed"}</option>
+                  <option value="oldest">{"Nejstar\u0161\u00ed"}</option>
+                  <option value="price_desc">{"Nejdra\u017e\u0161\u00ed"}</option>
+                  <option value="price_asc">{"Nejlevn\u011bj\u0161\u00ed"}</option>
+                  <option value="area_desc">{"Nejv\u011bt\u0161\u00ed plocha"}</option>
+                  <option value="area_asc">{"Nejmen\u0161\u00ed plocha"}</option>
                 </select>
+                <div className="view-toggle">
+                  <button
+                    className={`view-toggle__btn ${viewMode === "grid" ? "view-toggle__btn--active" : ""}`}
+                    onClick={() => setViewMode("grid")}
+                    title="M\u0159\u00ed\u017eka"
+                    aria-label="Zobrazen\u00ed m\u0159\u00ed\u017ekou"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                      <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                  </button>
+                  <button
+                    className={`view-toggle__btn ${viewMode === "list" ? "view-toggle__btn--active" : ""}`}
+                    onClick={() => setViewMode("list")}
+                    title="Seznam"
+                    aria-label="Zobrazen\u00ed seznamem"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" />
+                      <path d="M3 6h.01" /><path d="M3 12h.01" /><path d="M3 18h.01" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               </div>
             </div>
@@ -953,7 +981,7 @@ function ListingsContent() {
                 </div>
               ) : (
                 <>
-                  <div className="search-results-grid" ref={(el) => {
+                  <div className={isMobile ? "search-results-grid" : viewMode === "list" ? "search-results-list" : "search-results-grid"} ref={(el) => {
                     if (el && properties.length > 0) {
                       try { sessionStorage.setItem("listing-slugs", JSON.stringify(properties.map(p => p.slug))); } catch {}
                     }
@@ -964,12 +992,18 @@ function ListingsContent() {
                         onMouseEnter={() => setSelectedPropertyId(property.id)}
                         onMouseLeave={() => setSelectedPropertyId(null)}
                       >
-                        <PropertyCard property={property} />
+                        {isMobile ? (
+                          <PropertyRow property={property} />
+                        ) : viewMode === "list" ? (
+                          <PropertyRow property={property} />
+                        ) : (
+                          <PropertyCard property={property} />
+                        )}
                       </div>
                     ))}
                     {properties.length === 0 && !loading && (
                       <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                        Žádné nemovitosti neodpovídají zadaným filtrům.
+                        {"\u017d\u00e1dn\u00e9 nemovitosti neodpov\u00eddaj\u00ed zadan\u00fdm filtr\u016fm."}
                       </div>
                     )}
                   </div>

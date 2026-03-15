@@ -20,7 +20,7 @@ export default function RegisterPage() {
     if (!supabase) return;
 
     if (password !== passwordConfirm) {
-      setError("Hesla se neshoduji");
+      setError("Hesla se neshoduj\u00ed");
       return;
     }
 
@@ -60,13 +60,12 @@ export default function RegisterPage() {
   if (success) {
     return (
       <>
-        <h1 className="auth-title">Overeni e-mailu</h1>
+        <h1 className="auth-title">{"\u004fv\u011b\u0159en\u00ed e-mailu"}</h1>
         <div className="auth-success">
-          Na adresu <strong>{email}</strong> jsme odeslali overovaci odkaz.
-          Kliknete na nej pro dokonceni registrace.
+          {"Na adresu "}<strong>{email}</strong>{" jsme odeslali ov\u011b\u0159ovac\u00ed odkaz. Klikn\u011bte na n\u011bj pro dokon\u010den\u00ed registrace."}
         </div>
         <p className="auth-switch">
-          <Link href="/prihlaseni">Zpet na prihlaseni</Link>
+          <Link href="/prihlaseni">{"Zp\u011bt na p\u0159ihl\u00e1\u0161en\u00ed"}</Link>
         </p>
       </>
     );
@@ -80,7 +79,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleRegister} className="auth-form">
         <label className="auth-label">
-          Jmeno a prijmeni
+          {"Jm\u00e9no a p\u0159\u00edjmen\u00ed"}
           <input
             type="text"
             value={fullName}
@@ -150,11 +149,11 @@ export default function RegisterPage() {
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
         </svg>
-        Registrovat pres Google
+        {"Registrovat p\u0159es Google"}
       </button>
 
       <p className="auth-switch">
-        Uz mate ucet? <Link href="/prihlaseni">Prihlaste se</Link>
+        {"U\u017e m\u00e1te \u00fa\u010det? "}<Link href="/prihlaseni">{"\u0050\u0159ihla\u0161te se"}</Link>
       </p>
     </>
   );

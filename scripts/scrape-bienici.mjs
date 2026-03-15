@@ -196,6 +196,8 @@ async function insertProperty(ad, r2Images) {
     images: r2Images,
     featured: false,
     active: true,
+    source: "bienici",
+    country: "fr",
   };
 
   const { error } = await sb.from("properties").insert(property);

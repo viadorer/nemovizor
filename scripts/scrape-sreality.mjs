@@ -390,8 +390,13 @@ async function main() {
     { id: 620, code: "pt", label: "Portugalsko" },
     { id: 348, code: "hu", label: "Maďarsko" },
   ];
+  // Filter to specific country code(s) with --country es,it
+  const onlyCountry = getArg("--country", null);
+  const filteredCountries = onlyCountry
+    ? FOREIGN_COUNTRIES.filter(c => onlyCountry.split(",").includes(c.code))
+    : FOREIGN_COUNTRIES;
   // In foreign mode, iterate each country separately (multi-value country_id doesn't work)
-  const countryIds = foreignMode ? FOREIGN_COUNTRIES.map(c => c.id) : [null];
+  const countryIds = foreignMode ? filteredCountries.map(c => c.id) : [null];
 
   const ppc = Math.ceil(PAGES / (categories.length * countryIds.length));
 

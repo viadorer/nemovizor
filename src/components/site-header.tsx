@@ -113,7 +113,7 @@ export function SiteHeader() {
                   className="user-avatar-btn"
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  aria-label="Uzivatelske menu"
+                  aria-label="Uživatelské menu"
                 >
                   {user.user_metadata?.avatar_url ? (
                     <img
@@ -148,7 +148,7 @@ export function SiteHeader() {
                         <circle cx="12" cy="12" r="3" />
                         <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                       </svg>
-                      Nastaveni
+                      Nastavení
                     </Link>
                     <div className="user-dropdown-divider" />
                     <button type="button" className="user-dropdown-item user-dropdown-logout" onClick={handleSignOut}>
@@ -157,7 +157,7 @@ export function SiteHeader() {
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
                       </svg>
-                      Odhlasit se
+                      Odhlásit se
                     </button>
                   </div>
                 )}
@@ -173,7 +173,7 @@ export function SiteHeader() {
           <button
             className="hamburger-btn"
             onClick={() => setMenuOpen(true)}
-            aria-label="Otevrit menu"
+            aria-label="Otevřít menu"
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -194,7 +194,7 @@ export function SiteHeader() {
           <button
             className="mobile-menu-close"
             onClick={() => setMenuOpen(false)}
-            aria-label="Zavrit menu"
+            aria-label="Zavřít menu"
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -223,7 +223,7 @@ export function SiteHeader() {
         <div className="mobile-menu-footer">
           <div className="mobile-menu-theme">
             <ThemeToggle />
-            <span>Prepnout rezim</span>
+            <span>Přepnout režim</span>
           </div>
           {user ? (
             <>
@@ -250,7 +250,7 @@ export function SiteHeader() {
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
-                Odhlasit se
+                Odhlásit se
               </button>
             </>
           ) : (
@@ -259,7 +259,7 @@ export function SiteHeader() {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              Prihlasit
+              Přihlásit
             </Link>
           )}
         </div>
