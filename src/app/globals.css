@@ -902,8 +902,8 @@ nav ul li a.active {
   margin: 0 0 20px 0;
 }
 
-/* ===== PROPERTY ROW (horizontal scroll on homepage) ===== */
-.property-row {
+/* ===== PROPERTY SCROLL ROW (horizontal scroll on homepage) ===== */
+.property-scroll-row {
   display: flex;
   gap: 20px;
   overflow-x: auto;
@@ -913,7 +913,7 @@ nav ul li a.active {
   scrollbar-width: none;
 }
 
-.property-row::-webkit-scrollbar {
+.property-scroll-row::-webkit-scrollbar {
   display: none;
 }
 
@@ -3200,8 +3200,12 @@ nav ul li a.active {
     border-top: 1px solid var(--border-light);
   }
 
+  .search-results-scroll {
+    padding: 12px;
+  }
   .search-results-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .navbar {
