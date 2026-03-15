@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, DragEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
 import {
@@ -47,25 +47,6 @@ import {
   PhaseDistributions,
   type PropertyCategory,
 } from "@/lib/types";
-
-// ===== STEP DEFINITIONS =====
-const STEPS = [
-  { key: "basic", label: "Z\u00e1kladn\u00ed \u00fadaje" },
-  { key: "price", label: "Cena" },
-  { key: "location", label: "Lokace" },
-  { key: "areas", label: "Plochy" },
-  { key: "description", label: "Popis" },
-  { key: "condition", label: "Stav a parametry" },
-  { key: "floors", label: "Podla\u017e\u00ed a parkov\u00e1n\u00ed" },
-  { key: "amenities", label: "Vybaven\u00ed" },
-  { key: "heating", label: "Top\u011bn\u00ed" },
-  { key: "infrastructure", label: "Infrastruktura" },
-  { key: "financial", label: "Finan\u010dn\u00ed \u00fadaje" },
-  { key: "special", label: "Pron\u00e1jem / Dra\u017eba / Pod\u00edly" },
-  { key: "dates", label: "Datumy a status" },
-  { key: "media", label: "M\u00e9dia" },
-  { key: "assignment", label: "Makl\u00e9\u0159 a publikace" },
-] as const;
 
 // ===== FORM DATA TYPE (mirrors DB columns exactly) =====
 type PropertyFormData = {
@@ -401,6 +382,18 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
+function formatPreviewPrice(price: number, currency?: string): string {
+  if (!price) return "Na dotaz";
+  const cur = (currency || "czk").toUpperCase();
+  const localeMap: Record<string, string> = { CZK: "cs-CZ", EUR: "de-DE", GBP: "en-GB", USD: "en-US" };
+  const symbolMap: Record<string, string> = { CZK: "K\u010d", EUR: "\u20ac", GBP: "\u00a3", USD: "$" };
+  const locale = localeMap[cur] || "cs-CZ";
+  const sym = symbolMap[cur] || "K\u010d";
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(price) + " " + sym;
+}
+
+// ===== FIELD COMPONENTS =====
+
 function SelectField({
   label,
   value,
@@ -641,7 +634,7 @@ function TagsField({
                 addTag();
               }
             }}
-            placeholder={placeholder ?? "Přidat..."}
+            placeholder={placeholder ?? "P\u0159idat..."}
           />
           <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={addTag}>
             +
@@ -652,89 +645,545 @@ function TagsField({
   );
 }
 
-function ImageListField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
-  const [input, setInput] = useState("");
+// ===== ACCORDION SECTION COMPONENT =====
 
-  function addUrl() {
-    const url = input.trim();
-    if (url && !value.includes(url)) {
-      onChange([...value, url]);
+function AccordionSection({
+  title,
+  sectionKey,
+  openSections,
+  toggle,
+  children,
+}: {
+  title: string;
+  sectionKey: string;
+  openSections: Set<string>;
+  toggle: (key: string) => void;
+  children: React.ReactNode;
+}) {
+  const isOpen = openSections.has(sectionKey);
+  return (
+    <div className={`pf-accordion${isOpen ? " pf-accordion--open" : ""}`}>
+      <button
+        type="button"
+        className="pf-accordion__header"
+        onClick={() => toggle(sectionKey)}
+        aria-expanded={isOpen}
+      >
+        <span className="pf-accordion__title">{title}</span>
+        <svg
+          className="pf-accordion__chevron"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {isOpen && <div className="pf-accordion__body">{children}</div>}
+    </div>
+  );
+}
+
+// ===== ADDRESS AUTOCOMPLETE =====
+
+type MapySuggestion = {
+  name: string;
+  label: string;
+  position: { lat: number; lon: number };
+  regionalStructure: { type: string; name: string }[];
+};
+
+function AddressAutocomplete({
+  onSelect,
+  isLand,
+}: {
+  onSelect: (s: MapySuggestion) => void;
+  isLand: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<MapySuggestion[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const apiKey = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_MAPYCZ_API_KEY ?? "")
+    : "";
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
     }
-    setInput("");
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleChange(val: string) {
+    setQuery(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    if (!apiKey || val.trim().length < 3) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://api.mapy.cz/v1/suggest?lang=cs&limit=5&type=regional.address&query=${encodeURIComponent(val)}`,
+          { headers: { "X-Mapy-Api-Key": apiKey } }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setSuggestions(data.items || []);
+        setShowDropdown(true);
+      } catch {
+        /* silently fail */
+      }
+    }, 300);
   }
 
-  function removeUrl(idx: number) {
-    onChange(value.filter((_, i) => i !== idx));
+  function handleSelect(s: MapySuggestion) {
+    setQuery(s.label);
+    setShowDropdown(false);
+    onSelect(s);
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="admin-form-group">
+        <label>{"Vyhled\u00e1v\u00e1n\u00ed adresy"}</label>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={"Zadejte adresu ru\u010dn\u011b n\u00ed\u017ee..."}
+        />
+        {isLand && (
+          <p className="pf-hint">{"U pozemk\u016f adresa nemus\u00ed existovat \u2014 zadejte \u00fadaje ru\u010dn\u011b."}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-form-group pf-address-suggest" ref={wrapRef}>
+      <label>
+        {"Vyhledat adresu (Mapy.cz)"}
+      </label>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder={"Za\u010dn\u011bte ps\u00e1t adresu..."}
+        onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+      />
+      {isLand && (
+        <p className="pf-hint">{"U pozemk\u016f adresa nemus\u00ed existovat \u2014 zadejte \u00fadaje ru\u010dn\u011b."}</p>
+      )}
+      {showDropdown && suggestions.length > 0 && (
+        <ul className="pf-address-suggest__dropdown">
+          {suggestions.map((s, i) => (
+            <li key={i}>
+              <button type="button" onClick={() => handleSelect(s)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>{s.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ===== DRAG & DROP IMAGE UPLOAD =====
+
+type UploadingFile = {
+  id: string;
+  name: string;
+  progress: number;
+  error?: string;
+};
+
+function ImageDropZone({
+  images,
+  onImagesChange,
+  imageSrc,
+  onImageSrcChange,
+}: {
+  images: string[];
+  onImagesChange: (v: string[]) => void;
+  imageSrc: string;
+  onImageSrcChange: (v: string) => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState<UploadingFile[]>([]);
+  const [urlInput, setUrlInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+
+  async function uploadFile(file: File): Promise<string | null> {
+    if (!ACCEPTED.includes(file.type)) {
+      return null;
+    }
+    if (file.size > MAX_SIZE) {
+      return null;
+    }
+
+    const id = Math.random().toString(36).slice(2);
+    setUploading((prev) => [...prev, { id, name: file.name, progress: 0 }]);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("mediaType", "image");
+
+      const xhr = new XMLHttpRequest();
+      const url = await new Promise<string | null>((resolve) => {
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploading((prev) => prev.map((u) => (u.id === id ? { ...u, progress: pct } : u)));
+          }
+        });
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve(data.url || null);
+            } catch {
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        });
+        xhr.addEventListener("error", () => resolve(null));
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
+      });
+
+      setUploading((prev) => prev.filter((u) => u.id !== id));
+      return url;
+    } catch {
+      setUploading((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, error: "Chyba" } : u))
+      );
+      return null;
+    }
+  }
+
+  async function handleFiles(files: FileList | File[]) {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(
+      (f) => ACCEPTED.includes(f.type) && f.size <= MAX_SIZE
+    );
+
+    const urls: string[] = [];
+    for (const file of validFiles) {
+      const url = await uploadFile(file);
+      if (url) urls.push(url);
+    }
+
+    if (urls.length > 0) {
+      const newImages = [...images, ...urls];
+      onImagesChange(newImages);
+      // Auto-set main image if empty
+      if (!imageSrc) {
+        onImageSrcChange(newImages[0]);
+      }
+    }
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    setDragging(true);
+  }
+
+  function handleDragLeave(e: DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }
+
+  function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+      e.target.value = "";
+    }
+  }
+
+  function addUrl() {
+    const url = urlInput.trim();
+    if (url && !images.includes(url)) {
+      const newImages = [...images, url];
+      onImagesChange(newImages);
+      if (!imageSrc) onImageSrcChange(url);
+    }
+    setUrlInput("");
+  }
+
+  function removeImage(idx: number) {
+    const removed = images[idx];
+    const newImages = images.filter((_, i) => i !== idx);
+    onImagesChange(newImages);
+    if (imageSrc === removed) {
+      onImageSrcChange(newImages[0] || "");
+    }
   }
 
   function moveUp(idx: number) {
     if (idx === 0) return;
-    const arr = [...value];
+    const arr = [...images];
     [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-    onChange(arr);
+    onImagesChange(arr);
   }
 
   function moveDown(idx: number) {
-    if (idx === value.length - 1) return;
-    const arr = [...value];
+    if (idx === images.length - 1) return;
+    const arr = [...images];
     [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
-    onChange(arr);
+    onImagesChange(arr);
+  }
+
+  function setAsMain(url: string) {
+    onImageSrcChange(url);
   }
 
   return (
-    <div className="admin-form-group">
-      <label>{label} ({value.length} fotek)</label>
-      <div className="pf-image-list">
-        {value.map((url, i) => (
-          <div key={i} className="pf-image-item">
-            <img src={url} alt={`Foto ${i + 1}`} className="pf-image-thumb" />
-            <span className="pf-image-url">{url.length > 60 ? url.slice(0, 60) + "..." : url}</span>
-            <div className="pf-image-actions">
-              <button type="button" onClick={() => moveUp(i)} disabled={i === 0} title="Nahoru">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 15l-6-6-6 6" />
-                </svg>
-              </button>
-              <button type="button" onClick={() => moveDown(i)} disabled={i === value.length - 1} title="Dolu">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-              <button type="button" onClick={() => removeUrl(i)} title="Odebrat" className="pf-image-remove">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ))}
+    <div className="pf-dropzone-wrap">
+      {/* Drop zone */}
+      <div
+        className={`pf-dropzone${dragging ? " pf-dropzone--active" : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+        />
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>{"P\u0159et\u00e1hn\u011bte fotky sem nebo klikn\u011bte pro v\u00fdb\u011br"}</span>
+        <span className="pf-dropzone__hint">JPG, PNG, WebP (max 10 MB)</span>
       </div>
-      <div className="pf-tags-input">
+
+      {/* Upload progress */}
+      {uploading.length > 0 && (
+        <div className="pf-upload-list">
+          {uploading.map((u) => (
+            <div key={u.id} className="pf-upload-item">
+              <span className="pf-upload-name">{u.name}</span>
+              {u.error ? (
+                <span className="pf-upload-error">{u.error}</span>
+              ) : (
+                <div className="pf-upload-progress">
+                  <div className="pf-upload-progress__bar" style={{ width: `${u.progress}%` }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Gallery thumbnails */}
+      {images.length > 0 && (
+        <div className="pf-gallery-grid">
+          {images.map((url, i) => (
+            <div key={i} className={`pf-gallery-item${url === imageSrc ? " pf-gallery-item--main" : ""}`}>
+              <img src={url} alt={`Foto ${i + 1}`} />
+              {url === imageSrc && (
+                <span className="pf-gallery-badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </span>
+              )}
+              <div className="pf-gallery-actions">
+                {url !== imageSrc && (
+                  <button type="button" onClick={() => setAsMain(url)} title={"Nastavit jako hlavn\u00ed"}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  </button>
+                )}
+                <button type="button" onClick={() => moveUp(i)} disabled={i === 0} title="Nahoru">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
+                </button>
+                <button type="button" onClick={() => moveDown(i)} disabled={i === images.length - 1} title="Dol\u016f">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                <button type="button" onClick={() => removeImage(i)} title="Odebrat" className="pf-gallery-remove">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* URL fallback input */}
+      <div className="pf-tags-input" style={{ marginTop: 8 }}>
         <input
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
               addUrl();
             }
           }}
-          placeholder="URL fotky..."
+          placeholder={"Nebo vlo\u017ete URL fotky..."}
         />
         <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={addUrl}>
-          Pridat
+          {"P\u0159idat URL"}
         </button>
       </div>
     </div>
+  );
+}
+
+// ===== LIVE PREVIEW =====
+
+function LivePreview({ form }: { form: PropertyFormData }) {
+  const [collapsed, setCollapsed] = useState(true);
+  const listingLabel = ListingTypes[form.listing_type as keyof typeof ListingTypes] || form.listing_type;
+  const categoryLabel = PropertyCategories[form.category as PropertyCategory] || form.category;
+  const priceStr = formatPreviewPrice(form.price, form.price_currency);
+
+  const card = (
+    <div className="pf-preview-card">
+      <div className="property-image-wrapper" style={{ position: "relative" }}>
+        {form.image_src ? (
+          <img
+            src={form.image_src}
+            alt={form.image_alt || "N\u00e1hled"}
+            className="property-image"
+            style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: "8px 8px 0 0" }}
+          />
+        ) : (
+          <div className="pf-preview-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
+        )}
+        <span className={`property-badge property-badge--${form.listing_type}`}>
+          {listingLabel}
+        </span>
+      </div>
+      <div className="property-info" style={{ padding: "12px" }}>
+        <span className="property-price">{priceStr}</span>
+        <div className="property-meta">
+          <span>{categoryLabel}</span>
+          {form.rooms_label && (
+            <>
+              <span className="property-meta-divider" />
+              <span>{form.rooms_label}</span>
+            </>
+          )}
+          {form.area > 0 && (
+            <>
+              <span className="property-meta-divider" />
+              <span>{form.area} m\u00b2</span>
+            </>
+          )}
+        </div>
+        {(form.location_label || form.city) && (
+          <span className="property-location">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            {form.location_label || form.city}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div className="pf-preview-sidebar">
+        <h4 className="pf-preview-sidebar__title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          {"N\u00e1hled"}
+        </h4>
+        {card}
+        {form.title && <p className="pf-preview-title">{form.title}</p>}
+      </div>
+
+      {/* Mobile toggle */}
+      <div className="pf-preview-mobile">
+        <button
+          type="button"
+          className="pf-preview-mobile__toggle"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          {"N\u00e1hled"}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{ transform: collapsed ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.2s" }}
+          >
+            <path d="M18 15l-6-6-6 6" />
+          </svg>
+        </button>
+        {!collapsed && (
+          <div className="pf-preview-mobile__body">
+            {card}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -747,7 +1196,6 @@ type PropertyFormProps = {
 
 export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
   const [form, setForm] = useState<PropertyFormData>({ ...EMPTY_FORM });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -755,6 +1203,23 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   const [success, setSuccess] = useState(false);
   const [brokers, setBrokers] = useState<{ id: string; name: string }[]>([]);
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+
+  // Accordion state: sections 1-3 open by default, 4-5 collapsed
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    new Set(["basic", "location", "media"])
+  );
+
+  function toggleSection(key: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
 
   // Load property data for edit mode
   useEffect(() => {
@@ -895,17 +1360,16 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             });
           }
         })
-        .catch(() => setError("Nepodařilo se načíst nemovitost"))
+        .catch(() => setError("Nepoda\u0159ilo se na\u010d\u00edst nemovitost"))
         .finally(() => setLoading(false));
     }
   }, [mode, propertyId]);
 
-  // Load brokers and projects for assignment step
+  // Load brokers and projects
   useEffect(() => {
     const supabase = getBrowserSupabase();
     if (!supabase) return;
 
-    // Load brokers
     supabase
       .from("brokers")
       .select("id, name")
@@ -915,7 +1379,6 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         if (data) setBrokers(data as { id: string; name: string }[]);
       });
 
-    // Load projects
     supabase
       .from("projects")
       .select("id, name")
@@ -936,10 +1399,10 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
 
   // Auto-generate slug from title
   const autoSlug = useCallback(() => {
-    if (form.title && !form.slug) {
+    if (form.title) {
       set("slug", slugify(form.title));
     }
-  }, [form.title, form.slug, set]);
+  }, [form.title, set]);
 
   // Auto-generate location_label
   useEffect(() => {
@@ -954,12 +1417,36 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
     return SUBTYPE_MAP[form.category] ?? {};
   }, [form.category]);
 
-  // Build payload (strip empty strings for nullable enums)
+  // Parse mapy.cz suggestion
+  function handleAddressSelect(s: MapySuggestion) {
+    const regionMap: Record<string, (v: string) => void> = {
+      "regional.municipality": (v) => set("city", v),
+      "regional.municipality_part": (v) => set("city_part", v),
+      "regional.street": (v) => set("street", v),
+      "regional.region": (v) => set("region", v),
+      "regional.district": (v) => set("district", v),
+    };
+
+    for (const item of s.regionalStructure) {
+      const handler = regionMap[item.type];
+      if (handler) handler(item.name);
+    }
+
+    // Try to extract ZIP from label (Czech format: 5 digits)
+    const zipMatch = s.label.match(/\b(\d{3}\s?\d{2})\b/);
+    if (zipMatch) {
+      set("zip", zipMatch[1].replace(/\s/g, ""));
+    }
+
+    set("latitude", s.position.lat);
+    set("longitude", s.position.lon);
+  }
+
+  // Build payload
   function buildPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(form)) {
-      // Skip empty strings for nullable enum/text fields — send null instead
       if (value === "" && key !== "title" && key !== "slug" && key !== "summary" && key !== "image_src" && key !== "image_alt") {
         payload[key] = null;
         continue;
@@ -973,13 +1460,27 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
   // Submit
   async function handleSubmit() {
     if (!form.title.trim()) {
-      setError("Nazev je povinny");
-      setStep(0);
+      setError("N\u00e1zev je povinn\u00fd");
       return;
     }
     if (!form.slug.trim()) {
-      setError("Slug je povinny");
-      setStep(0);
+      setError("Slug je povinn\u00fd");
+      return;
+    }
+    if (!form.listing_type) {
+      setError("Typ nab\u00eddky je povinn\u00fd");
+      return;
+    }
+    if (!form.category) {
+      setError("Kategorie je povinn\u00e1");
+      return;
+    }
+    if (!form.price) {
+      setError("Cena je povinn\u00e1");
+      return;
+    }
+    if (!form.city.trim()) {
+      setError("M\u011bsto je povinn\u00e9");
       return;
     }
 
@@ -1004,7 +1505,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Chyba pri ukladani");
+        throw new Error(data?.error || "Chyba p\u0159i ukl\u00e1d\u00e1n\u00ed");
       }
 
       setSuccess(true);
@@ -1012,7 +1513,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         router.push("/dashboard/sprava/nemovitosti");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Chyba pri ukladani");
+      setError(err instanceof Error ? err.message : "Chyba p\u0159i ukl\u00e1d\u00e1n\u00ed");
     } finally {
       setSaving(false);
     }
@@ -1022,7 +1523,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
     return (
       <div className="pf-loading">
         <div className="pf-spinner" />
-        <p>Nacitam data...</p>
+        <p>{"Na\u010d\u00edt\u00e1m data..."}</p>
       </div>
     );
   }
@@ -1034,67 +1535,56 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <path d="M22 4L12 14.01l-3-3" />
         </svg>
-        <h3>{mode === "create" ? "Nemovitost vytvorena" : "Nemovitost ulozena"}</h3>
-        <p>Presmerovavam...</p>
+        <h3>{mode === "create" ? "Nemovitost vytvo\u0159ena" : "Nemovitost ulo\u017eena"}</h3>
+        <p>{"P\u0159esm\u011brov\u00e1v\u00e1m..."}</p>
       </div>
     );
   }
 
   return (
-    <div className="pf-wrap">
-      {/* Header */}
-      <div className="pf-header">
-        <button
-          className="admin-btn admin-btn--secondary"
-          onClick={() => router.push("/dashboard/sprava/nemovitosti")}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          {"Zp\u011bt"}
-        </button>
-        <h2>{mode === "create" ? "Nov\u00e1 nemovitost" : "Upravit nemovitost"}</h2>
-      </div>
-
-      {/* Step navigation */}
-      <div className="pf-steps">
-        {STEPS.map((s, i) => (
+    <div className="pf-layout">
+      <div className="pf-main">
+        {/* Header */}
+        <div className="pf-header">
           <button
-            key={s.key}
-            className={`pf-step${i === step ? " pf-step--active" : ""}${i < step ? " pf-step--done" : ""}`}
-            onClick={() => setStep(i)}
+            className="admin-btn admin-btn--secondary"
+            onClick={() => router.push("/dashboard/sprava/nemovitosti")}
           >
-            <span className="pf-step-num">{i + 1}</span>
-            <span className="pf-step-label">{s.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="pf-error">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M15 9l-6 6M9 9l6 6" />
-          </svg>
-          {error}
-          <button onClick={() => setError(null)} className="pf-error-close">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
+            {"Zp\u011bt"}
           </button>
+          <h2>{mode === "create" ? "Nov\u00e1 nemovitost" : "Upravit nemovitost"}</h2>
         </div>
-      )}
 
-      {/* Step content */}
-      <div className="pf-content">
-        {/* STEP 0: Basic */}
-        {step === 0 && (
+        {/* Error */}
+        {error && (
+          <div className="pf-error">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M15 9l-6 6M9 9l6 6" />
+            </svg>
+            {error}
+            <button onClick={() => setError(null)} className="pf-error-close">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* ========== SECTION 1: Zakladni udaje a cena ========== */}
+        <AccordionSection
+          title={"Z\u00e1kladn\u00ed \u00fadaje a cena"}
+          sectionKey="basic"
+          openSections={openSections}
+          toggle={toggleSection}
+        >
           <div className="pf-section">
-            <h3>Základní údaje</h3>
             <div className="admin-form-row">
               <SelectField
-                label="Typ nabídky"
+                label={"Typ nab\u00eddky"}
                 value={form.listing_type}
                 onChange={(v) => set("listing_type", v)}
                 options={ListingTypes}
@@ -1122,11 +1612,11 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 label="Dispozice"
                 value={form.rooms_label}
                 onChange={(v) => set("rooms_label", v)}
-                placeholder="napr. 3+kk"
+                placeholder={"nap\u0159. 3+kk"}
               />
             </div>
             <TextField
-              label="Nazev inzeratu"
+              label={"N\u00e1zev inzer\u00e1tu"}
               value={form.title}
               onChange={(v) => set("title", v)}
               required
@@ -1149,30 +1639,25 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                     type="button"
                     className="admin-btn admin-btn--secondary admin-btn--sm"
                     onClick={autoSlug}
-                    title="Vygenerovat z nazvu"
+                    title={"Vygenerovat z n\u00e1zvu"}
                   >
                     Auto
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* STEP 1: Price */}
-        {step === 1 && (
-          <div className="pf-section">
-            <h3>Cena</h3>
+            <h4 className="pf-subtitle">Cena</h4>
             <div className="admin-form-row">
               <NumberField
                 label="Cena"
                 value={form.price}
                 onChange={(v) => set("price", v ?? 0)}
-                suffix="Kc"
+                suffix={"K\u010d"}
                 min={0}
               />
               <SelectField
-                label="Mena"
+                label={"M\u011bna"}
                 value={form.price_currency}
                 onChange={(v) => set("price_currency", v)}
                 options={PriceCurrencies}
@@ -1186,27 +1671,36 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 options={PriceUnits}
               />
               <CheckboxField
-                label="Cena k jednani"
+                label={"Cena k jedn\u00e1n\u00ed"}
                 checked={form.price_negotiation}
                 onChange={(v) => set("price_negotiation", v)}
               />
             </div>
             <TextField
-              label="Poznamka k cene"
+              label={"Pozn\u00e1mka k cen\u011b"}
               value={form.price_note}
               onChange={(v) => set("price_note", v)}
-              placeholder="napr. Cena vcetne provize"
+              placeholder={"nap\u0159. Cena v\u010detn\u011b provize"}
             />
           </div>
-        )}
+        </AccordionSection>
 
-        {/* STEP 2: Location */}
-        {step === 2 && (
+        {/* ========== SECTION 2: Lokace ========== */}
+        <AccordionSection
+          title="Lokace"
+          sectionKey="location"
+          openSections={openSections}
+          toggle={toggleSection}
+        >
           <div className="pf-section">
-            <h3>Lokace</h3>
+            <AddressAutocomplete
+              onSelect={handleAddressSelect}
+              isLand={form.category === "land"}
+            />
+
             <div className="admin-form-row">
               <TextField
-                label="M\u011bsto"
+                label={"M\u011bsto"}
                 value={form.city}
                 onChange={(v) => set("city", v)}
                 required
@@ -1216,7 +1710,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 label="Okres"
                 value={form.district}
                 onChange={(v) => set("district", v)}
-                placeholder="Praha-zapad"
+                placeholder={"Praha-z\u00e1pad"}
               />
             </div>
             <div className="admin-form-row">
@@ -1224,10 +1718,10 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 label="Ulice"
                 value={form.street}
                 onChange={(v) => set("street", v)}
-                placeholder="Vinohradska 123"
+                placeholder="Vinohradsk\u00e1 123"
               />
               <TextField
-                label="M\u011bstsk\u00e1 \u010d\u00e1st"
+                label={"M\u011bstsk\u00e1 \u010d\u00e1st"}
                 value={form.city_part}
                 onChange={(v) => set("city_part", v)}
                 placeholder="Vinohrady"
@@ -1235,7 +1729,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             </div>
             <div className="admin-form-row">
               <TextField
-                label="PSC"
+                label={"PS\u010c"}
                 value={form.zip}
                 onChange={(v) => set("zip", v)}
                 placeholder="120 00"
@@ -1244,25 +1738,25 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 label="Kraj"
                 value={form.region}
                 onChange={(v) => set("region", v)}
-                placeholder="Hlavn\u00ed m\u011bsto Praha"
+                placeholder={"Hlavn\u00ed m\u011bsto Praha"}
               />
             </div>
             <TextField
-              label="Popis lokace (automaticky)"
+              label={"Popis lokace (automaticky)"}
               value={form.location_label}
               onChange={(v) => set("location_label", v)}
-              placeholder="Automaticky z ulice, \u010d\u00e1sti, m\u011bsta"
+              placeholder={"Automaticky z ulice, \u010d\u00e1sti, m\u011bsta"}
             />
             <div className="admin-form-row">
               <NumberField
-                label="Zem\u011bpisn\u00e1 \u0161\u00ed\u0159ka"
+                label={"Zem\u011bpisn\u00e1 \u0161\u00ed\u0159ka"}
                 value={form.latitude}
                 onChange={(v) => set("latitude", v ?? 0)}
                 step="0.000001"
                 suffix="lat"
               />
               <NumberField
-                label="Zem\u011bpisn\u00e1 d\u00e9lka"
+                label={"Zem\u011bpisn\u00e1 d\u00e9lka"}
                 value={form.longitude}
                 onChange={(v) => set("longitude", v ?? 0)}
                 step="0.000001"
@@ -1270,322 +1764,57 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
               />
             </div>
           </div>
-        )}
+        </AccordionSection>
 
-        {/* STEP 3: Areas */}
-        {step === 3 && (
+        {/* ========== SECTION 3: Popis a media ========== */}
+        <AccordionSection
+          title={"Popis a m\u00e9dia"}
+          sectionKey="media"
+          openSections={openSections}
+          toggle={toggleSection}
+        >
           <div className="pf-section">
-            <h3>Plochy</h3>
-            <div className="admin-form-row">
-              <NumberField label="U\u017eitn\u00e1 plocha" value={form.area} onChange={(v) => set("area", v ?? 0)} suffix="m2" min={0} />
-              <NumberField label="Plocha pozemku" value={form.land_area} onChange={(v) => set("land_area", v)} suffix="m2" min={0} />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Zastav\u011bn\u00e1 plocha" value={form.built_up_area} onChange={(v) => set("built_up_area", v)} suffix="m2" />
-              <NumberField label="Celková plocha" value={form.floor_area} onChange={(v) => set("floor_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Balkon" value={form.balcony_area} onChange={(v) => set("balcony_area", v)} suffix="m2" />
-              <NumberField label="Lod\u017eie" value={form.loggia_area} onChange={(v) => set("loggia_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Terasa" value={form.terrace_area} onChange={(v) => set("terrace_area", v)} suffix="m2" />
-              <NumberField label="Zahrada" value={form.garden_area} onChange={(v) => set("garden_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Sklep" value={form.cellar_area} onChange={(v) => set("cellar_area", v)} suffix="m2" />
-              <NumberField label="Baz\u00e9n" value={form.basin_area} onChange={(v) => set("basin_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Kancel\u00e1\u0159e" value={form.offices_area} onChange={(v) => set("offices_area", v)} suffix="m2" />
-              <NumberField label="V\u00fdroba" value={form.production_area} onChange={(v) => set("production_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Obchod" value={form.shop_area} onChange={(v) => set("shop_area", v)} suffix="m2" />
-              <NumberField label="Sklad" value={form.store_area} onChange={(v) => set("store_area", v)} suffix="m2" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="D\u00edlna" value={form.workshop_area} onChange={(v) => set("workshop_area", v)} suffix="m2" />
-              <NumberField label="Nebytov\u00e9 prostory celkem" value={form.nolive_total_area} onChange={(v) => set("nolive_total_area", v)} suffix="m2" />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Description */}
-        {step === 4 && (
-          <div className="pf-section">
-            <h3>Popis nemovitosti</h3>
             <TextareaField
-              label="Stručný popis (summary)"
+              label={"Stru\u010dn\u00fd popis (summary)"}
               value={form.summary}
               onChange={(v) => set("summary", v)}
-              placeholder="Krátký popisek pro kartičku a náhled..."
+              placeholder={"Kr\u00e1tk\u00fd popisek pro karti\u010dku a n\u00e1hled..."}
               rows={3}
             />
             <TextareaField
-              label="Podrobný popis"
+              label={"Podrobn\u00fd popis"}
               value={form.description ?? ""}
               onChange={(v) => set("description", v)}
-              placeholder="Podrobný popis nemovitosti včetně všech důležitých informací..."
+              placeholder={"Podrobn\u00fd popis nemovitosti v\u010detn\u011b v\u0161ech d\u016fle\u017eit\u00fdch informac\u00ed..."}
               rows={10}
             />
-          </div>
-        )}
 
-        {/* STEP 5: Condition & Parameters */}
-        {step === 5 && (
-          <div className="pf-section">
-            <h3>Stav a parametry</h3>
-            <div className="admin-form-row">
-              <SelectField label="Stav objektu" value={form.condition} onChange={(v) => set("condition", v)} options={PropertyConditions} />
-              <SelectField label="Vlastnictví" value={form.ownership} onChange={(v) => set("ownership", v)} options={OwnershipTypes} />
-            </div>
-            <div className="admin-form-row">
-              <SelectField label="Vybavení" value={form.furnishing} onChange={(v) => set("furnishing", v)} options={FurnishingTypes} />
-              <SelectField label="Energetický štítek" value={form.energy_rating} onChange={(v) => set("energy_rating", v)} options={EnergyRatings} />
-            </div>
-            <div className="admin-form-row">
-              <SelectField label="Materi\u00e1l stavby" value={form.building_material} onChange={(v) => set("building_material", v)} options={BuildingMaterials} />
-              <TextField label="Podlaha" value={form.flooring} onChange={(v) => set("flooring", v)} placeholder="např. dlažba, laminát" />
-            </div>
-
-            <h4 className="pf-subtitle">Dům / Byt specifické</h4>
-            <div className="admin-form-row">
-              <SelectField label="Typ domu" value={form.object_type} onChange={(v) => set("object_type", v)} options={ObjectTypes} />
-              <SelectField label="Poloha domu" value={form.object_kind} onChange={(v) => set("object_kind", v)} options={ObjectKinds} />
-            </div>
-            <div className="admin-form-row">
-              <SelectField label="Umístění objektu" value={form.object_location} onChange={(v) => set("object_location", v)} options={ObjectLocations} />
-              <SelectField label="Typ bytu" value={form.flat_class} onChange={(v) => set("flat_class", v)} options={FlatClasses} />
-            </div>
-
-            <h4 className="pf-subtitle">Stáří</h4>
-            <div className="admin-form-row">
-              <NumberField label="Rok v\u00fdstavby" value={form.year_built} onChange={(v) => set("year_built", v)} placeholder="1985" />
-              <NumberField label="Poslední rekonstrukce" value={form.last_renovation} onChange={(v) => set("last_renovation", v)} placeholder="2020" />
-            </div>
-            <NumberField label="Rok kolaudace" value={form.acceptance_year} onChange={(v) => set("acceptance_year", v)} placeholder="1986" />
-          </div>
-        )}
-
-        {/* STEP 6: Floors & Parking */}
-        {step === 6 && (
-          <div className="pf-section">
-            <h3>Podlaží</h3>
-            <div className="admin-form-row">
-              <NumberField label="Podlaží" value={form.floor} onChange={(v) => set("floor", v)} placeholder="např. 3" />
-              <NumberField label="Počet podlaží celkem" value={form.total_floors} onChange={(v) => set("total_floors", v)} placeholder="např. 8" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Podzemni podlazi" value={form.underground_floors} onChange={(v) => set("underground_floors", v)} />
-              <NumberField label="Svetla vyska stropu" value={form.ceiling_height} onChange={(v) => set("ceiling_height", v)} suffix="m" step="0.01" />
-            </div>
-
-            <h3 className="pf-subtitle">Parkování</h3>
-            <div className="admin-form-row">
-              <SelectField label="Typ parkovani" value={form.parking} onChange={(v) => set("parking", v)} options={ParkingTypes} />
-              <NumberField label="Počet parkovacích míst" value={form.parking_spaces} onChange={(v) => set("parking_spaces", v)} min={0} />
-            </div>
-            <NumberField label="Počet garáží" value={form.garage_count} onChange={(v) => set("garage_count", v)} min={0} />
-          </div>
-        )}
-
-        {/* STEP 7: Amenities */}
-        {step === 7 && (
-          <div className="pf-section">
-            <h3>Vybavení a vlastnosti</h3>
-            <div className="pf-checkbox-grid">
-              <CheckboxField label="Balkon" checked={form.balcony} onChange={(v) => set("balcony", v)} />
-              <CheckboxField label="Terasa" checked={form.terrace} onChange={(v) => set("terrace", v)} />
-              <CheckboxField label="Zahrada" checked={form.garden} onChange={(v) => set("garden", v)} />
-              <CheckboxField label="Vytah" checked={form.elevator} onChange={(v) => set("elevator", v)} />
-              <CheckboxField label="Sklep" checked={form.cellar} onChange={(v) => set("cellar", v)} />
-              <CheckboxField label="Garaz" checked={form.garage} onChange={(v) => set("garage", v)} />
-              <CheckboxField label="Baz\u00e9n" checked={form.pool} onChange={(v) => set("pool", v)} />
-              <CheckboxField label="Lod\u017eie" checked={form.loggia} onChange={(v) => set("loggia", v)} />
-              <CheckboxField label="Nizkoenergeticky" checked={form.low_energy} onChange={(v) => set("low_energy", v)} />
-              <CheckboxField label="FTV panely" checked={form.ftv_panels} onChange={(v) => set("ftv_panels", v)} />
-              <CheckboxField label="Solarni panely" checked={form.solar_panels} onChange={(v) => set("solar_panels", v)} />
-              <CheckboxField label="Hypoteka mozna" checked={form.mortgage} onChange={(v) => set("mortgage", v)} />
-            </div>
-            <div className="admin-form-row" style={{ marginTop: 16 }}>
-              <SelectField label="Bezbarierovy pristup" value={form.easy_access} onChange={(v) => set("easy_access", v)} options={EasyAccessTypes} />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 8: Heating */}
-        {step === 8 && (
-          <div className="pf-section">
-            <h3>Topění</h3>
-            <MultiSelectField label="Typ topeni" value={form.heating} onChange={(v) => set("heating", v)} options={HeatingTypes} />
-            <MultiSelectField label="Topné těleso" value={form.heating_element} onChange={(v) => set("heating_element", v)} options={HeatingElements} />
-            <MultiSelectField label="Zdroj topění" value={form.heating_source} onChange={(v) => set("heating_source", v)} options={HeatingSources} />
-            <MultiSelectField label="Zdroj teplé vody" value={form.water_heat_source} onChange={(v) => set("water_heat_source", v)} options={WaterHeatSources} />
-          </div>
-        )}
-
-        {/* STEP 9: Infrastructure */}
-        {step === 9 && (
-          <div className="pf-section">
-            <h3>Infrastruktura a sítě</h3>
-            <MultiSelectField label="Elektřina" value={form.electricity} onChange={(v) => set("electricity", v)} options={ElectricityTypes} />
-            <MultiSelectField label="Plyn" value={form.gas} onChange={(v) => set("gas", v)} options={GasTypes} />
-            <MultiSelectField label="Voda" value={form.water} onChange={(v) => set("water", v)} options={WaterTypes} />
-            <MultiSelectField label="Odpad" value={form.gully} onChange={(v) => set("gully", v)} options={GullyTypes} />
-            <MultiSelectField label="Komunikace" value={form.road_type} onChange={(v) => set("road_type", v)} options={RoadTypes} />
-            <MultiSelectField label="Telekomunikace" value={form.telecommunication} onChange={(v) => set("telecommunication", v)} options={TelecommunicationTypes} />
-            <MultiSelectField label="Doprava" value={form.transport} onChange={(v) => set("transport", v)} options={TransportTypes} />
-            <MultiSelectField label="Internet" value={form.internet_connection_type} onChange={(v) => set("internet_connection_type", v)} options={InternetConnectionTypes} />
-
-            <h4 className="pf-subtitle">Internet podrobnosti</h4>
-            <div className="admin-form-row">
-              <TextField label="Poskytovatel internetu" value={form.internet_connection_provider} onChange={(v) => set("internet_connection_provider", v)} placeholder="např. O2, UPC" />
-              <NumberField label="Rychlost internetu" value={form.internet_connection_speed} onChange={(v) => set("internet_connection_speed", v)} suffix="Mbps" />
-            </div>
-
-            <h4 className="pf-subtitle">Okoli a ochrana</h4>
-            <div className="admin-form-row">
-              <SelectField label="Typ zastavby" value={form.surroundings_type} onChange={(v) => set("surroundings_type", v)} options={SurroundingsTypes} />
-              <SelectField label="Ochrana" value={form.protection} onChange={(v) => set("protection", v)} options={ProtectionTypes} />
-            </div>
-
-            <h4 className="pf-subtitle">Elektricke parametry</h4>
-            <div className="admin-form-row">
-              <SelectField label="Jistic" value={form.circuit_breaker} onChange={(v) => set("circuit_breaker", v)} options={CircuitBreakers} />
-              <SelectField label="Faze" value={form.phase_distribution} onChange={(v) => set("phase_distribution", v)} options={PhaseDistributions} />
-            </div>
-
-            <h4 className="pf-subtitle">Studna</h4>
-            <MultiSelectField label="Typ studny" value={form.well_type} onChange={(v) => set("well_type", v)} options={WellTypes} />
-          </div>
-        )}
-
-        {/* STEP 10: Financial */}
-        {step === 10 && (
-          <div className="pf-section">
-            <h3>Finanční údaje</h3>
-            <div className="admin-form-row">
-              <NumberField label="Anuita / měsíční splátka" value={form.annuity} onChange={(v) => set("annuity", v)} suffix="Kc" />
-              <TextField label="Náklady na bydlení" value={form.cost_of_living} onChange={(v) => set("cost_of_living", v)} placeholder="např. 5 000 Kč/měsíc" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Provize" value={form.commission} onChange={(v) => set("commission", v)} suffix="Kc" />
-              <NumberField label="Procento hypoteky" value={form.mortgage_percent} onChange={(v) => set("mortgage_percent", v)} suffix="%" />
-            </div>
-            <div className="admin-form-row">
-              <NumberField label="Procento sporeni" value={form.spor_percent} onChange={(v) => set("spor_percent", v)} suffix="%" />
-              <NumberField label="Vratna kauce" value={form.refundable_deposit} onChange={(v) => set("refundable_deposit", v)} suffix="Kc" />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 11: Lease / Auction / Shares */}
-        {step === 11 && (
-          <div className="pf-section">
-            <h3>{"Speci\u00e1ln\u00ed \u00fadaje dle typu nab\u00eddky"}</h3>
-
-            {/* Lease section — show for rent */}
-            <div className="pf-conditional">
-              <h4 className="pf-subtitle">Pronájem</h4>
-              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pron\u00e1jem"}</p>
-              <div className="admin-form-row">
-                <SelectField label="Typ pron\u00e1jmu" value={form.lease_type} onChange={(v) => set("lease_type", v)} options={LeaseTypes} />
-                <CheckboxField label="Nájemce neplatí provizi" checked={form.tenant_not_pay_commission} onChange={(v) => set("tenant_not_pay_commission", v)} />
-              </div>
-              <TextField label="Datum nastěhování" value={form.ready_date} onChange={(v) => set("ready_date", v)} type="date" />
-            </div>
-
-            {/* Auction section */}
-            <div className="pf-conditional">
-              <h4 className="pf-subtitle">Dražba</h4>
-              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Dra\u017eba"}</p>
-              <div className="admin-form-row">
-                <SelectField label="Druh dražby" value={form.auction_kind} onChange={(v) => set("auction_kind", v)} options={AuctionKinds} />
-                <TextField label="Datum dražby" value={form.auction_date} onChange={(v) => set("auction_date", v)} type="date" />
-              </div>
-              <TextField label="M\u00edsto dra\u017eby" value={form.auction_place} onChange={(v) => set("auction_place", v)} placeholder="Adresa m\u00edsta dra\u017eby" />
-              <div className="admin-form-row">
-                <NumberField label="Jistina" value={form.price_auction_principal} onChange={(v) => set("price_auction_principal", v)} suffix="Kc" />
-                <NumberField label="Cena znaleck\u00e9ho posudku" value={form.price_expert_report} onChange={(v) => set("price_expert_report", v)} suffix="Kc" />
-              </div>
-              <NumberField label="Nejni\u017e\u0161\u00ed pod\u00e1n\u00ed" value={form.price_minimum_bid} onChange={(v) => set("price_minimum_bid", v)} suffix="Kc" />
-            </div>
-
-            {/* Shares section */}
-            <div className="pf-conditional">
-              <h4 className="pf-subtitle">Podíly</h4>
-              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pod\u00edly"}</p>
-              <div className="admin-form-row">
-                <NumberField label="Čitatel podílu" value={form.share_numerator} onChange={(v) => set("share_numerator", v)} placeholder="např. 1" />
-                <NumberField label="Jmenovatel podílu" value={form.share_denominator} onChange={(v) => set("share_denominator", v)} placeholder="např. 4" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 12: Dates & Status */}
-        {step === 12 && (
-          <div className="pf-section">
-            <h3>Datumy a status</h3>
-
-            <h4 className="pf-subtitle">Datumy výstavby</h4>
-            <div className="admin-form-row">
-              <TextField label="Začátek výstavby" value={form.beginning_date} onChange={(v) => set("beginning_date", v)} type="date" />
-              <TextField label="Konec výstavby" value={form.finish_date} onChange={(v) => set("finish_date", v)} type="date" />
-            </div>
-            <div className="admin-form-row">
-              <TextField label="Datum prodeje" value={form.sale_date} onChange={(v) => set("sale_date", v)} type="date" />
-              <TextField label="Prvn\u00ed prohl\u00eddka" value={form.first_tour_date} onChange={(v) => set("first_tour_date", v)} type="date" />
-            </div>
-
-            <h4 className="pf-subtitle">Status inzeratu</h4>
-            <div className="admin-form-row">
-              <SelectField label="Stav" value={form.extra_info} onChange={(v) => set("extra_info", v)} options={ExtraInfoStatuses} />
-              <SelectField label="P\u0159evod do OV" value={form.personal_transfer} onChange={(v) => set("personal_transfer", v)} options={PersonalTransferTypes} />
-            </div>
-            <div className="admin-form-row">
-              <CheckboxField label="Exkluzivn\u011b u RK" checked={form.exclusively_at_rk} onChange={(v) => set("exclusively_at_rk", v)} />
-              <NumberField label="Po\u010det vlastn\u00edk\u016f" value={form.num_owners} onChange={(v) => set("num_owners", v)} />
-            </div>
-            <NumberField label="Číslo bytové jednotky" value={form.apartment_number} onChange={(v) => set("apartment_number", v)} />
-
-            <h4 className="pf-subtitle">Klíčová slova</h4>
-            <TagsField
-              label="Klíčová slova"
-              value={form.keywords}
-              onChange={(v) => set("keywords", v)}
-              placeholder="Přidat klíčové slovo..."
+            <h4 className="pf-subtitle">{"Fotky"}</h4>
+            <ImageDropZone
+              images={form.images}
+              onImagesChange={(v) => set("images", v)}
+              imageSrc={form.image_src}
+              onImageSrcChange={(v) => set("image_src", v)}
             />
-          </div>
-        )}
 
-        {/* STEP 13: Media */}
-        {step === 13 && (
-          <div className="pf-section">
-            <h3>Media</h3>
-
-            <h4 className="pf-subtitle">{"Hlavn\u00ed fotka"}</h4>
-            <div className="admin-form-row">
-              <TextField label="URL hlavn\u00ed fotky" value={form.image_src} onChange={(v) => set("image_src", v)} placeholder="https://..." />
-              <TextField label="Alt text" value={form.image_alt} onChange={(v) => set("image_alt", v)} placeholder="Popis fotky" />
-            </div>
             {form.image_src && (
-              <div className="pf-main-image-preview">
-                <img src={form.image_src} alt={form.image_alt || "N\u00e1hled"} />
+              <div style={{ marginTop: 12 }}>
+                <h4 className="pf-subtitle" style={{ marginTop: 0 }}>{"Hlavn\u00ed fotka"}</h4>
+                <div className="pf-main-image-preview">
+                  <img src={form.image_src} alt={form.image_alt || "N\u00e1hled"} />
+                </div>
+                <TextField
+                  label="Alt text"
+                  value={form.image_alt}
+                  onChange={(v) => set("image_alt", v)}
+                  placeholder="Popis fotky"
+                />
               </div>
             )}
 
-            <h4 className="pf-subtitle">Galerie fotek</h4>
-            <ImageListField
-              label="Fotky v galerii"
-              value={form.images}
-              onChange={(v) => set("images", v)}
-            />
-
-            <h4 className="pf-subtitle">{"Virtu\u00e1ln\u00ed prohl\u00eddky a video"}</h4>
+            <h4 className="pf-subtitle">{"Virtu\u00e1ln\u00ed prohl\u00eddky"}</h4>
             <TextField
-              label="Matterport URL (3D prohl\u00eddka)"
+              label={"Matterport URL (3D prohl\u00eddka)"}
               value={form.matterport_url}
               onChange={(v) => set("matterport_url", v)}
               placeholder="https://my.matterport.com/show/?m=..."
@@ -1597,23 +1826,244 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
               placeholder="https://..."
             />
           </div>
-        )}
+        </AccordionSection>
 
-        {/* STEP 14: Assignment & Publication */}
-        {step === 14 && (
+        {/* ========== SECTION 4: Parametry ========== */}
+        <AccordionSection
+          title="Parametry"
+          sectionKey="params"
+          openSections={openSections}
+          toggle={toggleSection}
+        >
           <div className="pf-section">
-            <h3>Makléř a publikace</h3>
+            <h4 className="pf-subtitle" style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>Plochy</h4>
+            <div className="admin-form-row">
+              <NumberField label={"U\u017eitn\u00e1 plocha"} value={form.area} onChange={(v) => set("area", v ?? 0)} suffix={"m\u00b2"} min={0} />
+              <NumberField label="Plocha pozemku" value={form.land_area} onChange={(v) => set("land_area", v)} suffix={"m\u00b2"} min={0} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label={"Zastav\u011bn\u00e1 plocha"} value={form.built_up_area} onChange={(v) => set("built_up_area", v)} suffix={"m\u00b2"} />
+              <NumberField label={"Celkov\u00e1 plocha"} value={form.floor_area} onChange={(v) => set("floor_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label="Balkon" value={form.balcony_area} onChange={(v) => set("balcony_area", v)} suffix={"m\u00b2"} />
+              <NumberField label={"Lod\u017eie"} value={form.loggia_area} onChange={(v) => set("loggia_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label="Terasa" value={form.terrace_area} onChange={(v) => set("terrace_area", v)} suffix={"m\u00b2"} />
+              <NumberField label="Zahrada" value={form.garden_area} onChange={(v) => set("garden_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label="Sklep" value={form.cellar_area} onChange={(v) => set("cellar_area", v)} suffix={"m\u00b2"} />
+              <NumberField label={"Baz\u00e9n"} value={form.basin_area} onChange={(v) => set("basin_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label={"Kancel\u00e1\u0159e"} value={form.offices_area} onChange={(v) => set("offices_area", v)} suffix={"m\u00b2"} />
+              <NumberField label={"V\u00fdroba"} value={form.production_area} onChange={(v) => set("production_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label="Obchod" value={form.shop_area} onChange={(v) => set("shop_area", v)} suffix={"m\u00b2"} />
+              <NumberField label="Sklad" value={form.store_area} onChange={(v) => set("store_area", v)} suffix={"m\u00b2"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label={"D\u00edlna"} value={form.workshop_area} onChange={(v) => set("workshop_area", v)} suffix={"m\u00b2"} />
+              <NumberField label={"Nebytov\u00e9 prostory celkem"} value={form.nolive_total_area} onChange={(v) => set("nolive_total_area", v)} suffix={"m\u00b2"} />
+            </div>
 
+            <h4 className="pf-subtitle">Stav a parametry</h4>
+            <div className="admin-form-row">
+              <SelectField label="Stav objektu" value={form.condition} onChange={(v) => set("condition", v)} options={PropertyConditions} />
+              <SelectField label={"Vlastnictv\u00ed"} value={form.ownership} onChange={(v) => set("ownership", v)} options={OwnershipTypes} />
+            </div>
+            <div className="admin-form-row">
+              <SelectField label={"Vybaven\u00ed"} value={form.furnishing} onChange={(v) => set("furnishing", v)} options={FurnishingTypes} />
+              <SelectField label={"Energetick\u00fd \u0161t\u00edtek"} value={form.energy_rating} onChange={(v) => set("energy_rating", v)} options={EnergyRatings} />
+            </div>
+            <div className="admin-form-row">
+              <SelectField label={"Materi\u00e1l stavby"} value={form.building_material} onChange={(v) => set("building_material", v)} options={BuildingMaterials} />
+              <TextField label="Podlaha" value={form.flooring} onChange={(v) => set("flooring", v)} placeholder={"nap\u0159. dla\u017eba, lamin\u00e1t"} />
+            </div>
+
+            <h4 className="pf-subtitle">{"D\u016fm / Byt specifick\u00e9"}</h4>
+            <div className="admin-form-row">
+              <SelectField label={"Typ domu"} value={form.object_type} onChange={(v) => set("object_type", v)} options={ObjectTypes} />
+              <SelectField label={"Poloha domu"} value={form.object_kind} onChange={(v) => set("object_kind", v)} options={ObjectKinds} />
+            </div>
+            <div className="admin-form-row">
+              <SelectField label={"Um\u00edst\u011bn\u00ed objektu"} value={form.object_location} onChange={(v) => set("object_location", v)} options={ObjectLocations} />
+              <SelectField label={"Typ bytu"} value={form.flat_class} onChange={(v) => set("flat_class", v)} options={FlatClasses} />
+            </div>
+
+            <h4 className="pf-subtitle">{"Podla\u017e\u00ed"}</h4>
+            <div className="admin-form-row">
+              <NumberField label={"Podla\u017e\u00ed"} value={form.floor} onChange={(v) => set("floor", v)} placeholder={"nap\u0159. 3"} />
+              <NumberField label={"Po\u010det podla\u017e\u00ed celkem"} value={form.total_floors} onChange={(v) => set("total_floors", v)} placeholder={"nap\u0159. 8"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label={"Podzemn\u00ed podla\u017e\u00ed"} value={form.underground_floors} onChange={(v) => set("underground_floors", v)} />
+              <NumberField label={"Sv\u011btl\u00e1 v\u00fd\u0161ka stropu"} value={form.ceiling_height} onChange={(v) => set("ceiling_height", v)} suffix="m" step="0.01" />
+            </div>
+
+            <h4 className="pf-subtitle">{"Parkov\u00e1n\u00ed"}</h4>
+            <div className="admin-form-row">
+              <SelectField label={"Typ parkov\u00e1n\u00ed"} value={form.parking} onChange={(v) => set("parking", v)} options={ParkingTypes} />
+              <NumberField label={"Po\u010det parkovac\u00edch m\u00edst"} value={form.parking_spaces} onChange={(v) => set("parking_spaces", v)} min={0} />
+            </div>
+            <NumberField label={"Po\u010det gar\u00e1\u017e\u00ed"} value={form.garage_count} onChange={(v) => set("garage_count", v)} min={0} />
+
+            <h4 className="pf-subtitle">{"Vybaven\u00ed a vlastnosti"}</h4>
+            <div className="pf-checkbox-grid">
+              <CheckboxField label="Balkon" checked={form.balcony} onChange={(v) => set("balcony", v)} />
+              <CheckboxField label="Terasa" checked={form.terrace} onChange={(v) => set("terrace", v)} />
+              <CheckboxField label="Zahrada" checked={form.garden} onChange={(v) => set("garden", v)} />
+              <CheckboxField label={"V\u00fdtah"} checked={form.elevator} onChange={(v) => set("elevator", v)} />
+              <CheckboxField label="Sklep" checked={form.cellar} onChange={(v) => set("cellar", v)} />
+              <CheckboxField label={"Gar\u00e1\u017e"} checked={form.garage} onChange={(v) => set("garage", v)} />
+              <CheckboxField label={"Baz\u00e9n"} checked={form.pool} onChange={(v) => set("pool", v)} />
+              <CheckboxField label={"Lod\u017eie"} checked={form.loggia} onChange={(v) => set("loggia", v)} />
+              <CheckboxField label={"N\u00edzkoenergetick\u00fd"} checked={form.low_energy} onChange={(v) => set("low_energy", v)} />
+              <CheckboxField label="FTV panely" checked={form.ftv_panels} onChange={(v) => set("ftv_panels", v)} />
+              <CheckboxField label={"Sol\u00e1rn\u00ed panely"} checked={form.solar_panels} onChange={(v) => set("solar_panels", v)} />
+              <CheckboxField label={"Hypot\u00e9ka mo\u017en\u00e1"} checked={form.mortgage} onChange={(v) => set("mortgage", v)} />
+            </div>
+            <div className="admin-form-row" style={{ marginTop: 16 }}>
+              <SelectField label={"Bezbar\u00e9rov\u00fd p\u0159\u00edstup"} value={form.easy_access} onChange={(v) => set("easy_access", v)} options={EasyAccessTypes} />
+            </div>
+
+            <h4 className="pf-subtitle">{"St\u00e1\u0159\u00ed"}</h4>
+            <div className="admin-form-row">
+              <NumberField label={"Rok v\u00fdstavby"} value={form.year_built} onChange={(v) => set("year_built", v)} placeholder="1985" />
+              <NumberField label={"Posledn\u00ed rekonstrukce"} value={form.last_renovation} onChange={(v) => set("last_renovation", v)} placeholder="2020" />
+            </div>
+            <NumberField label="Rok kolaudace" value={form.acceptance_year} onChange={(v) => set("acceptance_year", v)} placeholder="1986" />
+          </div>
+        </AccordionSection>
+
+        {/* ========== SECTION 5: Rozsirene udaje ========== */}
+        <AccordionSection
+          title={"Roz\u0161\u00ed\u0159en\u00e9 \u00fadaje"}
+          sectionKey="extended"
+          openSections={openSections}
+          toggle={toggleSection}
+        >
+          <div className="pf-section">
+            <h4 className="pf-subtitle" style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>{"Top\u011bn\u00ed"}</h4>
+            <MultiSelectField label={"Typ topen\u00ed"} value={form.heating} onChange={(v) => set("heating", v)} options={HeatingTypes} />
+            <MultiSelectField label={"Topn\u00e9 t\u011bleso"} value={form.heating_element} onChange={(v) => set("heating_element", v)} options={HeatingElements} />
+            <MultiSelectField label={"Zdroj top\u011bn\u00ed"} value={form.heating_source} onChange={(v) => set("heating_source", v)} options={HeatingSources} />
+            <MultiSelectField label={"Zdroj tepl\u00e9 vody"} value={form.water_heat_source} onChange={(v) => set("water_heat_source", v)} options={WaterHeatSources} />
+
+            <h4 className="pf-subtitle">Infrastruktura</h4>
+            <MultiSelectField label={"Elekt\u0159ina"} value={form.electricity} onChange={(v) => set("electricity", v)} options={ElectricityTypes} />
+            <MultiSelectField label="Plyn" value={form.gas} onChange={(v) => set("gas", v)} options={GasTypes} />
+            <MultiSelectField label="Voda" value={form.water} onChange={(v) => set("water", v)} options={WaterTypes} />
+            <MultiSelectField label="Odpad" value={form.gully} onChange={(v) => set("gully", v)} options={GullyTypes} />
+            <MultiSelectField label="Komunikace" value={form.road_type} onChange={(v) => set("road_type", v)} options={RoadTypes} />
+            <MultiSelectField label="Telekomunikace" value={form.telecommunication} onChange={(v) => set("telecommunication", v)} options={TelecommunicationTypes} />
+            <MultiSelectField label="Doprava" value={form.transport} onChange={(v) => set("transport", v)} options={TransportTypes} />
+            <MultiSelectField label="Internet" value={form.internet_connection_type} onChange={(v) => set("internet_connection_type", v)} options={InternetConnectionTypes} />
+
+            <div className="admin-form-row">
+              <TextField label="Poskytovatel internetu" value={form.internet_connection_provider} onChange={(v) => set("internet_connection_provider", v)} placeholder={"nap\u0159. O2, UPC"} />
+              <NumberField label="Rychlost internetu" value={form.internet_connection_speed} onChange={(v) => set("internet_connection_speed", v)} suffix="Mbps" />
+            </div>
+
+            <div className="admin-form-row">
+              <SelectField label={"Typ z\u00e1stavby"} value={form.surroundings_type} onChange={(v) => set("surroundings_type", v)} options={SurroundingsTypes} />
+              <SelectField label="Ochrana" value={form.protection} onChange={(v) => set("protection", v)} options={ProtectionTypes} />
+            </div>
+            <div className="admin-form-row">
+              <SelectField label={"Jisti\u010d"} value={form.circuit_breaker} onChange={(v) => set("circuit_breaker", v)} options={CircuitBreakers} />
+              <SelectField label={"F\u00e1ze"} value={form.phase_distribution} onChange={(v) => set("phase_distribution", v)} options={PhaseDistributions} />
+            </div>
+            <MultiSelectField label={"Typ studny"} value={form.well_type} onChange={(v) => set("well_type", v)} options={WellTypes} />
+
+            <h4 className="pf-subtitle">{"Finan\u010dn\u00ed \u00fadaje"}</h4>
+            <div className="admin-form-row">
+              <NumberField label={"Anuita / m\u011bs\u00ed\u010dn\u00ed spl\u00e1tka"} value={form.annuity} onChange={(v) => set("annuity", v)} suffix={"K\u010d"} />
+              <TextField label={"N\u00e1klady na bydlen\u00ed"} value={form.cost_of_living} onChange={(v) => set("cost_of_living", v)} placeholder={"nap\u0159. 5 000 K\u010d/m\u011bs\u00edc"} />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label="Provize" value={form.commission} onChange={(v) => set("commission", v)} suffix={"K\u010d"} />
+              <NumberField label={"Procento hypot\u00e9ky"} value={form.mortgage_percent} onChange={(v) => set("mortgage_percent", v)} suffix="%" />
+            </div>
+            <div className="admin-form-row">
+              <NumberField label={"Procento spo\u0159en\u00ed"} value={form.spor_percent} onChange={(v) => set("spor_percent", v)} suffix="%" />
+              <NumberField label={"Vratn\u00e1 kauce"} value={form.refundable_deposit} onChange={(v) => set("refundable_deposit", v)} suffix={"K\u010d"} />
+            </div>
+
+            <h4 className="pf-subtitle">{"Pron\u00e1jem / Dra\u017eba / Pod\u00edly"}</h4>
+            <div className="pf-conditional">
+              <h4 className="pf-subtitle">{"Pron\u00e1jem"}</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pron\u00e1jem"}</p>
+              <div className="admin-form-row">
+                <SelectField label={"Typ pron\u00e1jmu"} value={form.lease_type} onChange={(v) => set("lease_type", v)} options={LeaseTypes} />
+                <CheckboxField label={"N\u00e1jemce neplat\u00ed provizi"} checked={form.tenant_not_pay_commission} onChange={(v) => set("tenant_not_pay_commission", v)} />
+              </div>
+              <TextField label={"Datum nast\u011bhov\u00e1n\u00ed"} value={form.ready_date} onChange={(v) => set("ready_date", v)} type="date" />
+            </div>
+
+            <div className="pf-conditional">
+              <h4 className="pf-subtitle">{"Dra\u017eba"}</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Dra\u017eba"}</p>
+              <div className="admin-form-row">
+                <SelectField label={"Druh dra\u017eby"} value={form.auction_kind} onChange={(v) => set("auction_kind", v)} options={AuctionKinds} />
+                <TextField label={"Datum dra\u017eby"} value={form.auction_date} onChange={(v) => set("auction_date", v)} type="date" />
+              </div>
+              <TextField label={"M\u00edsto dra\u017eby"} value={form.auction_place} onChange={(v) => set("auction_place", v)} placeholder={"Adresa m\u00edsta dra\u017eby"} />
+              <div className="admin-form-row">
+                <NumberField label="Jistina" value={form.price_auction_principal} onChange={(v) => set("price_auction_principal", v)} suffix={"K\u010d"} />
+                <NumberField label={"Cena znaleck\u00e9ho posudku"} value={form.price_expert_report} onChange={(v) => set("price_expert_report", v)} suffix={"K\u010d"} />
+              </div>
+              <NumberField label={"Nejni\u017e\u0161\u00ed pod\u00e1n\u00ed"} value={form.price_minimum_bid} onChange={(v) => set("price_minimum_bid", v)} suffix={"K\u010d"} />
+            </div>
+
+            <div className="pf-conditional">
+              <h4 className="pf-subtitle">{"Pod\u00edly"}</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pod\u00edly"}</p>
+              <div className="admin-form-row">
+                <NumberField label={"\u010citatel pod\u00edlu"} value={form.share_numerator} onChange={(v) => set("share_numerator", v)} placeholder={"nap\u0159. 1"} />
+                <NumberField label={"Jmenovatel pod\u00edlu"} value={form.share_denominator} onChange={(v) => set("share_denominator", v)} placeholder={"nap\u0159. 4"} />
+              </div>
+            </div>
+
+            <h4 className="pf-subtitle">Datumy a status</h4>
+            <div className="admin-form-row">
+              <TextField label={"Za\u010d\u00e1tek v\u00fdstavby"} value={form.beginning_date} onChange={(v) => set("beginning_date", v)} type="date" />
+              <TextField label={"Konec v\u00fdstavby"} value={form.finish_date} onChange={(v) => set("finish_date", v)} type="date" />
+            </div>
+            <div className="admin-form-row">
+              <TextField label="Datum prodeje" value={form.sale_date} onChange={(v) => set("sale_date", v)} type="date" />
+              <TextField label={"Prvn\u00ed prohl\u00eddka"} value={form.first_tour_date} onChange={(v) => set("first_tour_date", v)} type="date" />
+            </div>
+            <div className="admin-form-row">
+              <SelectField label="Stav" value={form.extra_info} onChange={(v) => set("extra_info", v)} options={ExtraInfoStatuses} />
+              <SelectField label={"P\u0159evod do OV"} value={form.personal_transfer} onChange={(v) => set("personal_transfer", v)} options={PersonalTransferTypes} />
+            </div>
+            <div className="admin-form-row">
+              <CheckboxField label={"Exkluzivn\u011b u RK"} checked={form.exclusively_at_rk} onChange={(v) => set("exclusively_at_rk", v)} />
+              <NumberField label={"Po\u010det vlastn\u00edk\u016f"} value={form.num_owners} onChange={(v) => set("num_owners", v)} />
+            </div>
+            <NumberField label={"C\u00edslo bytov\u00e9 jednotky"} value={form.apartment_number} onChange={(v) => set("apartment_number", v)} />
+
+            <h4 className="pf-subtitle">{"Kl\u00ed\u010dov\u00e1 slova"}</h4>
+            <TagsField
+              label={"Kl\u00ed\u010dov\u00e1 slova"}
+              value={form.keywords}
+              onChange={(v) => set("keywords", v)}
+              placeholder={"P\u0159idat kl\u00ed\u010dov\u00e9 slovo..."}
+            />
+
+            <h4 className="pf-subtitle">{"Makl\u00e9\u0159 a publikace"}</h4>
             <div className="admin-form-group">
-              <label>Prirazeny makler</label>
+              <label>{"P\u0159i\u0159azen\u00fd makl\u00e9\u0159"}</label>
               <select value={form.broker_id} onChange={(e) => set("broker_id", e.target.value)}>
-                <option value="">-- Bez maklere --</option>
+                <option value="">{"-- Bez makl\u00e9\u0159e --"}</option>
                 {brokers.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
             </div>
-
             <div className="admin-form-group">
               <label>Projekt</label>
               <select value={form.project_id} onChange={(e) => set("project_id", e.target.value)}>
@@ -1623,43 +2073,15 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 ))}
               </select>
             </div>
-
             <div className="pf-checkbox-grid" style={{ marginTop: 16 }}>
-              <CheckboxField label="Aktivni (zobrazit na webu)" checked={form.active} onChange={(v) => set("active", v)} />
-              <CheckboxField label="Doporucena (premium)" checked={form.featured} onChange={(v) => set("featured", v)} />
+              <CheckboxField label={"Aktivn\u00ed (zobrazit na webu)"} checked={form.active} onChange={(v) => set("active", v)} />
+              <CheckboxField label={"Doporu\u010den\u00e1 (premium)"} checked={form.featured} onChange={(v) => set("featured", v)} />
             </div>
           </div>
-        )}
-      </div>
+        </AccordionSection>
 
-      {/* Navigation */}
-      <div className="pf-nav">
-        <button
-          className="admin-btn admin-btn--secondary"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Predchozi
-        </button>
-
-        <span className="pf-nav-info">
-          Krok {step + 1} z {STEPS.length}
-        </span>
-
-        {step < STEPS.length - 1 ? (
-          <button
-            className="admin-btn admin-btn--primary"
-            onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-          >
-            Dalsi
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        ) : (
+        {/* Submit bar */}
+        <div className="pf-submit-bar">
           <button
             className="admin-btn admin-btn--primary"
             onClick={handleSubmit}
@@ -1674,10 +2096,13 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 <polyline points="7 3 7 8 15 8" />
               </svg>
             )}
-            {mode === "create" ? "Vytvořit nemovitost" : "Uložit změny"}
+            {mode === "create" ? "Vytvo\u0159it nemovitost" : "Ulo\u017eit zm\u011bny"}
           </button>
-        )}
+        </div>
       </div>
+
+      {/* Live preview */}
+      <LivePreview form={form} />
     </div>
   );
 }
