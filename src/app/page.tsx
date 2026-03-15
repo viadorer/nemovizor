@@ -122,8 +122,8 @@ export default function Home() {
               </div>
 
               <div className="hero-quick-links">
-                <Link href="/nabidky?listing_type=prodej" className="hero-quick-link">Prodej</Link>
-                <Link href="/nabidky?listing_type=pronajem" className="hero-quick-link">Pronájem</Link>
+                <Link href="/nabidky?listingType=sale" className="hero-quick-link">Prodej</Link>
+                <Link href="/nabidky?listingType=rent" className="hero-quick-link">{"Pron\u00e1jem"}</Link>
                 <Link href="/prodat" className="hero-quick-link">Prodat / Pronajmout</Link>
                 <Link href="/oceneni" className="hero-quick-link">Odhad ceny</Link>
               </div>
