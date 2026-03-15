@@ -27,7 +27,7 @@ export function createBrowserSupabase(): SupabaseClient<Database> | null {
   return browserClient;
 }
 
-/** Zpetna kompatibilita — pouzije singleton browser klient */
+/** Zp\u011btn\u00e1 kompatibilita \u2014 pou\u017eije singleton browser klient */
 export const supabase: SupabaseClient<Database> | null = createBrowserSupabase();
 
 /** Server-side klient s service key (obchazi RLS) — pouze v API routes / server components */

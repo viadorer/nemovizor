@@ -50,21 +50,21 @@ import {
 
 // ===== STEP DEFINITIONS =====
 const STEPS = [
-  { key: "basic", label: "Zakladni udaje" },
+  { key: "basic", label: "Z\u00e1kladn\u00ed \u00fadaje" },
   { key: "price", label: "Cena" },
   { key: "location", label: "Lokace" },
   { key: "areas", label: "Plochy" },
   { key: "description", label: "Popis" },
   { key: "condition", label: "Stav a parametry" },
-  { key: "floors", label: "Podlazi a parkovani" },
-  { key: "amenities", label: "Vybaveni" },
-  { key: "heating", label: "Topeni" },
+  { key: "floors", label: "Podla\u017e\u00ed a parkov\u00e1n\u00ed" },
+  { key: "amenities", label: "Vybaven\u00ed" },
+  { key: "heating", label: "Top\u011bn\u00ed" },
   { key: "infrastructure", label: "Infrastruktura" },
-  { key: "financial", label: "Financni udaje" },
-  { key: "special", label: "Pronajem / Drazba / Podily" },
+  { key: "financial", label: "Finan\u010dn\u00ed \u00fadaje" },
+  { key: "special", label: "Pron\u00e1jem / Dra\u017eba / Pod\u00edly" },
   { key: "dates", label: "Datumy a status" },
-  { key: "media", label: "Media" },
-  { key: "assignment", label: "Makler a publikace" },
+  { key: "media", label: "M\u00e9dia" },
+  { key: "assignment", label: "Makl\u00e9\u0159 a publikace" },
 ] as const;
 
 // ===== FORM DATA TYPE (mirrors DB columns exactly) =====
@@ -641,7 +641,7 @@ function TagsField({
                 addTag();
               }
             }}
-            placeholder={placeholder ?? "Pridat..."}
+            placeholder={placeholder ?? "Přidat..."}
           />
           <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={addTag}>
             +
@@ -1051,9 +1051,9 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Zpet
+          {"Zp\u011bt"}
         </button>
-        <h2>{mode === "create" ? "Nova nemovitost" : "Upravit nemovitost"}</h2>
+        <h2>{mode === "create" ? "Nov\u00e1 nemovitost" : "Upravit nemovitost"}</h2>
       </div>
 
       {/* Step navigation */}
@@ -1091,10 +1091,10 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 0: Basic */}
         {step === 0 && (
           <div className="pf-section">
-            <h3>Zakladni udaje</h3>
+            <h3>Základní údaje</h3>
             <div className="admin-form-row">
               <SelectField
-                label="Typ nabidky"
+                label="Typ nabídky"
                 value={form.listing_type}
                 onChange={(v) => set("listing_type", v)}
                 options={ListingTypes}
@@ -1206,7 +1206,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             <h3>Lokace</h3>
             <div className="admin-form-row">
               <TextField
-                label="Mesto"
+                label="M\u011bsto"
                 value={form.city}
                 onChange={(v) => set("city", v)}
                 required
@@ -1227,7 +1227,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 placeholder="Vinohradska 123"
               />
               <TextField
-                label="Mestska cast"
+                label="M\u011bstsk\u00e1 \u010d\u00e1st"
                 value={form.city_part}
                 onChange={(v) => set("city_part", v)}
                 placeholder="Vinohrady"
@@ -1244,25 +1244,25 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 label="Kraj"
                 value={form.region}
                 onChange={(v) => set("region", v)}
-                placeholder="Hlavni mesto Praha"
+                placeholder="Hlavn\u00ed m\u011bsto Praha"
               />
             </div>
             <TextField
               label="Popis lokace (automaticky)"
               value={form.location_label}
               onChange={(v) => set("location_label", v)}
-              placeholder="Automaticky z ulice, casti, mesta"
+              placeholder="Automaticky z ulice, \u010d\u00e1sti, m\u011bsta"
             />
             <div className="admin-form-row">
               <NumberField
-                label="Zemepisna sirka"
+                label="Zem\u011bpisn\u00e1 \u0161\u00ed\u0159ka"
                 value={form.latitude}
                 onChange={(v) => set("latitude", v ?? 0)}
                 step="0.000001"
                 suffix="lat"
               />
               <NumberField
-                label="Zemepisna delka"
+                label="Zem\u011bpisn\u00e1 d\u00e9lka"
                 value={form.longitude}
                 onChange={(v) => set("longitude", v ?? 0)}
                 step="0.000001"
@@ -1277,16 +1277,16 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <div className="pf-section">
             <h3>Plochy</h3>
             <div className="admin-form-row">
-              <NumberField label="Uzitna plocha" value={form.area} onChange={(v) => set("area", v ?? 0)} suffix="m2" min={0} />
+              <NumberField label="U\u017eitn\u00e1 plocha" value={form.area} onChange={(v) => set("area", v ?? 0)} suffix="m2" min={0} />
               <NumberField label="Plocha pozemku" value={form.land_area} onChange={(v) => set("land_area", v)} suffix="m2" min={0} />
             </div>
             <div className="admin-form-row">
-              <NumberField label="Zastavena plocha" value={form.built_up_area} onChange={(v) => set("built_up_area", v)} suffix="m2" />
-              <NumberField label="Celkova plocha" value={form.floor_area} onChange={(v) => set("floor_area", v)} suffix="m2" />
+              <NumberField label="Zastav\u011bn\u00e1 plocha" value={form.built_up_area} onChange={(v) => set("built_up_area", v)} suffix="m2" />
+              <NumberField label="Celková plocha" value={form.floor_area} onChange={(v) => set("floor_area", v)} suffix="m2" />
             </div>
             <div className="admin-form-row">
               <NumberField label="Balkon" value={form.balcony_area} onChange={(v) => set("balcony_area", v)} suffix="m2" />
-              <NumberField label="Lodzie" value={form.loggia_area} onChange={(v) => set("loggia_area", v)} suffix="m2" />
+              <NumberField label="Lod\u017eie" value={form.loggia_area} onChange={(v) => set("loggia_area", v)} suffix="m2" />
             </div>
             <div className="admin-form-row">
               <NumberField label="Terasa" value={form.terrace_area} onChange={(v) => set("terrace_area", v)} suffix="m2" />
@@ -1294,19 +1294,19 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             </div>
             <div className="admin-form-row">
               <NumberField label="Sklep" value={form.cellar_area} onChange={(v) => set("cellar_area", v)} suffix="m2" />
-              <NumberField label="Bazen" value={form.basin_area} onChange={(v) => set("basin_area", v)} suffix="m2" />
+              <NumberField label="Baz\u00e9n" value={form.basin_area} onChange={(v) => set("basin_area", v)} suffix="m2" />
             </div>
             <div className="admin-form-row">
-              <NumberField label="Kancelare" value={form.offices_area} onChange={(v) => set("offices_area", v)} suffix="m2" />
-              <NumberField label="Vyroba" value={form.production_area} onChange={(v) => set("production_area", v)} suffix="m2" />
+              <NumberField label="Kancel\u00e1\u0159e" value={form.offices_area} onChange={(v) => set("offices_area", v)} suffix="m2" />
+              <NumberField label="V\u00fdroba" value={form.production_area} onChange={(v) => set("production_area", v)} suffix="m2" />
             </div>
             <div className="admin-form-row">
               <NumberField label="Obchod" value={form.shop_area} onChange={(v) => set("shop_area", v)} suffix="m2" />
               <NumberField label="Sklad" value={form.store_area} onChange={(v) => set("store_area", v)} suffix="m2" />
             </div>
             <div className="admin-form-row">
-              <NumberField label="Dilna" value={form.workshop_area} onChange={(v) => set("workshop_area", v)} suffix="m2" />
-              <NumberField label="Nebytove prostory celkem" value={form.nolive_total_area} onChange={(v) => set("nolive_total_area", v)} suffix="m2" />
+              <NumberField label="D\u00edlna" value={form.workshop_area} onChange={(v) => set("workshop_area", v)} suffix="m2" />
+              <NumberField label="Nebytov\u00e9 prostory celkem" value={form.nolive_total_area} onChange={(v) => set("nolive_total_area", v)} suffix="m2" />
             </div>
           </div>
         )}
@@ -1316,17 +1316,17 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <div className="pf-section">
             <h3>Popis nemovitosti</h3>
             <TextareaField
-              label="Strucny popis (summary)"
+              label="Stručný popis (summary)"
               value={form.summary}
               onChange={(v) => set("summary", v)}
-              placeholder="Kratky popisek pro karticku a nahled..."
+              placeholder="Krátký popisek pro kartičku a náhled..."
               rows={3}
             />
             <TextareaField
-              label="Podrobny popis"
+              label="Podrobný popis"
               value={form.description ?? ""}
               onChange={(v) => set("description", v)}
-              placeholder="Podrobny popis nemovitosti vcetne vsech dulezitych informaci..."
+              placeholder="Podrobný popis nemovitosti včetně všech důležitých informací..."
               rows={10}
             />
           </div>
@@ -1338,31 +1338,31 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
             <h3>Stav a parametry</h3>
             <div className="admin-form-row">
               <SelectField label="Stav objektu" value={form.condition} onChange={(v) => set("condition", v)} options={PropertyConditions} />
-              <SelectField label="Vlastnictvi" value={form.ownership} onChange={(v) => set("ownership", v)} options={OwnershipTypes} />
+              <SelectField label="Vlastnictví" value={form.ownership} onChange={(v) => set("ownership", v)} options={OwnershipTypes} />
             </div>
             <div className="admin-form-row">
-              <SelectField label="Vybaveni" value={form.furnishing} onChange={(v) => set("furnishing", v)} options={FurnishingTypes} />
-              <SelectField label="Energeticky stitek" value={form.energy_rating} onChange={(v) => set("energy_rating", v)} options={EnergyRatings} />
+              <SelectField label="Vybavení" value={form.furnishing} onChange={(v) => set("furnishing", v)} options={FurnishingTypes} />
+              <SelectField label="Energetický štítek" value={form.energy_rating} onChange={(v) => set("energy_rating", v)} options={EnergyRatings} />
             </div>
             <div className="admin-form-row">
-              <SelectField label="Material stavby" value={form.building_material} onChange={(v) => set("building_material", v)} options={BuildingMaterials} />
-              <TextField label="Podlaha" value={form.flooring} onChange={(v) => set("flooring", v)} placeholder="napr. dlazba, laminat" />
+              <SelectField label="Materi\u00e1l stavby" value={form.building_material} onChange={(v) => set("building_material", v)} options={BuildingMaterials} />
+              <TextField label="Podlaha" value={form.flooring} onChange={(v) => set("flooring", v)} placeholder="např. dlažba, laminát" />
             </div>
 
-            <h4 className="pf-subtitle">Dum / Byt specificke</h4>
+            <h4 className="pf-subtitle">Dům / Byt specifické</h4>
             <div className="admin-form-row">
               <SelectField label="Typ domu" value={form.object_type} onChange={(v) => set("object_type", v)} options={ObjectTypes} />
               <SelectField label="Poloha domu" value={form.object_kind} onChange={(v) => set("object_kind", v)} options={ObjectKinds} />
             </div>
             <div className="admin-form-row">
-              <SelectField label="Umisteni objektu" value={form.object_location} onChange={(v) => set("object_location", v)} options={ObjectLocations} />
+              <SelectField label="Umístění objektu" value={form.object_location} onChange={(v) => set("object_location", v)} options={ObjectLocations} />
               <SelectField label="Typ bytu" value={form.flat_class} onChange={(v) => set("flat_class", v)} options={FlatClasses} />
             </div>
 
-            <h4 className="pf-subtitle">Stari</h4>
+            <h4 className="pf-subtitle">Stáří</h4>
             <div className="admin-form-row">
-              <NumberField label="Rok vystavby" value={form.year_built} onChange={(v) => set("year_built", v)} placeholder="1985" />
-              <NumberField label="Posledni rekonstrukce" value={form.last_renovation} onChange={(v) => set("last_renovation", v)} placeholder="2020" />
+              <NumberField label="Rok v\u00fdstavby" value={form.year_built} onChange={(v) => set("year_built", v)} placeholder="1985" />
+              <NumberField label="Poslední rekonstrukce" value={form.last_renovation} onChange={(v) => set("last_renovation", v)} placeholder="2020" />
             </div>
             <NumberField label="Rok kolaudace" value={form.acceptance_year} onChange={(v) => set("acceptance_year", v)} placeholder="1986" />
           </div>
@@ -1371,29 +1371,29 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 6: Floors & Parking */}
         {step === 6 && (
           <div className="pf-section">
-            <h3>Podlazi</h3>
+            <h3>Podlaží</h3>
             <div className="admin-form-row">
-              <NumberField label="Podlazi" value={form.floor} onChange={(v) => set("floor", v)} placeholder="napr. 3" />
-              <NumberField label="Pocet podlazi celkem" value={form.total_floors} onChange={(v) => set("total_floors", v)} placeholder="napr. 8" />
+              <NumberField label="Podlaží" value={form.floor} onChange={(v) => set("floor", v)} placeholder="např. 3" />
+              <NumberField label="Počet podlaží celkem" value={form.total_floors} onChange={(v) => set("total_floors", v)} placeholder="např. 8" />
             </div>
             <div className="admin-form-row">
               <NumberField label="Podzemni podlazi" value={form.underground_floors} onChange={(v) => set("underground_floors", v)} />
               <NumberField label="Svetla vyska stropu" value={form.ceiling_height} onChange={(v) => set("ceiling_height", v)} suffix="m" step="0.01" />
             </div>
 
-            <h3 className="pf-subtitle">Parkovani</h3>
+            <h3 className="pf-subtitle">Parkování</h3>
             <div className="admin-form-row">
               <SelectField label="Typ parkovani" value={form.parking} onChange={(v) => set("parking", v)} options={ParkingTypes} />
-              <NumberField label="Pocet parkovacich mist" value={form.parking_spaces} onChange={(v) => set("parking_spaces", v)} min={0} />
+              <NumberField label="Počet parkovacích míst" value={form.parking_spaces} onChange={(v) => set("parking_spaces", v)} min={0} />
             </div>
-            <NumberField label="Pocet garazi" value={form.garage_count} onChange={(v) => set("garage_count", v)} min={0} />
+            <NumberField label="Počet garáží" value={form.garage_count} onChange={(v) => set("garage_count", v)} min={0} />
           </div>
         )}
 
         {/* STEP 7: Amenities */}
         {step === 7 && (
           <div className="pf-section">
-            <h3>Vybaveni a vlastnosti</h3>
+            <h3>Vybavení a vlastnosti</h3>
             <div className="pf-checkbox-grid">
               <CheckboxField label="Balkon" checked={form.balcony} onChange={(v) => set("balcony", v)} />
               <CheckboxField label="Terasa" checked={form.terrace} onChange={(v) => set("terrace", v)} />
@@ -1401,8 +1401,8 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
               <CheckboxField label="Vytah" checked={form.elevator} onChange={(v) => set("elevator", v)} />
               <CheckboxField label="Sklep" checked={form.cellar} onChange={(v) => set("cellar", v)} />
               <CheckboxField label="Garaz" checked={form.garage} onChange={(v) => set("garage", v)} />
-              <CheckboxField label="Bazen" checked={form.pool} onChange={(v) => set("pool", v)} />
-              <CheckboxField label="Lodzie" checked={form.loggia} onChange={(v) => set("loggia", v)} />
+              <CheckboxField label="Baz\u00e9n" checked={form.pool} onChange={(v) => set("pool", v)} />
+              <CheckboxField label="Lod\u017eie" checked={form.loggia} onChange={(v) => set("loggia", v)} />
               <CheckboxField label="Nizkoenergeticky" checked={form.low_energy} onChange={(v) => set("low_energy", v)} />
               <CheckboxField label="FTV panely" checked={form.ftv_panels} onChange={(v) => set("ftv_panels", v)} />
               <CheckboxField label="Solarni panely" checked={form.solar_panels} onChange={(v) => set("solar_panels", v)} />
@@ -1417,19 +1417,19 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 8: Heating */}
         {step === 8 && (
           <div className="pf-section">
-            <h3>Topeni</h3>
+            <h3>Topění</h3>
             <MultiSelectField label="Typ topeni" value={form.heating} onChange={(v) => set("heating", v)} options={HeatingTypes} />
-            <MultiSelectField label="Topne teleso" value={form.heating_element} onChange={(v) => set("heating_element", v)} options={HeatingElements} />
-            <MultiSelectField label="Zdroj topeni" value={form.heating_source} onChange={(v) => set("heating_source", v)} options={HeatingSources} />
-            <MultiSelectField label="Zdroj teple vody" value={form.water_heat_source} onChange={(v) => set("water_heat_source", v)} options={WaterHeatSources} />
+            <MultiSelectField label="Topné těleso" value={form.heating_element} onChange={(v) => set("heating_element", v)} options={HeatingElements} />
+            <MultiSelectField label="Zdroj topění" value={form.heating_source} onChange={(v) => set("heating_source", v)} options={HeatingSources} />
+            <MultiSelectField label="Zdroj teplé vody" value={form.water_heat_source} onChange={(v) => set("water_heat_source", v)} options={WaterHeatSources} />
           </div>
         )}
 
         {/* STEP 9: Infrastructure */}
         {step === 9 && (
           <div className="pf-section">
-            <h3>Infrastruktura a site</h3>
-            <MultiSelectField label="Elektrina" value={form.electricity} onChange={(v) => set("electricity", v)} options={ElectricityTypes} />
+            <h3>Infrastruktura a sítě</h3>
+            <MultiSelectField label="Elektřina" value={form.electricity} onChange={(v) => set("electricity", v)} options={ElectricityTypes} />
             <MultiSelectField label="Plyn" value={form.gas} onChange={(v) => set("gas", v)} options={GasTypes} />
             <MultiSelectField label="Voda" value={form.water} onChange={(v) => set("water", v)} options={WaterTypes} />
             <MultiSelectField label="Odpad" value={form.gully} onChange={(v) => set("gully", v)} options={GullyTypes} />
@@ -1440,7 +1440,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
 
             <h4 className="pf-subtitle">Internet podrobnosti</h4>
             <div className="admin-form-row">
-              <TextField label="Poskytovatel internetu" value={form.internet_connection_provider} onChange={(v) => set("internet_connection_provider", v)} placeholder="napr. O2, UPC" />
+              <TextField label="Poskytovatel internetu" value={form.internet_connection_provider} onChange={(v) => set("internet_connection_provider", v)} placeholder="např. O2, UPC" />
               <NumberField label="Rychlost internetu" value={form.internet_connection_speed} onChange={(v) => set("internet_connection_speed", v)} suffix="Mbps" />
             </div>
 
@@ -1464,10 +1464,10 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 10: Financial */}
         {step === 10 && (
           <div className="pf-section">
-            <h3>Financni udaje</h3>
+            <h3>Finanční údaje</h3>
             <div className="admin-form-row">
-              <NumberField label="Anuita / mesicni splatka" value={form.annuity} onChange={(v) => set("annuity", v)} suffix="Kc" />
-              <TextField label="Naklady na bydleni" value={form.cost_of_living} onChange={(v) => set("cost_of_living", v)} placeholder="napr. 5 000 Kc/mesic" />
+              <NumberField label="Anuita / měsíční splátka" value={form.annuity} onChange={(v) => set("annuity", v)} suffix="Kc" />
+              <TextField label="Náklady na bydlení" value={form.cost_of_living} onChange={(v) => set("cost_of_living", v)} placeholder="např. 5 000 Kč/měsíc" />
             </div>
             <div className="admin-form-row">
               <NumberField label="Provize" value={form.commission} onChange={(v) => set("commission", v)} suffix="Kc" />
@@ -1483,42 +1483,42 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 11: Lease / Auction / Shares */}
         {step === 11 && (
           <div className="pf-section">
-            <h3>Specialni udaje dle typu nabidky</h3>
+            <h3>{"Speci\u00e1ln\u00ed \u00fadaje dle typu nab\u00eddky"}</h3>
 
             {/* Lease section — show for rent */}
             <div className="pf-conditional">
-              <h4 className="pf-subtitle">Pronajem</h4>
-              <p className="pf-hint">Relevantni pro typ nabidky: Pronajem</p>
+              <h4 className="pf-subtitle">Pronájem</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pron\u00e1jem"}</p>
               <div className="admin-form-row">
-                <SelectField label="Typ pronajmu" value={form.lease_type} onChange={(v) => set("lease_type", v)} options={LeaseTypes} />
-                <CheckboxField label="Najemce neplati provizi" checked={form.tenant_not_pay_commission} onChange={(v) => set("tenant_not_pay_commission", v)} />
+                <SelectField label="Typ pron\u00e1jmu" value={form.lease_type} onChange={(v) => set("lease_type", v)} options={LeaseTypes} />
+                <CheckboxField label="Nájemce neplatí provizi" checked={form.tenant_not_pay_commission} onChange={(v) => set("tenant_not_pay_commission", v)} />
               </div>
-              <TextField label="Datum nastehhovani" value={form.ready_date} onChange={(v) => set("ready_date", v)} type="date" />
+              <TextField label="Datum nastěhování" value={form.ready_date} onChange={(v) => set("ready_date", v)} type="date" />
             </div>
 
             {/* Auction section */}
             <div className="pf-conditional">
-              <h4 className="pf-subtitle">Drazba</h4>
-              <p className="pf-hint">Relevantni pro typ nabidky: Drazba</p>
+              <h4 className="pf-subtitle">Dražba</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Dra\u017eba"}</p>
               <div className="admin-form-row">
-                <SelectField label="Druh drazby" value={form.auction_kind} onChange={(v) => set("auction_kind", v)} options={AuctionKinds} />
-                <TextField label="Datum drazby" value={form.auction_date} onChange={(v) => set("auction_date", v)} type="date" />
+                <SelectField label="Druh dražby" value={form.auction_kind} onChange={(v) => set("auction_kind", v)} options={AuctionKinds} />
+                <TextField label="Datum dražby" value={form.auction_date} onChange={(v) => set("auction_date", v)} type="date" />
               </div>
-              <TextField label="Misto drazby" value={form.auction_place} onChange={(v) => set("auction_place", v)} placeholder="Adresa mista drazby" />
+              <TextField label="M\u00edsto dra\u017eby" value={form.auction_place} onChange={(v) => set("auction_place", v)} placeholder="Adresa m\u00edsta dra\u017eby" />
               <div className="admin-form-row">
                 <NumberField label="Jistina" value={form.price_auction_principal} onChange={(v) => set("price_auction_principal", v)} suffix="Kc" />
-                <NumberField label="Cena znaleckeho posudku" value={form.price_expert_report} onChange={(v) => set("price_expert_report", v)} suffix="Kc" />
+                <NumberField label="Cena znaleck\u00e9ho posudku" value={form.price_expert_report} onChange={(v) => set("price_expert_report", v)} suffix="Kc" />
               </div>
-              <NumberField label="Nejnizsi podani" value={form.price_minimum_bid} onChange={(v) => set("price_minimum_bid", v)} suffix="Kc" />
+              <NumberField label="Nejni\u017e\u0161\u00ed pod\u00e1n\u00ed" value={form.price_minimum_bid} onChange={(v) => set("price_minimum_bid", v)} suffix="Kc" />
             </div>
 
             {/* Shares section */}
             <div className="pf-conditional">
-              <h4 className="pf-subtitle">Podily</h4>
-              <p className="pf-hint">Relevantni pro typ nabidky: Podily</p>
+              <h4 className="pf-subtitle">Podíly</h4>
+              <p className="pf-hint">{"Relevantn\u00ed pro typ nab\u00eddky: Pod\u00edly"}</p>
               <div className="admin-form-row">
-                <NumberField label="Citatel podilu" value={form.share_numerator} onChange={(v) => set("share_numerator", v)} placeholder="napr. 1" />
-                <NumberField label="Jmenovatel podilu" value={form.share_denominator} onChange={(v) => set("share_denominator", v)} placeholder="napr. 4" />
+                <NumberField label="Čitatel podílu" value={form.share_numerator} onChange={(v) => set("share_numerator", v)} placeholder="např. 1" />
+                <NumberField label="Jmenovatel podílu" value={form.share_denominator} onChange={(v) => set("share_denominator", v)} placeholder="např. 4" />
               </div>
             </div>
           </div>
@@ -1529,33 +1529,33 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <div className="pf-section">
             <h3>Datumy a status</h3>
 
-            <h4 className="pf-subtitle">Datumy vystavby</h4>
+            <h4 className="pf-subtitle">Datumy výstavby</h4>
             <div className="admin-form-row">
-              <TextField label="Zacatek vystavby" value={form.beginning_date} onChange={(v) => set("beginning_date", v)} type="date" />
-              <TextField label="Konec vystavby" value={form.finish_date} onChange={(v) => set("finish_date", v)} type="date" />
+              <TextField label="Začátek výstavby" value={form.beginning_date} onChange={(v) => set("beginning_date", v)} type="date" />
+              <TextField label="Konec výstavby" value={form.finish_date} onChange={(v) => set("finish_date", v)} type="date" />
             </div>
             <div className="admin-form-row">
               <TextField label="Datum prodeje" value={form.sale_date} onChange={(v) => set("sale_date", v)} type="date" />
-              <TextField label="Prvni prohlidka" value={form.first_tour_date} onChange={(v) => set("first_tour_date", v)} type="date" />
+              <TextField label="Prvn\u00ed prohl\u00eddka" value={form.first_tour_date} onChange={(v) => set("first_tour_date", v)} type="date" />
             </div>
 
             <h4 className="pf-subtitle">Status inzeratu</h4>
             <div className="admin-form-row">
               <SelectField label="Stav" value={form.extra_info} onChange={(v) => set("extra_info", v)} options={ExtraInfoStatuses} />
-              <SelectField label="Prevod do OV" value={form.personal_transfer} onChange={(v) => set("personal_transfer", v)} options={PersonalTransferTypes} />
+              <SelectField label="P\u0159evod do OV" value={form.personal_transfer} onChange={(v) => set("personal_transfer", v)} options={PersonalTransferTypes} />
             </div>
             <div className="admin-form-row">
-              <CheckboxField label="Exkluzivne u RK" checked={form.exclusively_at_rk} onChange={(v) => set("exclusively_at_rk", v)} />
-              <NumberField label="Pocet vlastniku" value={form.num_owners} onChange={(v) => set("num_owners", v)} />
+              <CheckboxField label="Exkluzivn\u011b u RK" checked={form.exclusively_at_rk} onChange={(v) => set("exclusively_at_rk", v)} />
+              <NumberField label="Po\u010det vlastn\u00edk\u016f" value={form.num_owners} onChange={(v) => set("num_owners", v)} />
             </div>
-            <NumberField label="Cislo bytove jednotky" value={form.apartment_number} onChange={(v) => set("apartment_number", v)} />
+            <NumberField label="Číslo bytové jednotky" value={form.apartment_number} onChange={(v) => set("apartment_number", v)} />
 
-            <h4 className="pf-subtitle">Klicova slova</h4>
+            <h4 className="pf-subtitle">Klíčová slova</h4>
             <TagsField
-              label="Klicova slova"
+              label="Klíčová slova"
               value={form.keywords}
               onChange={(v) => set("keywords", v)}
-              placeholder="Pridat klicove slovo..."
+              placeholder="Přidat klíčové slovo..."
             />
           </div>
         )}
@@ -1565,14 +1565,14 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
           <div className="pf-section">
             <h3>Media</h3>
 
-            <h4 className="pf-subtitle">Hlavni fotka</h4>
+            <h4 className="pf-subtitle">{"Hlavn\u00ed fotka"}</h4>
             <div className="admin-form-row">
-              <TextField label="URL hlavni fotky" value={form.image_src} onChange={(v) => set("image_src", v)} placeholder="https://..." />
+              <TextField label="URL hlavn\u00ed fotky" value={form.image_src} onChange={(v) => set("image_src", v)} placeholder="https://..." />
               <TextField label="Alt text" value={form.image_alt} onChange={(v) => set("image_alt", v)} placeholder="Popis fotky" />
             </div>
             {form.image_src && (
               <div className="pf-main-image-preview">
-                <img src={form.image_src} alt={form.image_alt || "Nahled"} />
+                <img src={form.image_src} alt={form.image_alt || "N\u00e1hled"} />
               </div>
             )}
 
@@ -1583,9 +1583,9 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
               onChange={(v) => set("images", v)}
             />
 
-            <h4 className="pf-subtitle">Virtualni prohlidky a video</h4>
+            <h4 className="pf-subtitle">{"Virtu\u00e1ln\u00ed prohl\u00eddky a video"}</h4>
             <TextField
-              label="Matterport URL (3D prohlidka)"
+              label="Matterport URL (3D prohl\u00eddka)"
               value={form.matterport_url}
               onChange={(v) => set("matterport_url", v)}
               placeholder="https://my.matterport.com/show/?m=..."
@@ -1602,7 +1602,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
         {/* STEP 14: Assignment & Publication */}
         {step === 14 && (
           <div className="pf-section">
-            <h3>Makler a publikace</h3>
+            <h3>Makléř a publikace</h3>
 
             <div className="admin-form-group">
               <label>Prirazeny makler</label>
@@ -1674,7 +1674,7 @@ export function PropertyForm({ mode, propertyId }: PropertyFormProps) {
                 <polyline points="7 3 7 8 15 8" />
               </svg>
             )}
-            {mode === "create" ? "Vytvorit nemovitost" : "Ulozit zmeny"}
+            {mode === "create" ? "Vytvořit nemovitost" : "Uložit změny"}
           </button>
         )}
       </div>
