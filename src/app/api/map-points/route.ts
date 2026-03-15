@@ -40,48 +40,100 @@ export async function GET(req: NextRequest) {
   }
 
   // Fallback: simple select (no PostGIS)
-  let query = client
-    .from("properties")
-    .select("id, latitude, longitude, price, price_currency, category, listing_type, title, slug, rooms_label, image_src, subtype, area, district")
-    .eq("active", true);
-
   const listingType = sp.get("listing_type");
   const category = sp.get("category");
   const subtype = sp.get("subtype");
   const city = sp.get("city");
 
-  if (listingType) query = query.eq("listing_type", listingType);
-  if (category) {
-    const cats = category.split(",");
-    query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
-  }
-  if (subtype) {
-    const subs = subtype.split(",");
-    query = subs.length === 1 ? query.eq("subtype", subs[0]) : query.in("subtype", subs);
-  }
-  if (city) query = query.eq("city", city);
-  if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
-  if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));
-  if (sp.get("area_min")) query = query.gte("area", Number(sp.get("area_min")));
-  if (sp.get("area_max")) query = query.lte("area", Number(sp.get("area_max")));
+  function buildQuery() {
+    let q = client!
+      .from("properties")
+      .select("id, latitude, longitude, price, price_currency, category, listing_type, title, slug, rooms_label, image_src, subtype, area, district")
+      .eq("active", true)
+      .not("latitude", "is", null)
+      .not("longitude", "is", null);
 
-  // Bounds filter (without PostGIS)
-  if (sp.get("sw_lat")) {
-    query = query.gte("latitude", Number(sp.get("sw_lat")));
-    query = query.lte("latitude", Number(sp.get("ne_lat")));
-    query = query.gte("longitude", Number(sp.get("sw_lon")));
-    query = query.lte("longitude", Number(sp.get("ne_lon")));
+    if (listingType) q = q.eq("listing_type", listingType);
+    if (category) {
+      const cats = category.split(",");
+      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+    }
+    if (subtype) {
+      const subs = subtype.split(",");
+      q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
+    }
+    if (city) q = q.eq("city", city);
+    if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
+    if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
+    if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
+    if (sp.get("area_max")) q = q.lte("area", Number(sp.get("area_max")));
+
+    if (sp.get("sw_lat")) {
+      q = q.gte("latitude", Number(sp.get("sw_lat")));
+      q = q.lte("latitude", Number(sp.get("ne_lat")));
+      q = q.gte("longitude", Number(sp.get("sw_lon")));
+      q = q.lte("longitude", Number(sp.get("ne_lon")));
+    }
+    return q;
   }
 
-  query = query.limit(Math.min(Number(sp.get("limit") || "5000"), 5000));
+  const maxPoints = Math.min(Number(sp.get("limit") || "5000"), 10000);
 
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  // Supabase caps at 1000 rows per request — fetch pages in parallel
   type MapRow = { id: string; latitude: number; longitude: number; price: number; price_currency: string | null; category: string; listing_type: string; title: string; slug: string; rooms_label: string; image_src: string | null; subtype: string | null; area: number | null; district: string | null };
-  const points = ((data || []) as MapRow[]).map((p) => ({
+  const pageSize = 1000;
+  const numPages = Math.ceil(maxPoints / pageSize);
+
+  // Count query — separate builder without heavy select
+  function buildCountQuery() {
+    let q = client!
+      .from("properties")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true)
+      .not("latitude", "is", null)
+      .not("longitude", "is", null);
+
+    if (listingType) q = q.eq("listing_type", listingType);
+    if (category) {
+      const cats = category.split(",");
+      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+    }
+    if (subtype) {
+      const subs = subtype.split(",");
+      q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
+    }
+    if (city) q = q.eq("city", city);
+    if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
+    if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
+    if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
+    if (sp.get("area_max")) q = q.lte("area", Number(sp.get("area_max")));
+    if (sp.get("sw_lat")) {
+      q = q.gte("latitude", Number(sp.get("sw_lat")));
+      q = q.lte("latitude", Number(sp.get("ne_lat")));
+      q = q.gte("longitude", Number(sp.get("sw_lon")));
+      q = q.lte("longitude", Number(sp.get("ne_lon")));
+    }
+    return q;
+  }
+
+  // Fetch count + data pages in parallel
+  const pagePromises = Array.from({ length: numPages }, (_, i) =>
+    buildQuery().range(i * pageSize, (i + 1) * pageSize - 1)
+  );
+  const [countResult, ...pageResults] = await Promise.all([buildCountQuery(), ...pagePromises]);
+  const totalCount = countResult.count ?? 0;
+
+  const allRows: MapRow[] = [];
+  for (const { data: pageData, error: pageError } of pageResults) {
+    if (pageError) {
+      return NextResponse.json({ error: pageError.message }, { status: 500 });
+    }
+    const rows = (pageData || []) as MapRow[];
+    allRows.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+
+  const points = allRows.map((p) => ({
     id: p.id,
     lat: p.latitude,
     lon: p.longitude,
@@ -99,7 +151,7 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json(
-    { points, count: points.length },
+    { points, count: points.length, total: totalCount, truncated: points.length < totalCount },
     { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
   );
 }

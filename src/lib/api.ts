@@ -43,6 +43,11 @@ export async function getSimilarProperties(slug: string, city: string): Promise<
   return mockData.getSimilarProperties(slug, city);
 }
 
+export async function getAdjacentProperties(propertyId: string) {
+  if (isLive) return supabaseData.fetchAdjacentProperties(propertyId);
+  return { prev: null, next: null };
+}
+
 export async function getUniqueCities(): Promise<string[]> {
   if (isLive) return supabaseData.fetchUniqueCities();
   return mockData.getUniqueCities();

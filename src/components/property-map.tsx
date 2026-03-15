@@ -111,6 +111,7 @@ type PropertyMapProps = {
   height?: string;
   flyTo?: { lat: number; lon: number; bbox?: [number, number, number, number] } | null;
   onFlyToDone?: () => void;
+  truncated?: boolean; // true = map points were capped at limit, clusters show "+"
 };
 
 export default function PropertyMap({
@@ -123,12 +124,15 @@ export default function PropertyMap({
   height = "100%",
   flyTo,
   onFlyToDone,
+  truncated = false,
 }: PropertyMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
   const markerMapRef = useRef<Map<string, L.Marker>>(new Map());
   const initialFitDoneRef = useRef(false);
+  const truncatedRef = useRef(truncated);
+  truncatedRef.current = truncated;
   const restoredFromSessionRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const onFlyToDoneRef = useRef(onFlyToDone);
@@ -191,8 +195,9 @@ export default function PropertyMap({
       zoomToBoundsOnClick: true,
       iconCreateFunction: (cluster: { getChildCount: () => number }) => {
         const count = cluster.getChildCount();
+        const plus = truncatedRef.current ? "+" : "";
         return L.divIcon({
-          html: `<div class="map-cluster-icon">${count}</div>`,
+          html: `<div class="map-cluster-icon">${count}${plus}</div>`,
           className: "map-cluster-wrapper",
           iconSize: [40, 40],
         });

@@ -34,7 +34,7 @@ function useHomepageData() {
           locationLabel: (row.location_label as string) || "",
           latitude: (row.latitude as number) || 0,
           longitude: (row.longitude as number) || 0,
-          imageSrc: ((row.images as string[]) || [])[0] || "/branding/placeholder.png",
+          imageSrc: ((row.images as string[]) || [])[0] || "/images/placeholder.svg",
           imageAlt: (row.title as string) || "",
           featured: (row.featured as boolean) || false,
           showAgencyLogo: false,
@@ -186,33 +186,43 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== SERVICES ===== */}
-        <section className="hp-services">
+        {/* ===== HOW IT WORKS ===== */}
+        <section className="hp-steps">
           <div className="container">
-            <h2 className="hp-section-title">Vyhledáte, oceníte i prodáte na jednom místě</h2>
-            <p className="hp-section-sub">Rychle, transparentně a bez stresu</p>
-            <div className="hp-services-grid">
-              <Link href="/oceneni" className="hp-service-card">
-                <div className="hp-service-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+            <div className="hp-steps-grid">
+              <div className="hp-step">
+                <span className="hp-step-num">1</span>
+                <div className="hp-step-content">
+                  <h3>Najděte nemovitost</h3>
+                  <p>Prohledejte tisíce nabídek z celé Evropy. Filtry, mapa, AI vyhledávání.</p>
+                  <Link href="/nabidky" className="hp-step-link">
+                    Prohlížet nabídky
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </Link>
                 </div>
-                <h3>Odhad ceny</h3>
-                <p>Zjistěte tržní hodnotu vaší nemovitosti zdarma do 24 hodin.</p>
-              </Link>
-              <Link href="/specialiste" className="hp-service-card">
-                <div className="hp-service-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+              </div>
+              <div className="hp-step">
+                <span className="hp-step-num">2</span>
+                <div className="hp-step-content">
+                  <h3>Zjistěte reálnou cenu</h3>
+                  <p>Odhad tržní hodnoty zdarma do 24 hodin. Žádné závazky.</p>
+                  <Link href="/oceneni" className="hp-step-link">
+                    Získat odhad
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </Link>
                 </div>
-                <h3>Ověření specialisté</h3>
-                <p>Najděte makléře a kanceláře podle lokality a zaměření.</p>
-              </Link>
-              <Link href="/nabidky" className="hp-service-card">
-                <div className="hp-service-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+              </div>
+              <div className="hp-step">
+                <span className="hp-step-num">3</span>
+                <div className="hp-step-content">
+                  <h3>Spojte se se specialistou</h3>
+                  <p>Ověření makléři a kanceláře podle lokality, recenzí a výsledků.</p>
+                  <Link href="/specialiste" className="hp-step-link">
+                    Najít specialistu
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </Link>
                 </div>
-                <h3>Hlídač nabídek</h3>
-                <p>Sledujte nové nabídky ve vaší lokalitě. Nic vám neunikne.</p>
-              </Link>
+              </div>
             </div>
           </div>
         </section>

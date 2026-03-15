@@ -285,6 +285,21 @@ export async function fetchPropertyBySlug(slug: string): Promise<Property | null
   return dbPropertyToApp(row, row.brokers);
 }
 
+export async function fetchAdjacentProperties(propertyId: string): Promise<{ prev: { slug: string; title: string } | null; next: { slug: string; title: string } | null }> {
+  if (!isSupabaseConfigured || !getSupabase()) return { prev: null, next: null };
+  const sb = getSupabase()!;
+
+  const [prevRes, nextRes] = await Promise.all([
+    sb.from("properties").select("slug, title").eq("active", true).lt("id", propertyId).order("id", { ascending: false }).limit(1),
+    sb.from("properties").select("slug, title").eq("active", true).gt("id", propertyId).order("id", { ascending: true }).limit(1),
+  ]);
+
+  return {
+    prev: prevRes.data?.[0] ? { slug: prevRes.data[0].slug, title: prevRes.data[0].title } : null,
+    next: nextRes.data?.[0] ? { slug: nextRes.data[0].slug, title: nextRes.data[0].title } : null,
+  };
+}
+
 export async function fetchSimilarProperties(slug: string, city: string): Promise<Property[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 

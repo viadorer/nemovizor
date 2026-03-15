@@ -8,6 +8,8 @@ import { DetailMap, WideDetailMap } from "./detail-map";
 import { MediaGallery } from "./media-gallery";
 import { PointsOfInterest } from "./points-of-interest";
 import { AutoSaveSearch } from "./auto-save-search";
+import { MortgageCalculator } from "./mortgage-calculator";
+import { ListingNav } from "./listing-nav";
 
 type PropertyDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -64,12 +66,15 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         <div className="detail-wide-layout">
         <div className="detail-wide-content">
         <div className="container" style={{ paddingTop: 24, paddingBottom: 48 }}>
-          <Link href="/nabidky" className="detail-back">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Zpět na nabídky
-          </Link>
+          <div className="detail-top-nav">
+            <Link href="/nabidky" className="detail-back">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Zpet na nabidky
+            </Link>
+            <ListingNav currentSlug={slug} />
+          </div>
 
           <MediaGallery
             images={property.images.length > 0 ? property.images : [property.imageSrc]}
@@ -217,6 +222,10 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   )}
                 </div>
               </div>
+
+              {property.listingType === "sale" && (
+                <MortgageCalculator propertyPrice={property.price} priceCurrency={property.priceCurrency} />
+              )}
 
               <div className="detail-sidebar-card">
                 <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>

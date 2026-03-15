@@ -312,13 +312,16 @@ async function insertProperty(detail, r2Images, brokerId) {
     garage_count: getItemNum(items, "Garáž") || undefined,
     // 3D / Video
     matterport_url: matterportUrl || undefined,
-    // Images
-    image_src: r2Images[0] || "/images/placeholder.jpg",
+    // Images - skip if no photos uploaded
+    image_src: r2Images[0] || null,
     image_alt: name,
     images: r2Images,
     featured: false, active: true,
     broker_id: brokerId || null,
   };
+
+  // Skip listings without photos
+  if (!r2Images.length) return { skipped: true, slug };
 
   const { error } = await sb.from("properties").insert(property);
   if (error) {

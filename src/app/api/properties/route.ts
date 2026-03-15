@@ -74,8 +74,14 @@ export async function GET(req: NextRequest) {
     case "newest":
       query = query.order("created_at", { ascending: false });
       break;
+    case "oldest":
+      query = query.order("created_at", { ascending: true });
+      break;
     case "area_desc":
       query = query.order("area", { ascending: false });
+      break;
+    case "area_asc":
+      query = query.order("area", { ascending: true });
       break;
     default: // "featured"
       query = query.order("featured", { ascending: false }).order("created_at", { ascending: false });

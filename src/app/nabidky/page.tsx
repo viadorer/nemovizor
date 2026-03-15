@@ -359,7 +359,7 @@ function rowToProperty(row: Record<string, unknown>): Property {
     area: (row.area as number) || 0,
     summary: (row.summary as string) || "",
     description: (row.description as string) || undefined,
-    imageSrc: (row.image_src as string) || "/images/placeholder.jpg",
+    imageSrc: (row.image_src as string) || "/images/placeholder.svg",
     imageAlt: (row.image_alt as string) || "",
     images: (row.images as string[]) || [],
     featured: (row.featured as boolean) || false,
@@ -412,7 +412,7 @@ function mapPointToMapProperty(pt: MapPoint) {
     longitude: pt.lon,
     area: pt.area || 0,
     summary: "",
-    imageSrc: pt.image_src || "/images/placeholder.jpg",
+    imageSrc: pt.image_src || "/images/placeholder.svg",
     imageAlt: "",
     images: [],
     featured: false,
@@ -446,6 +446,9 @@ function ListingsContent() {
   const [areaMin, setAreaMin] = useState<number | null>(null);
   const [areaMax, setAreaMax] = useState<number | null>(null);
 
+  // Sort
+  const [sortBy, setSortBy] = useState<string>("featured");
+
   // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -457,6 +460,7 @@ function ListingsContent() {
   const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapLoading, setMapLoading] = useState(true);
+  const [mapTruncated, setMapTruncated] = useState(false);
 
   // UI
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -481,8 +485,8 @@ function ListingsContent() {
     priceMin, priceMax, areaMin, areaMax,
   }), [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax]);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [filters]);
+  // Reset page when filters or sort change
+  useEffect(() => { setPage(1); }, [filters, sortBy]);
 
   // Reset page when bounds change
   useEffect(() => { setPage(1); }, [debouncedBounds]);
@@ -495,6 +499,7 @@ function ListingsContent() {
     const params = buildFilterParams(filters);
     params.set("page", String(page));
     params.set("limit", "24");
+    if (sortBy !== "featured") params.set("sort", sortBy);
 
     // Add bounds from map viewport
     if (debouncedBounds) {
@@ -515,7 +520,7 @@ function ListingsContent() {
       .catch((e) => { if (e.name !== "AbortError") { setLoading(false); } });
 
     return () => controller.abort();
-  }, [filters, page, debouncedBounds]);
+  }, [filters, page, debouncedBounds, sortBy]);
 
   // Fetch map points (all matching in viewport, lightweight)
   useEffect(() => {
@@ -534,8 +539,9 @@ function ListingsContent() {
 
     fetch(`/api/map-points?${params}`, { signal: controller.signal })
       .then((r) => r.json())
-      .then((data: { points: MapPoint[] }) => {
+      .then((data: { points: MapPoint[]; total?: number; truncated?: boolean }) => {
         setMapPoints((data.points || []).map(mapPointToMapProperty));
+        setMapTruncated(data.truncated || false);
         setMapLoading(false);
       })
       .catch((e) => { if (e.name !== "AbortError") { setMapLoading(false); } });
@@ -671,6 +677,7 @@ function ListingsContent() {
     setListingType(null); setCategories([]); setSubtypes([]);
     setPriceMin(null); setPriceMax(null);
     setAreaMin(null); setAreaMax(null);
+    setSortBy("featured");
   };
 
   // Geocode a city name via Mapy.cz Suggest API
@@ -762,7 +769,7 @@ function ListingsContent() {
     }
   }, [geocodeCity]);
 
-  const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || priceMin || priceMax || areaMin || areaMax;
+  const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || priceMin || priceMax || areaMin || areaMax || sortBy !== "featured";
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
   const areaPresets = [30, 50, 80, 100, 150, 200, 300];
@@ -831,11 +838,26 @@ function ListingsContent() {
                 onRestore={handleRestoreSavedSearch}
               />
 
-              <span className="search-results-count">
-                {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabídka" : totalResults < 5 ? "nabídky" : "nabídek"}
-                {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v této oblasti" : ""}
-                {totalPages > 1 && ` (str. ${page}/${totalPages})`}
-              </span>
+              <div className="search-results-bar">
+                <span className="search-results-count">
+                  {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabídka" : totalResults < 5 ? "nabídky" : "nabídek"}
+                  {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v této oblasti" : ""}
+                  {totalPages > 1 && ` (str. ${page}/${totalPages})`}
+                </span>
+                <select
+                  className="search-sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="featured">Doporučené</option>
+                  <option value="newest">Nejnovější</option>
+                  <option value="oldest">Nejstarší</option>
+                  <option value="price_desc">Nejdražší</option>
+                  <option value="price_asc">Nejlevnější</option>
+                  <option value="area_desc">Největší plocha</option>
+                  <option value="area_asc">Nejmenší plocha</option>
+                </select>
+              </div>
               </div>
             </div>
 
@@ -846,7 +868,11 @@ function ListingsContent() {
                 </div>
               ) : (
                 <>
-                  <div className="search-results-grid">
+                  <div className="search-results-grid" ref={(el) => {
+                    if (el && properties.length > 0) {
+                      try { sessionStorage.setItem("listing-slugs", JSON.stringify(properties.map(p => p.slug))); } catch {}
+                    }
+                  }}>
                     {properties.map((property) => (
                       <div
                         key={property.id}
@@ -947,6 +973,7 @@ function ListingsContent() {
               onPropertySelect={setSelectedPropertyId}
               onBoundsChange={handleBoundsChange}
               mode="prices"
+              truncated={mapTruncated}
               flyTo={mapFlyTo}
               onFlyToDone={() => setMapFlyTo(null)}
             />
