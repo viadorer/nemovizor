@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "./supabase";
 import * as supabaseData from "./supabase-data";
 import * as mockData from "./data";
 import type { Property, Broker, Agency, Branch, Review, PropertyFilters } from "./types";
+import type { DetailPropertyFilters } from "./supabase-data";
 
 /** Je aplikace napojena na DB? */
 export const isLive = isSupabaseConfigured;
@@ -174,6 +175,60 @@ export async function getAgencyBranchCities(agencyId: string): Promise<string[]>
     return [...new Set(branches.map((b) => b.city))].sort();
   }
   return mockData.getAgencyBranchCities(agencyId);
+}
+
+// ===== Bulk city maps =====
+
+export async function getBrokerCitiesMap(): Promise<Record<string, string[]>> {
+  if (isLive) return supabaseData.fetchBrokerCitiesMap();
+  // Mock fallback: build from properties
+  const brokers = mockData.brokers;
+  const map: Record<string, string[]> = {};
+  for (const b of brokers) {
+    const props = mockData.getBrokerProperties(b.id);
+    map[b.id] = [...new Set(props.map((p) => p.city))];
+  }
+  return map;
+}
+
+export async function getBranchCitiesMap(): Promise<Record<string, string[]>> {
+  if (isLive) return supabaseData.fetchBranchCitiesMap();
+  const map: Record<string, string[]> = {};
+  for (const b of mockData.branches) {
+    const arr = (map[b.agencyId] ??= []);
+    if (!arr.includes(b.city)) arr.push(b.city);
+  }
+  return map;
+}
+
+// ===== Paginated fetches for detail pages =====
+
+type PaginatedResult<T> = { items: T[]; total: number };
+
+export type { DetailPropertyFilters } from "./supabase-data";
+
+export async function getBrokerPropertiesPaginated(
+  brokerId: string,
+  page: number,
+  perPage: number,
+  filters?: DetailPropertyFilters
+): Promise<PaginatedResult<Property>> {
+  if (isLive) return supabaseData.fetchBrokerPropertiesPaginated(brokerId, page, perPage, filters);
+  const all = mockData.getBrokerProperties(brokerId);
+  const start = (page - 1) * perPage;
+  return { items: all.slice(start, start + perPage), total: all.length };
+}
+
+export async function getAgencyPropertiesPaginated(
+  agencyId: string,
+  page: number,
+  perPage: number,
+  filters?: DetailPropertyFilters
+): Promise<PaginatedResult<Property>> {
+  if (isLive) return supabaseData.fetchAgencyPropertiesPaginated(agencyId, page, perPage, filters);
+  const all = mockData.getAgencyProperties(agencyId);
+  const start = (page - 1) * perPage;
+  return { items: all.slice(start, start + perPage), total: all.length };
 }
 
 /** Format ceny (sync – nepotřebuje DB) */

@@ -643,3 +643,128 @@ export async function fetchAllSpecializations(): Promise<string[]> {
   if (!data) return [];
   return [...new Set((data as { specialization: string }[]).map((r) => r.specialization))].sort();
 }
+
+// ===== Bulk city maps (for specialiste page) =====
+
+/** Returns { brokerId → [city1, city2, ...] } from active properties */
+export async function fetchBrokerCitiesMap(): Promise<Record<string, string[]>> {
+  if (!isSupabaseConfigured || !getSupabase()) return {};
+  const sb = getSupabase()!;
+  const map: Record<string, string[]> = {};
+  let from = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data } = await sb
+      .from("properties")
+      .select("broker_id, city")
+      .eq("active", true)
+      .not("broker_id", "is", null)
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    for (const row of data as { broker_id: string; city: string }[]) {
+      const arr = (map[row.broker_id] ??= []);
+      if (!arr.includes(row.city)) arr.push(row.city);
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return map;
+}
+
+/** Returns { agencyId → [city1, city2, ...] } from branches */
+export async function fetchBranchCitiesMap(): Promise<Record<string, string[]>> {
+  if (!isSupabaseConfigured || !getSupabase()) return {};
+  const { data } = await getSupabase()!.from("branches").select("agency_id, city");
+  if (!data) return {};
+  const map: Record<string, string[]> = {};
+  for (const row of data as { agency_id: string; city: string }[]) {
+    const arr = (map[row.agency_id] ??= []);
+    if (!arr.includes(row.city)) arr.push(row.city);
+  }
+  return map;
+}
+
+// ===== Paginated fetches for detail pages =====
+
+export type DetailPropertyFilters = {
+  listingType?: string | null;
+  category?: string | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  areaMin?: number | null;
+  areaMax?: number | null;
+};
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyDetailFilters(query: any, filters?: DetailPropertyFilters) {
+  if (!filters) return query;
+  if (filters.listingType) query = query.eq("listing_type", filters.listingType);
+  if (filters.category) query = query.eq("category", filters.category);
+  if (filters.priceMin) query = query.gte("price", filters.priceMin);
+  if (filters.priceMax) query = query.lte("price", filters.priceMax);
+  if (filters.areaMin) query = query.gte("area", filters.areaMin);
+  if (filters.areaMax) query = query.lte("area", filters.areaMax);
+  return query;
+}
+
+export async function fetchBrokerPropertiesPaginated(
+  brokerId: string,
+  page: number,
+  perPage: number,
+  filters?: DetailPropertyFilters
+): Promise<{ items: Property[]; total: number }> {
+  if (!isSupabaseConfigured || !getSupabase()) return { items: [], total: 0 };
+
+  const sb = getSupabase()!;
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  let countQ = sb.from("properties").select("id", { count: "exact", head: true }).eq("broker_id", brokerId).eq("active", true);
+  let dataQ = sb.from("properties").select("*, brokers(*)").eq("broker_id", brokerId).eq("active", true);
+  countQ = applyDetailFilters(countQ, filters);
+  dataQ = applyDetailFilters(dataQ, filters);
+
+  const [{ count }, { data, error }] = await Promise.all([
+    countQ,
+    dataQ.order("created_at", { ascending: false }).range(from, to),
+  ]);
+
+  if (error) return { items: [], total: 0 };
+  return {
+    items: (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) => dbPropertyToApp(row, row.brokers)),
+    total: count ?? 0,
+  };
+}
+
+export async function fetchAgencyPropertiesPaginated(
+  agencyId: string,
+  page: number,
+  perPage: number,
+  filters?: DetailPropertyFilters
+): Promise<{ items: Property[]; total: number }> {
+  if (!isSupabaseConfigured || !getSupabase()) return { items: [], total: 0 };
+
+  const sb = getSupabase()!;
+  const { data: brokerData } = await sb.from("brokers").select("id").eq("agency_id", agencyId);
+  if (!brokerData?.length) return { items: [], total: 0 };
+
+  const brokerIds = (brokerData as { id: string }[]).map((b) => b.id);
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  let countQ = sb.from("properties").select("id", { count: "exact", head: true }).in("broker_id", brokerIds).eq("active", true);
+  let dataQ = sb.from("properties").select("*, brokers(*)").in("broker_id", brokerIds).eq("active", true);
+  countQ = applyDetailFilters(countQ, filters);
+  dataQ = applyDetailFilters(dataQ, filters);
+
+  const [{ count }, { data, error }] = await Promise.all([
+    countQ,
+    dataQ.order("created_at", { ascending: false }).range(from, to),
+  ]);
+
+  if (error) return { items: [], total: 0 };
+  return {
+    items: (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) => dbPropertyToApp(row, row.brokers)),
+    total: count ?? 0,
+  };
+}

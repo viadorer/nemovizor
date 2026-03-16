@@ -18,7 +18,7 @@ const navItems = [
     ),
   },
   {
-    href: "/makleri",
+    href: "/specialiste",
     label: "RK / makl\u00E9\u0159i",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

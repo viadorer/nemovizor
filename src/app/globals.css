@@ -1106,155 +1106,57 @@ nav ul li a.active {
   height: calc(100vh - 64px);
 }
 
-/* Embedded listings in broker/agency profile pages */
-.profile-listings .search-layout {
-  height: calc(100vh - 110px);
-  min-height: 500px;
-}
-
-.profile-listings .search-page {
-  padding: 0;
-  min-height: auto;
-}
-
-/* ===== PROFILE DETAIL PAGE ===== */
-.profile-detail-page {
+/* ===== DETAIL PAGE (agency/broker) ===== */
+.detail-page {
   padding-top: 64px;
-}
-
-/* --- Top bar with back link --- */
-.profile-topbar {
-  padding: 12px 24px 0;
-}
-.profile-topbar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-/* --- Profile cards section (always visible above tabs) --- */
-.profile-cards-section {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 24px;
-}
-
-/* --- Identity bar (compact strip — kept for future use) --- */
-.profile-identity-bar {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-light);
-  padding: 10px 24px;
-}
-
-.profile-identity-bar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile-back-link {
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  text-decoration: none;
-  transition: color 0.15s, background 0.15s;
-}
-.profile-back-link:hover {
-  color: var(--text);
-  background: var(--bg-card);
-}
-
-.profile-identity-avatar,
-.profile-identity-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-}
-.profile-identity-logo {
-  border-radius: 8px;
-}
-.profile-identity-avatar img,
-.profile-identity-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.profile-identity-logo img {
-  object-fit: contain;
-  padding: 2px;
-}
-
-.profile-identity-info {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.profile-identity-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.profile-identity-agency {
-  font-size: 0.8rem;
-  color: var(--accent);
-  text-decoration: none;
-}
-.profile-identity-agency:hover {
-  text-decoration: underline;
-}
-
-.profile-identity-meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* --- Toggle bar (Profil / Nabidky / ...) --- */
-.profile-toggle-wrapper {
-  /* no margin — sits right below identity bar */
-}
-
-.profile-toggle-bar {
+  min-height: 100vh;
   background: var(--bg);
-  border-bottom: 1px solid var(--border-light);
-  position: sticky;
-  top: 64px;
-  z-index: 10;
-  padding: 0 24px;
 }
 
-.profile-toggle-buttons {
+.detail-header-content {
+  padding: 24px 24px 0;
   max-width: 1400px;
-  margin: 0 auto;
+}
+
+/* --- Profile card extras --- */
+.profile-card-avatar--placeholder {
+  background: var(--bg);
+}
+.profile-card-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.profile-card-rating-row .profile-stars {
+  color: var(--accent);
+}
+.profile-card-rating-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.detail-tabs-bar {
   display: flex;
   gap: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 24px;
+  position: sticky;
+  top: 64px;
+  z-index: 10;
 }
-.profile-toggle-buttons::-webkit-scrollbar {
+.detail-tabs-bar::-webkit-scrollbar {
   display: none;
 }
 
-.profile-toggle-btn {
+.detail-tab-btn {
   background: none;
   border: none;
-  padding: 12px 20px;
+  padding: 10px 20px;
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -1266,15 +1168,15 @@ nav ul li a.active {
   align-items: center;
   gap: 8px;
 }
-.profile-toggle-btn:hover {
+.detail-tab-btn:hover {
   color: var(--text);
 }
-.profile-toggle-btn--active {
+.detail-tab-btn--active {
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
 
-.profile-toggle-count {
+.detail-tab-count {
   background: var(--bg-card);
   color: var(--text-secondary);
   font-size: 0.75rem;
@@ -1282,23 +1184,206 @@ nav ul li a.active {
   border-radius: 10px;
   font-weight: 600;
 }
-.profile-toggle-btn--active .profile-toggle-count {
+.detail-tab-btn--active .detail-tab-count {
   background: var(--accent);
   color: var(--bg);
 }
 
-/* --- Toggle content area --- */
-.profile-toggle-content--fullwidth {
-  /* listings mode: full viewport width, no padding */
+.detail-content {
+  padding: 24px;
+  max-width: 1400px;
+}
+
+.detail-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.detail-cards-grid .property-card,
+.detail-cards-grid .profile-broker-card,
+.detail-cards-grid .profile-branch-card {
+  min-width: unset;
+}
+
+.detail-cards-grid--profile {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.detail-cards-grid--brokers {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.detail-cards-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-results-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.detail-results-page {
+  color: var(--text-muted);
+}
+
+.detail-empty {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--text-muted);
+}
+.detail-empty svg {
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.detail-empty p {
+  margin: 0;
+}
+
+/* --- Detail filters bar --- */
+.detail-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.detail-range-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.detail-range-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.detail-range-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.82rem;
+  outline: none;
+}
+.detail-range-input:focus {
+  border-color: var(--accent);
+}
+.detail-range-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.detail-range-sep {
+  color: var(--text-muted);
+}
+
+.detail-range-unit {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.detail-filters-clear {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.detail-filters-clear:hover {
+  text-decoration: underline;
+}
+
+/* --- Pagination --- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 24px 0;
+}
+
+.pagination-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+}
+.pagination-btn:hover:not(:disabled) {
+  background: var(--bg-filter);
+  border-color: var(--border);
+  color: var(--text);
+}
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.pagination-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.pagination-btn--active:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.pagination-dots {
+  padding: 8px 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .detail-cards-grid--profile {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-content {
+    padding: 16px;
+  }
+  .detail-tabs-bar {
+    padding: 0 16px;
+  }
+  .detail-cards-grid--profile {
+    grid-template-columns: 1fr;
+  }
 }
 
 .profile-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
+  max-width: 1200px;
 }
 .profile-cards-grid--4 {
   grid-template-columns: repeat(4, 1fr);
+  max-width: 1400px;
 }
 
 /* --- Profile card --- */
@@ -1328,7 +1413,6 @@ nav ul li a.active {
   align-items: center;
   justify-content: center;
   background: var(--bg-input);
-  border: 2px solid var(--accent);
 }
 .profile-card-avatar img {
   width: 100%;
@@ -1568,44 +1652,52 @@ nav ul li a.active {
   display: block;
 }
 
-/* --- Brokers grid (agency detail) --- */
+/* --- Brokers grid (agency detail) — matches property card grid --- */
 .profile-brokers-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(max(240px, calc(33.333% - 11px)), 1fr));
   gap: 16px;
+}
+.profile-brokers-grid .profile-broker-card {
+  min-width: unset;
 }
 
 .profile-broker-card {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 16px;
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 .profile-broker-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 2px 12px var(--shadow);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px var(--shadow-strong);
+  border-color: var(--border);
 }
 
-.profile-broker-card-top {
+/* Circle avatar area */
+.profile-broker-avatar-wrap {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  justify-content: center;
+  padding: 20px 14px 8px;
 }
-
 .profile-broker-avatar {
-  width: 44px;
-  height: 44px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-input);
+}
+.profile-broker-avatar--placeholder {
+  background: var(--bg);
+  color: var(--text-muted);
 }
 .profile-broker-avatar img {
   width: 100%;
@@ -1613,14 +1705,46 @@ nav ul li a.active {
   object-fit: cover;
 }
 
+/* Body — info below avatar */
+.profile-broker-body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
 .profile-broker-name {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
 }
 .profile-broker-spec {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.profile-broker-agency {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.profile-broker-contacts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+}
+.profile-broker-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .profile-broker-stats {
@@ -1628,6 +1752,7 @@ nav ul li a.active {
   justify-content: space-between;
   border-top: 1px solid var(--border-light);
   padding-top: 10px;
+  margin-top: 8px;
 }
 
 /* --- Branches grid (agency detail) --- */
@@ -1683,45 +1808,16 @@ nav ul li a.active {
   color: var(--text);
 }
 
-/* --- Responsive --- */
+/* --- Responsive (profile grids) --- */
 @media (max-width: 1024px) {
-  .profile-cards-grid,
-  .profile-cards-grid--4 {
-    grid-template-columns: 1fr 1fr;
-  }
-  .profile-brokers-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .profile-branches-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .profile-cards-grid {
-    grid-template-columns: 1fr;
-  }
-  .profile-brokers-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .profile-branches-grid {
     grid-template-columns: 1fr;
-  }
-  .profile-identity-bar {
-    padding: 8px 16px;
-  }
-  .profile-cards-section {
-    padding: 12px 16px;
-  }
-  .profile-cards-grid--4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .profile-toggle-bar {
-    padding: 0 16px;
-  }
-  .profile-identity-info {
-    flex-direction: column;
-    gap: 2px;
   }
 }
 
@@ -3350,12 +3446,7 @@ nav ul li a.active {
   gap: 16px;
 }
 
-/* ===== PROFILE BROKERS GRID ===== */
-.profile-brokers-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
+/* ===== PROFILE BROKERS GRID (duplicate removed — see main definition above) ===== */
 
 /* Responsive - profiles & agencies */
 @media (max-width: 1024px) {
