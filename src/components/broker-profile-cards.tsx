@@ -16,9 +16,10 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
 type BrokerAboutCardProps = {
   broker: Broker;
   agency: Agency | null;
+  agencyAddress?: string;
 };
 
-export function BrokerAboutCard({ broker, agency }: BrokerAboutCardProps) {
+export function BrokerAboutCard({ broker, agency, agencyAddress }: BrokerAboutCardProps) {
   return (
     <div className="profile-card">
       <div className="profile-card-header">
@@ -50,6 +51,15 @@ export function BrokerAboutCard({ broker, agency }: BrokerAboutCardProps) {
       </div>
 
       <div className="profile-card-contacts">
+        {agencyAddress && (
+          <span className="profile-card-contact">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            {agencyAddress}
+          </span>
+        )}
         {broker.phone && (
           <a href={`tel:${broker.phone}`} className="profile-card-contact">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,7 +79,7 @@ export function BrokerAboutCard({ broker, agency }: BrokerAboutCardProps) {
         )}
       </div>
 
-      {(broker.languages?.length || broker.certifications?.length) && (
+      {((broker.languages?.length ?? 0) > 0 || (broker.certifications?.length ?? 0) > 0) && (
         <div className="profile-card-tags">
           {broker.languages?.map((lang) => (
             <span key={lang} className="profile-card-tag">{lang}</span>

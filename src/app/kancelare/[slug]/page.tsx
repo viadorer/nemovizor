@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { AgencyProfileHeader } from "@/components/profile-header";
-import { AgencyBrokersGrid, AgencyBranchesGrid } from "@/components/agency-profile-cards";
+import { AgencyAboutCard, AgencyStatsCard, AgencyReviewsCard, AgencyBrokersGrid, AgencyBranchesGrid } from "@/components/agency-profile-cards";
 import { DetailTabs } from "@/components/detail-tabs";
 import type { DetailTab } from "@/components/detail-tabs";
 import { DetailPropertiesGrid } from "@/components/detail-properties-grid";
@@ -36,15 +35,9 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
   ]);
 
   const hqBranch = agencyBranches.find((b) => b.isHeadquarters) ?? agencyBranches[0] ?? null;
-
-  const profileHeader = (
-    <AgencyProfileHeader
-      agency={agency}
-      parentAgency={parentAgency}
-      hqBranch={hqBranch}
-      reviews={reviewsList}
-    />
-  );
+  const agencyAddress = hqBranch
+    ? `${hqBranch.address}, ${hqBranch.city}`
+    : [agency.seatAddress, agency.seatCity].filter(Boolean).join(", ") || undefined;
 
   const tabs: DetailTab[] = [];
 
@@ -67,7 +60,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
     count: agencyBrokers.length,
     content: (
       <div className="detail-cards-grid detail-cards-grid--brokers">
-        <AgencyBrokersGrid brokers={agencyBrokers} agencyAddress={hqBranch ? `${hqBranch.address}, ${hqBranch.city}` : undefined} />
+        <AgencyBrokersGrid brokers={agencyBrokers} agencyAddress={agencyAddress} />
       </div>
     ),
   });
@@ -89,7 +82,12 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
     <div className="page-shell">
       <SiteHeader />
       <main className="detail-page">
-        <DetailTabs tabs={tabs} defaultTab="nabidky" headerContent={profileHeader} />
+        <div className="profile-cards-grid">
+          <AgencyAboutCard agency={agency} parentAgency={parentAgency} hqBranch={hqBranch} />
+          <AgencyStatsCard agency={agency} />
+          <AgencyReviewsCard agency={agency} reviews={reviewsList} />
+        </div>
+        <DetailTabs tabs={tabs} defaultTab="nabidky" />
       </main>
       <SiteFooter />
     </div>

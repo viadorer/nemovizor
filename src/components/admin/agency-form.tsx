@@ -11,6 +11,7 @@ import {
   CheckboxField,
 } from "@/components/admin/form-fields";
 import { SingleImageUpload } from "@/components/admin/single-image-upload";
+import { AddressAutocomplete, type MapySuggestion } from "@/components/admin/address-autocomplete";
 
 type AgencyFormProps = {
   mode: "create" | "edit";
@@ -278,14 +279,29 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
           placeholder="https://www.kancelar.cz"
         />
 
+      </div>
+
+      <AddressAutocomplete
+        onSelect={(s: MapySuggestion) => {
+          // Extract city from regional structure
+          const city = s.regionalStructure?.find((r) => r.type === "regional.municipality")?.name;
+          if (city) updateField("seat_city", city);
+          // Build address from name + location
+          const addr = s.name + (s.location ? `, ${s.location}` : "");
+          updateField("seat_address", addr);
+        }}
+        isLand={false}
+      />
+
+      <div className="admin-form-grid">
         <TextField
-          label="Město sídla"
+          label="Mesto sidla"
           value={form.seat_city}
           onChange={(v) => updateField("seat_city", v)}
           placeholder="Praha"
         />
         <TextField
-          label="Adresa sídla"
+          label="Adresa sidla"
           value={form.seat_address}
           onChange={(v) => updateField("seat_address", v)}
           placeholder="Ulice 123, 110 00 Praha"

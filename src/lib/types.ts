@@ -802,6 +802,8 @@ export type Agency = {
   specializations: string[];
   parentAgencyId?: string;
   isIndependent: boolean;
+  seatCity?: string;
+  seatAddress?: string;
 };
 
 /** Pobočka kanceláře */

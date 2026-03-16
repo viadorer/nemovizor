@@ -2,30 +2,9 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Property, Broker, Agency, Branch, Review, PropertyFilters } from "./types";
 import type { Database } from "./supabase-types";
 
-// ===== Helpers: paginated fetching (Supabase 1000-row limit) =====
+// ===== Helpers =====
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-async function countPropertiesPerBroker(sb: any): Promise<Record<string, number>> {
-  const countMap: Record<string, number> = {};
-  let from = 0;
-  const PAGE = 1000;
-  while (true) {
-    const { data } = await sb
-      .from("properties")
-      .select("broker_id")
-      .eq("active", true)
-      .not("broker_id", "is", null)
-      .range(from, from + PAGE - 1);
-    if (!data || data.length === 0) break;
-    for (const p of data as { broker_id: string }[]) {
-      countMap[p.broker_id] = (countMap[p.broker_id] || 0) + 1;
-    }
-    if (data.length < PAGE) break;
-    from += PAGE;
-  }
-  return countMap;
-}
-
 async function fetchAllFromTable(sb: any, table: string, select: string, orderBy = "name"): Promise<any[]> {
   const all: any[] = [];
   let from = 0;
@@ -231,6 +210,8 @@ function dbAgencyToApp(row: DbAgency): Agency {
     specializations: row.specializations ?? [],
     parentAgencyId: row.parent_agency_id ?? undefined,
     isIndependent: row.is_independent,
+    seatCity: row.seat_city ?? undefined,
+    seatAddress: row.seat_address ?? undefined,
   };
 }
 
@@ -368,9 +349,24 @@ export async function fetchSimilarProperties(slug: string, city: string): Promis
 export async function fetchUniqueCities(): Promise<string[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  const { data, error } = await getSupabase()!.from("properties").select("city").eq("active", true);
-  if (error || !data) return [];
-  return [...new Set((data as { city: string }[]).map((r) => r.city))].sort();
+  // Fetch only city column, paginated to handle >1000 rows
+  const sb = getSupabase()!;
+  const cities = new Set<string>();
+  let from = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data } = await sb
+      .from("properties")
+      .select("city")
+      .eq("active", true)
+      .order("city")
+      .range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    for (const r of data as { city: string }[]) cities.add(r.city);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return [...cities].sort();
 }
 
 // ===== Brokers =====
@@ -382,15 +378,7 @@ export async function fetchBrokers(): Promise<Broker[]> {
   const allData = await fetchAllFromTable(sb, "brokers", "*", "name");
   if (!allData.length) return [];
 
-  const brokers = allData.map(dbBrokerToApp);
-
-  // Dynamically count active listings per broker (paginated)
-  const countMap = await countPropertiesPerBroker(sb);
-  for (const b of brokers) {
-    b.activeListings = countMap[b.id] ?? 0;
-  }
-
-  return brokers;
+  return allData.map(dbBrokerToApp);
 }
 
 export async function fetchBrokerById(id: string): Promise<Broker | null> {
@@ -431,7 +419,7 @@ export async function fetchBrokerBySlug(slug: string): Promise<Broker | null> {
   return broker;
 }
 
-export async function fetchBrokerProperties(brokerId: string): Promise<Property[]> {
+export async function fetchBrokerProperties(brokerId: string, limit = 200): Promise<Property[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
   const { data, error } = await getSupabase()!
@@ -439,7 +427,8 @@ export async function fetchBrokerProperties(brokerId: string): Promise<Property[
     .select("*, brokers(*)")
     .eq("broker_id", brokerId)
     .eq("active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) return [];
   return (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) =>
@@ -458,27 +447,17 @@ export async function fetchAgencies(): Promise<Agency[]> {
 
   const agencies = allData.map(dbAgencyToApp);
 
-  // Dynamically count brokers per agency
-  const brokersData = await fetchAllFromTable(sb, "brokers", "id, agency_id", "name");
-  const brokersByAgency: Record<string, string[]> = {};
-  const brokerToAgency: Record<string, string> = {};
-  for (const b of brokersData as { id: string; agency_id: string }[]) {
-    if (!b.agency_id) continue;
-    (brokersByAgency[b.agency_id] ??= []).push(b.id);
-    brokerToAgency[b.id] = b.agency_id;
-  }
-  for (const a of agencies) {
-    a.totalBrokers = brokersByAgency[a.id]?.length ?? 0;
-  }
-
-  // Count listings per agency (via broker_id) — paginated
-  const countMap = await countPropertiesPerBroker(sb);
+  // Count brokers and listings per agency in 2 lightweight queries
+  const brokersData = await fetchAllFromTable(sb, "brokers", "id, agency_id, active_listings", "name");
+  const brokersByAgency: Record<string, number> = {};
   const listingsByAgency: Record<string, number> = {};
-  for (const [brokerId, cnt] of Object.entries(countMap)) {
-    const aid = brokerToAgency[brokerId];
-    if (aid) listingsByAgency[aid] = (listingsByAgency[aid] || 0) + cnt;
+  for (const b of brokersData as { id: string; agency_id: string; active_listings: number }[]) {
+    if (!b.agency_id) continue;
+    brokersByAgency[b.agency_id] = (brokersByAgency[b.agency_id] ?? 0) + 1;
+    listingsByAgency[b.agency_id] = (listingsByAgency[b.agency_id] ?? 0) + (b.active_listings ?? 0);
   }
   for (const a of agencies) {
+    a.totalBrokers = brokersByAgency[a.id] ?? 0;
     a.totalListings = listingsByAgency[a.id] ?? 0;
   }
 
@@ -537,15 +516,7 @@ export async function fetchAgencyBrokers(agencyId: string): Promise<Broker[]> {
   const sb = getSupabase()!;
   const { data, error } = await sb.from("brokers").select("*").eq("agency_id", agencyId).order("name");
   if (error) return [];
-  const brokers = (data ?? []).map(dbBrokerToApp);
-
-  // Dynamically count active listings per broker (paginated to avoid 1000-row limit)
-  const countMap = await countPropertiesPerBroker(sb);
-  for (const b of brokers) {
-    b.activeListings = countMap[b.id] ?? 0;
-  }
-
-  return brokers;
+  return (data ?? []).map(dbBrokerToApp);
 }
 
 export async function fetchAgencyBranches(agencyId: string): Promise<Branch[]> {
@@ -569,7 +540,8 @@ export async function fetchAgencyProperties(agencyId: string): Promise<Property[
     .select("*, brokers(*)")
     .in("broker_id", brokerIds)
     .eq("active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) return [];
   return (data ?? []).map((row: DbProperty & { brokers?: DbBroker | null }) =>
@@ -622,10 +594,8 @@ export async function fetchAgencyReviews(agencyId: string): Promise<Review[]> {
 export async function fetchAllBrokerCities(): Promise<string[]> {
   if (!isSupabaseConfigured || !getSupabase()) return [];
 
-  // Cities from properties linked to brokers
-  const { data } = await getSupabase()!.from("properties").select("city").eq("active", true);
-  if (!data) return [];
-  return [...new Set((data as { city: string }[]).map((r) => r.city))].sort();
+  // Reuse fetchUniqueCities — same data source
+  return fetchUniqueCities();
 }
 
 export async function fetchAllBranchCities(): Promise<string[]> {
@@ -646,7 +616,8 @@ export async function fetchAllSpecializations(): Promise<string[]> {
 
 // ===== Bulk city maps (for specialiste page) =====
 
-/** Returns { brokerId → [city1, city2, ...] } from active properties */
+/** Returns { brokerId → [city1, city2, ...] } from active properties.
+ *  Fetches only broker_id + city with active filter, paginated. */
 export async function fetchBrokerCitiesMap(): Promise<Record<string, string[]>> {
   if (!isSupabaseConfigured || !getSupabase()) return {};
   const sb = getSupabase()!;
@@ -659,6 +630,7 @@ export async function fetchBrokerCitiesMap(): Promise<Record<string, string[]>> 
       .select("broker_id, city")
       .eq("active", true)
       .not("broker_id", "is", null)
+      .order("broker_id")
       .range(from, from + PAGE - 1);
     if (!data || data.length === 0) break;
     for (const row of data as { broker_id: string; city: string }[]) {
