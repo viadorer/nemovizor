@@ -558,7 +558,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
       params.set("ne_lon", String(debouncedBounds.east));
     }
 
-    fetch(`/api/properties?${params}`, { signal: controller.signal })
+    fetch(`/api/properties?${params}`, { signal: controller.signal, cache: "no-store" })
       .then((r) => r.json())
       .then((data: PropertiesResponse) => {
         setProperties((data.data || []).map(rowToProperty));

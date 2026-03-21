@@ -20,7 +20,7 @@ function useHomepageData() {
 
   useEffect(() => {
     // Fetch latest properties via API
-    fetch("/api/properties?sort=newest&limit=8")
+    fetch("/api/properties?sort=newest&limit=8", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         const rows = (d.data || []).map((row: Record<string, unknown>) => ({

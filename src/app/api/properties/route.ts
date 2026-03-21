@@ -118,13 +118,10 @@ export async function GET(req: NextRequest) {
 
   const total = count ?? 0;
 
-  return NextResponse.json({
-    data,
-    total,
-    page,
-    pages: Math.ceil(total / limit),
-    limit,
-  });
+  return NextResponse.json(
+    { data, total, page, pages: Math.ceil(total / limit), limit },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+  );
 }
 
 /** POST /api/properties – vložit novou nemovitost */
