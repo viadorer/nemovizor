@@ -24,7 +24,10 @@ function getArg(name, def) {
 }
 
 const PAGES = Number(getArg("--pages", "50"));
+const START_PAGE = Number(getArg("--start-page", "0"));
 const DELAY_MS = Number(getArg("--delay", "300"));
+const LOCALITY_REGION = getArg("--locality-region", null); // e.g. 12 = Plzeňský kraj
+const LOCALITY_DISTRICT = getArg("--locality-district", null); // e.g. 3406 = Plzeň-město
 const PER_PAGE = 20;
 const MAX_IMAGES = 8;
 const IMG_CONCURRENCY = 4; // parallel image downloads
@@ -278,12 +281,21 @@ async function insertProperty(detail, r2Images, brokerId) {
   // Matterport URL — sometimes in items or in additional links
   let matterportUrl = null;
   if (has3D) {
-    // Check for matterport in recommendations or items
     const vrItem = getItem(items, "Virtuální prohlídka");
     if (typeof vrItem === "string" && vrItem.includes("http")) matterportUrl = vrItem;
-    // Also check _embedded for panorama link
     const panoLinks = detail._embedded?.panoramas || detail._links?.panorama;
     if (panoLinks?.href) matterportUrl = panoLinks.href;
+  }
+  // Video URL
+  let videoUrl = null;
+  if (hasVideo) {
+    const vidItem = getItem(items, "Video");
+    if (typeof vidItem === "string" && vidItem.includes("http")) videoUrl = vidItem;
+    const vidLink = detail._links?.video_revisions?.href || detail._links?.video?.href;
+    if (vidLink) videoUrl = videoUrl || vidLink;
+    // Also check _embedded videos
+    const embeddedVids = detail._embedded?.video_revisions || [];
+    if (embeddedVids.length && embeddedVids[0]?.url) videoUrl = videoUrl || embeddedVids[0].url;
   }
 
   const property = {
@@ -325,6 +337,7 @@ async function insertProperty(detail, r2Images, brokerId) {
     garage_count: getItemNum(items, "Garáž") || undefined,
     // 3D / Video
     matterport_url: matterportUrl || undefined,
+    video_url: videoUrl || undefined,
     // Images - skip if no photos uploaded
     image_src: r2Images[0] || null,
     image_alt: name,
@@ -408,13 +421,15 @@ async function main() {
   for (const c of categories) {
     console.log(`\n== ${c.label}${countryLabel ? ` (${countryLabel})` : ""} (${ppc} pages) ==`);
 
-    for (let page = 0; page < ppc; page++) {
+    for (let page = START_PAGE; page < ppc; page++) {
       console.log(`\n  Page ${page + 1}/${ppc}`);
 
       let listings;
       const countryQ = countryId ? `&locality_country_id=${countryId}` : "";
+      const regionQ = LOCALITY_REGION ? `&locality_region_id=${LOCALITY_REGION}` : "";
+      const districtQ = LOCALITY_DISTRICT ? `&locality_district_id=${LOCALITY_DISTRICT}` : "";
       try {
-        listings = (await fetchS(`${SREALITY}/estates?category_main_cb=${c.cat}&category_type_cb=${c.type}&per_page=${PER_PAGE}&page=${page}${countryQ}`))
+        listings = (await fetchS(`${SREALITY}/estates?category_main_cb=${c.cat}&category_type_cb=${c.type}&per_page=${PER_PAGE}&page=${page}${countryQ}${regionQ}${districtQ}`))
           ?._embedded?.estates ?? [];
       } catch (e) {
         console.error(`  Page error: ${e.message}`);
