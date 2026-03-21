@@ -3,9 +3,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { getProfile, updateProfile, uploadAvatar, type Profile } from "@/lib/profile";
+import { useT } from "@/i18n/provider";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const t = useT();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,7 +52,7 @@ export default function SettingsPage() {
     if (!file || !user) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("Maximální velikost souboru je 2 MB");
+      alert(t.dashboard.maxFileSize);
       return;
     }
 
@@ -68,7 +70,7 @@ export default function SettingsPage() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Nastavení profilu</h1>
+      <h1 className="dashboard-page-title">{t.dashboard.settingsTitle}</h1>
 
       <div className="settings-avatar-section">
         <button
@@ -99,12 +101,12 @@ export default function SettingsPage() {
           onChange={handleAvatarUpload}
           style={{ display: "none" }}
         />
-        <span className="settings-avatar-hint">Kliknutím změníte fotku</span>
+        <span className="settings-avatar-hint">{t.dashboard.avatarHint}</span>
       </div>
 
       <form onSubmit={handleSave} className="settings-form">
         <label className="auth-label">
-          E-mail
+          {t.dashboard.emailLabel}
           <input
             type="email"
             value={user?.email || ""}
@@ -114,7 +116,7 @@ export default function SettingsPage() {
         </label>
 
         <label className="auth-label">
-          Jméno a příjmení
+          {t.dashboard.fullNameLabel}
           <input
             type="text"
             value={fullName}
@@ -124,7 +126,7 @@ export default function SettingsPage() {
         </label>
 
         <label className="auth-label">
-          Telefon
+          {t.dashboard.phoneLabel}
           <input
             type="tel"
             value={phone}
@@ -135,21 +137,21 @@ export default function SettingsPage() {
         </label>
 
         <label className="auth-label">
-          Preferované město
+          {t.dashboard.preferredCityLabel}
           <input
             type="text"
             value={preferredCity}
             onChange={(e) => setPreferredCity(e.target.value)}
             className="auth-input"
-            placeholder="např. Praha"
+            placeholder={t.dashboard.preferredCityPlaceholder}
           />
         </label>
 
         <div className="settings-form-actions">
           <button type="submit" className="auth-submit" disabled={saving}>
-            {saving ? "Ukládám..." : "Uložit změny"}
+            {saving ? t.dashboard.saving : t.dashboard.saveChanges}
           </button>
-          {saved && <span className="settings-saved">Uloženo</span>}
+          {saved && <span className="settings-saved">{t.dashboard.saved}</span>}
         </div>
       </form>
     </div>

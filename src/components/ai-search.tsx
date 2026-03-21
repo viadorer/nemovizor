@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useT } from "@/i18n/provider";
 
 type AiSearchFilters = {
   listingType?: string;
@@ -19,6 +20,7 @@ type AiSearchProps = {
 };
 
 export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -28,8 +30,8 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
   // Auto-dismiss explanation after 8s
   useEffect(() => {
     if (!explanation) return;
-    const t = setTimeout(() => setExplanation(null), 8000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setExplanation(null), 8000);
+    return () => clearTimeout(timer);
   }, [explanation]);
 
   const handleSubmit = async () => {
@@ -49,7 +51,7 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "AI hledání selhalo");
+        throw new Error(data?.error || t.aiSearch.searchFailed);
       }
 
       const data = await res.json();
@@ -60,7 +62,7 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
       onFiltersReady(filters, expl);
       setQuery("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Chyba AI hledání");
+      setError(err instanceof Error ? err.message : t.aiSearch.searchError);
     } finally {
       setLoading(false);
     }

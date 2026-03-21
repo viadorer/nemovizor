@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Pagination } from "@/components/pagination";
 import type { Broker, Agency } from "@/lib/types";
+import { useT } from "@/i18n/provider";
 
 type DropdownProps<T extends string> = {
   label: string;
@@ -13,6 +14,7 @@ type DropdownProps<T extends string> = {
 };
 
 function FilterDropdown<T extends string>({ label, value, options, onChange }: DropdownProps<T>) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -43,7 +45,7 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
             className={`filter-dropdown-item ${!value ? "filter-dropdown-item--active" : ""}`}
             onClick={() => { onChange(null); setOpen(false); }}
           >
-            Vse
+            {t.filters.all}
           </button>
           {options.map((opt) => (
             <button
@@ -83,6 +85,7 @@ export function SpecialistsContent({
   brokerCitiesMap,
   branchCitiesMap,
 }: SpecialistsContentProps) {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [city, setCity] = useState<string | null>(null);
   const [specialization, setSpecialization] = useState<string | null>(null);
@@ -149,7 +152,7 @@ export function SpecialistsContent({
         </svg>
         <input
           type="text"
-          placeholder="Hledat podle jmena..."
+          placeholder={t.specialists.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -157,26 +160,26 @@ export function SpecialistsContent({
 
       <div className="listing-filters">
         <FilterDropdown
-          label="Lokalita"
+          label={t.specialists.location}
           value={city}
           options={cities.map((c) => ({ value: c, label: c }))}
           onChange={setCity}
         />
         <FilterDropdown
-          label="Zamereni"
+          label={t.specialists.specialization}
           value={specialization}
           options={specs.map((s) => ({ value: s, label: s }))}
           onChange={setSpecialization}
         />
 
         <div className="specialist-type-toggle">
-          {(["all", "broker", "agency"] as const).map((t) => (
+          {(["all", "broker", "agency"] as const).map((ft) => (
             <button
-              key={t}
-              className={`specialist-type-btn ${typeFilter === t ? "specialist-type-btn--active" : ""}`}
-              onClick={() => setTypeFilter(t)}
+              key={ft}
+              className={`specialist-type-btn ${typeFilter === ft ? "specialist-type-btn--active" : ""}`}
+              onClick={() => setTypeFilter(ft)}
             >
-              {t === "all" ? "Vse" : t === "broker" ? "Makleri" : "Kancelare"}
+              {ft === "all" ? t.specialists.all : ft === "broker" ? t.specialists.brokers : t.specialists.agencies}
             </button>
           ))}
         </div>
@@ -186,20 +189,20 @@ export function SpecialistsContent({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
-            Vymazat filtry
+            {t.specialists.clearFilters}
           </button>
         )}
       </div>
 
       <div className="listing-results-count">
-        Nalezeno {filtered.length} {filtered.length === 1 ? "vysledek" : filtered.length >= 2 && filtered.length <= 4 ? "vysledky" : "vysledku"}
+        {(filtered.length === 1 ? t.specialists.foundOne : filtered.length >= 2 && filtered.length <= 4 ? t.specialists.foundFew : t.specialists.foundMany).replace("{count}", String(filtered.length))}
       </div>
 
       <div className="specialists-grid">
         {paginatedResults.map((item) =>
           item.type === "broker" ? (
             <Link key={`b-${item.data.id}`} href={`/makleri/${item.data.slug}`} className="specialist-card" style={{ textDecoration: "none" }}>
-              <span className="specialist-badge specialist-badge--broker">Makler</span>
+              <span className="specialist-badge specialist-badge--broker">{t.specialists.badgeBroker}</span>
               <div className="broker-list-avatar">
                 {item.data.photo ? (
                   <img src={item.data.photo} alt={item.data.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
@@ -216,21 +219,21 @@ export function SpecialistsContent({
               <div className="broker-list-stats">
                 <div className="broker-stat">
                   <div className="broker-stat-value">{item.data.activeListings}</div>
-                  <div className="broker-stat-label">Nabidek</div>
+                  <div className="broker-stat-label">{t.specialists.listingsLabel}</div>
                 </div>
                 <div className="broker-stat">
                   <div className="broker-stat-value">{item.data.rating}</div>
-                  <div className="broker-stat-label">Hodnoceni</div>
+                  <div className="broker-stat-label">{t.specialists.ratingLabel}</div>
                 </div>
                 <div className="broker-stat">
                   <div className="broker-stat-value">{item.data.totalDeals}</div>
-                  <div className="broker-stat-label">Obchodu</div>
+                  <div className="broker-stat-label">{t.specialists.dealsLabel}</div>
                 </div>
               </div>
             </Link>
           ) : (
             <Link key={`a-${item.data.id}`} href={`/kancelare/${(item.data as Agency).slug}`} className="specialist-card" style={{ textDecoration: "none" }}>
-              <span className="specialist-badge specialist-badge--agency">Kancelar</span>
+              <span className="specialist-badge specialist-badge--agency">{t.specialists.badgeAgency}</span>
               <div className="agency-list-logo">
                 {(item.data as Agency).logo ? (
                   <img src={(item.data as Agency).logo} alt={(item.data as Agency).name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -250,15 +253,15 @@ export function SpecialistsContent({
               <div className="agency-list-stats">
                 <div className="broker-stat">
                   <div className="broker-stat-value">{(item.data as Agency).totalBrokers}</div>
-                  <div className="broker-stat-label">Makleru</div>
+                  <div className="broker-stat-label">{t.specialists.brokersLabel}</div>
                 </div>
                 <div className="broker-stat">
                   <div className="broker-stat-value">{(item.data as Agency).rating}</div>
-                  <div className="broker-stat-label">Hodnoceni</div>
+                  <div className="broker-stat-label">{t.specialists.ratingLabel}</div>
                 </div>
                 <div className="broker-stat">
                   <div className="broker-stat-value">{(item.data as Agency).totalDeals}</div>
-                  <div className="broker-stat-label">Obchodu</div>
+                  <div className="broker-stat-label">{t.specialists.dealsLabel}</div>
                 </div>
               </div>
             </Link>
@@ -274,7 +277,7 @@ export function SpecialistsContent({
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
-          <p>Zadnym filtrum neodpovidaji zadne vysledky.</p>
+          <p>{t.specialists.noResults}</p>
         </div>
       )}
     </>

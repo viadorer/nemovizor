@@ -1,15 +1,19 @@
+"use client";
+
 import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/api";
-import { Property, PropertyCategories } from "@/lib/types";
+import { Property } from "@/lib/types";
 import { FavoriteButton } from "@/components/favorite-button";
+import { useT } from "@/i18n/provider";
 
 type PropertyRowProps = {
   property: Property;
 };
 
 export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowProps) {
+  const t = useT();
   return (
     <div className="property-row">
       <div className="property-row__image-wrapper">
@@ -26,10 +30,10 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
         </Link>
         <FavoriteButton propertyId={property.id} />
         <span className={`property-badge property-badge--${property.listingType}`}>
-          {property.listingType === "sale" ? "Prodej" : property.listingType === "rent" ? "Pron\u00e1jem" : property.listingType === "auction" ? "Dra\u017eba" : property.listingType === "project" ? "Projekt" : "Pod\u00edly"}
+          {t.enumLabels.listingTypes[property.listingType] || property.listingType}
         </span>
         {property.featured && (
-          <span className="property-badge property-badge--featured">Premium</span>
+          <span className="property-badge property-badge--featured">{t.badges.premium}</span>
         )}
         <div className="property-broker-avatar">
           {property.showAgencyLogo ? (
@@ -44,14 +48,14 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
         {(property.matterportUrl || property.videoUrl || property.viewsTrend === "hot") && (
           <div className="property-media-badges">
             {property.viewsTrend === "hot" && (
-              <span className="property-media-badge property-media-badge--hot" title={"Vysok\u00fd z\u00e1jem"}>
+              <span className="property-media-badge property-media-badge--hot" title={t.header.highInterest}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                   <path d="M12 2c0 4-4 6-4 10a4 4 0 0 0 8 0c0-4-4-6-4-10zM12 18a2 2 0 0 1-2-2c0-1.3 2-2 2-4 0 2 2 2.7 2 4a2 2 0 0 1-2 2z" />
                 </svg>
               </span>
             )}
             {property.matterportUrl && (
-              <span className="property-media-badge" title={"3D prohl\u00eddka"}>
+              <span className="property-media-badge" title={t.detail.virtualTour}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                   <path d="M2 17l10 5 10-5" />
@@ -61,11 +65,11 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
               </span>
             )}
             {property.videoUrl && (
-              <span className="property-media-badge" title="Video">
+              <span className="property-media-badge" title={t.header.video}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                Video
+                {t.header.video}
               </span>
             )}
           </div>
@@ -74,7 +78,7 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
 
       <div className="property-row__body">
         <Link href={`/nemovitost/${property.slug}`} className="property-row__title">
-          {property.summary || property.imageAlt || "Nemovitost"}
+          {property.summary || property.imageAlt || t.header.property}
         </Link>
 
         <span className="property-price">
@@ -82,7 +86,7 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
         </span>
 
         <div className="property-meta">
-          <span>{PropertyCategories[property.category] ?? property.category}</span>
+          <span>{t.enumLabels.propertyCategories[property.category] || property.category}</span>
           {property.roomsLabel && (
             <>
               <span className="property-meta-divider" />
@@ -118,12 +122,12 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
               href={`tel:${property.brokerPhone}`}
               className="property-row__action"
               onClick={(e) => e.stopPropagation()}
-              title="Zavolat"
+              title={t.detail.callBroker}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
-              Telefon
+              {t.header.phone}
             </a>
           )}
           {property.brokerEmail && (
@@ -131,7 +135,7 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
               href={`mailto:${property.brokerEmail}`}
               className="property-row__action"
               onClick={(e) => e.stopPropagation()}
-              title={"Napsat e-mail"}
+              title={t.detail.emailBroker}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect width="20" height="16" x="2" y="4" rx="2" />
@@ -148,7 +152,7 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
-            Detail
+            {t.header.detail}
           </Link>
         </div>
       </div>

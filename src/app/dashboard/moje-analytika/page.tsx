@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 export default function BrokerAnalyticsPage() {
   const { user } = useAuth();
+  const t = useT();
   const [stats, setStats] = useState<{
     totalListings: number;
     activeListings: number;
@@ -49,21 +51,21 @@ export default function BrokerAnalyticsPage() {
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Moje analytika</h1>
+      <h1 className="dashboard-page-title">{t.dashboard.myAnalyticsTitle}</h1>
 
       {!stats ? (
-        <p style={{ color: "var(--text-muted)" }}>Načítání...</p>
+        <p style={{ color: "var(--text-muted)" }}>{t.common.loading}</p>
       ) : (
         <div className="admin-stats">
           <div className="admin-stat-card">
-            <div className="label">Inzeraty celkem</div>
+            <div className="label">{t.dashboard.totalListings}</div>
             <div className="value">{stats.totalListings}</div>
-            <div className="sub">{stats.activeListings} aktivních</div>
+            <div className="sub">{stats.activeListings} {t.dashboard.activeCount}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="label">Poptávky celkem</div>
+            <div className="label">{t.dashboard.totalRequests}</div>
             <div className="value">{stats.totalRequests}</div>
-            <div className="sub">{stats.newRequests} nových</div>
+            <div className="sub">{stats.newRequests} {t.dashboard.newCount}</div>
           </div>
         </div>
       )}

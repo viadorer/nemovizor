@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 type SavedSearchRow = {
   id: string;
@@ -37,6 +38,7 @@ function buildSearchUrl(s: SavedSearchRow): string {
 
 export default function SavedSearchesPage() {
   const { user } = useAuth();
+  const t = useT();
   const [searches, setSearches] = useState<SavedSearchRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,23 +75,23 @@ export default function SavedSearchesPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Uložená hledání</h1>
-        <p className="dashboard-loading">Načítání...</p>
+        <h1 className="dashboard-page-title">{t.dashboard.savedSearchesTitle}</h1>
+        <p className="dashboard-loading">{t.common.loading}</p>
       </div>
     );
   }
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Uložená hledání</h1>
+      <h1 className="dashboard-page-title">{t.dashboard.savedSearchesTitle}</h1>
 
       {searches.length === 0 ? (
         <div className="dashboard-empty">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
-          <p>Zatím nemáte žádná uložená hledání</p>
-          <Link href="/nabidky" className="dashboard-action-btn">Hledat nemovitosti</Link>
+          <p>{t.dashboard.savedSearchesEmpty}</p>
+          <Link href="/nabidky" className="dashboard-action-btn">{t.dashboard.searchProperties}</Link>
         </div>
       ) : (
         <div className="dashboard-searches-list">
@@ -106,7 +108,7 @@ export default function SavedSearchesPage() {
                   type="button"
                   className={`dashboard-notify-btn ${s.notify_email ? "dashboard-notify-btn--active" : ""}`}
                   onClick={() => toggleNotify(s.id, s.notify_email)}
-                  title={s.notify_email ? "Vypnout upozornění" : "Zapnout upozornění"}
+                  title={s.notify_email ? t.dashboard.turnOffNotifications : t.dashboard.turnOnNotifications}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill={s.notify_email ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -114,13 +116,13 @@ export default function SavedSearchesPage() {
                   </svg>
                 </button>
                 <Link href={buildSearchUrl(s)} className="dashboard-use-btn">
-                  Použít
+                  {t.dashboard.useSearch}
                 </Link>
                 <button
                   type="button"
                   className="dashboard-delete-btn"
                   onClick={() => handleDelete(s.id)}
-                  title="Smazat"
+                  title={t.common.delete}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="3 6 5 6 21 6" />

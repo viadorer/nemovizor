@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -44,7 +45,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
   if (agencyBranches.length > 1) {
     tabs.push({
       id: "pobocky",
-      label: "Pobocky",
+      label: t.profile.branches,
       count: agencyBranches.length,
       content: (
         <div className="detail-cards-grid detail-cards-grid--profile">
@@ -56,7 +57,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
 
   tabs.push({
     id: "makleri",
-    label: "Makleri",
+    label: t.nav.brokers,
     count: agencyBrokers.length,
     content: (
       <div className="detail-cards-grid detail-cards-grid--brokers">
@@ -67,7 +68,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
 
   tabs.push({
     id: "nabidky",
-    label: "Nabidky",
+    label: t.nav.listings,
     count: propertiesPage1.total,
     content: (
       <DetailPropertiesGrid

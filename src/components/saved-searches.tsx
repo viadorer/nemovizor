@@ -9,6 +9,7 @@ import {
   updateLastUsed,
   type SearchFilters,
 } from "@/lib/saved-searches";
+import { useT } from "@/i18n/provider";
 
 type SavedSearchesProps = {
   currentFilters: SearchFilters;
@@ -17,6 +18,7 @@ type SavedSearchesProps = {
 };
 
 export function SavedSearches({ currentFilters, locationLabel, onRestore }: SavedSearchesProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const ref = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
       <button
         className={`saved-searches-trigger ${open ? "saved-searches-trigger--open" : ""}`}
         onClick={() => setOpen(!open)}
-        title="Uložená hledání"
+        title={t.savedSearchPanel.trigger}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
@@ -72,21 +74,21 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
       {open && (
         <div className="saved-searches-dropdown">
           <div className="saved-searches-header">
-            <span className="saved-searches-title">Uložená hledání</span>
+            <span className="saved-searches-title">{t.savedSearchPanel.title}</span>
             <button className="saved-searches-save-btn" onClick={handleSave}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              Uložit aktuální
+              {t.savedSearchPanel.saveCurrent}
             </button>
           </div>
 
           {searches.length === 0 ? (
             <div className="saved-searches-empty">
-              Zatím žádná uložená hledání.
+              {t.savedSearchPanel.empty}
               <br />
               <span style={{ fontSize: "0.8em", opacity: 0.7 }}>
-                Hledání se automaticky ukládají při zobrazení detailu nabídky.
+                {t.savedSearchPanel.emptyHint}
               </span>
             </div>
           ) : (
@@ -109,7 +111,7 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
                   <button
                     className="saved-search-item-delete"
                     onClick={(e) => handleDelete(search.id, e)}
-                    title="Smazat"
+                    title={t.savedSearchPanel.deleteTitle}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18 6L6 18M6 6l12 12" />

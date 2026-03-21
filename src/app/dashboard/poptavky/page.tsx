@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 type RequestRow = {
   id: string;
@@ -16,65 +17,66 @@ type RequestRow = {
   created_at: string;
 };
 
-const typeLabels: Record<string, string> = {
-  info: "Info",
-  viewing: "Prohlídka",
-  offer: "Nabídka",
-  valuation: "Ocenění",
-};
-
-const statusLabels: Record<string, string> = {
-  new: "Nová",
-  contacted: "Kontaktováno",
-  closed: "Uzavřeno",
-};
-
-const columns: Column<RequestRow>[] = [
-  {
-    key: "name",
-    label: "Klient",
-    render: (row) => (
-      <div>
-        <div style={{ fontWeight: 600 }}>{row.name}</div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.email}</div>
-      </div>
-    ),
-  },
-  { key: "phone", label: "Telefon", render: (row) => row.phone || "-" },
-  {
-    key: "request_type",
-    label: "Typ",
-    render: (row) => typeLabels[row.request_type] || row.request_type,
-  },
-  {
-    key: "status",
-    label: "Status",
-    render: (row) => (
-      <span className={`admin-badge admin-badge--${row.status === "new" ? "running" : row.status === "contacted" ? "active" : "inactive"}`}>
-        {statusLabels[row.status] || row.status}
-      </span>
-    ),
-  },
-  {
-    key: "message",
-    label: "Zpráva",
-    sortable: false,
-    render: (row) => (
-      <span style={{ maxWidth: 200, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {row.message || "-"}
-      </span>
-    ),
-  },
-  {
-    key: "created_at",
-    label: "Datum",
-    render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
-  },
-];
-
 export default function BrokerRequestsPage() {
   const { user } = useAuth();
+  const t = useT();
   const [tableKey, setTableKey] = useState(0);
+
+  const typeLabels: Record<string, string> = {
+    info: t.dashboard.requestTypeInfo,
+    viewing: t.dashboard.requestTypeViewing,
+    offer: t.dashboard.requestTypeOffer,
+    valuation: t.dashboard.requestTypeValuation,
+  };
+
+  const statusLabels: Record<string, string> = {
+    new: t.dashboard.requestStatusNew,
+    contacted: t.dashboard.requestStatusContacted,
+    closed: t.dashboard.requestStatusClosed,
+  };
+
+  const columns: Column<RequestRow>[] = [
+    {
+      key: "name",
+      label: t.dashboard.requestClientLabel,
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{row.name}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.email}</div>
+        </div>
+      ),
+    },
+    { key: "phone", label: t.dashboard.requestPhoneLabel, render: (row) => row.phone || "-" },
+    {
+      key: "request_type",
+      label: t.dashboard.requestTypeLabel,
+      render: (row) => typeLabels[row.request_type] || row.request_type,
+    },
+    {
+      key: "status",
+      label: t.dashboard.requestStatusLabel,
+      render: (row) => (
+        <span className={`admin-badge admin-badge--${row.status === "new" ? "running" : row.status === "contacted" ? "active" : "inactive"}`}>
+          {statusLabels[row.status] || row.status}
+        </span>
+      ),
+    },
+    {
+      key: "message",
+      label: t.dashboard.requestMessageLabel,
+      sortable: false,
+      render: (row) => (
+        <span style={{ maxWidth: 200, display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {row.message || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      label: t.dashboard.requestDateLabel,
+      render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
+    },
+  ];
 
   const fetchData = useCallback(async (params: { page: number; limit: number; search: string; sort: string; order: "asc" | "desc" }) => {
     const supabase = getBrowserSupabase();
@@ -119,11 +121,11 @@ export default function BrokerRequestsPage() {
     <div className="dashboard-page">
       <DataTable<RequestRow>
         key={tableKey}
-        title="Poptávky"
+        title={t.dashboard.requestsTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle jména, emailu..."
+        searchPlaceholder={t.dashboard.requestsSearchPlaceholder}
         rowActions={(row) => (
           <select
             className="admin-btn admin-btn--secondary admin-btn--sm"
@@ -131,9 +133,9 @@ export default function BrokerRequestsPage() {
             value={row.status}
             onChange={(e) => handleStatusChange(row, e.target.value)}
           >
-            <option value="new">Nová</option>
-            <option value="contacted">Kontaktováno</option>
-            <option value="closed">Uzavřeno</option>
+            <option value="new">{t.dashboard.requestStatusNew}</option>
+            <option value="contacted">{t.dashboard.requestStatusContacted}</option>
+            <option value="closed">{t.dashboard.requestStatusClosed}</option>
           </select>
         )}
       />

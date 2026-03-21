@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useT } from "@/i18n/provider";
 
 type ProjectRow = {
   id: string;
@@ -19,60 +20,61 @@ type ProjectRow = {
   created_at: string;
 };
 
-const statusLabels: Record<string, string> = {
-  planned: "Plánovaný",
-  active: "Aktivní",
-  construction: "Ve výstavbě",
-  selling: "Prodej",
-  completed: "Dokončený",
-  archived: "Archivovaný",
-};
-
-const columns: Column<ProjectRow>[] = [
-  {
-    key: "name",
-    label: "Název",
-    render: (row) => (
-      <div>
-        <div style={{ fontWeight: 600 }}>{row.name}</div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.developer_name}</div>
-      </div>
-    ),
-  },
-  { key: "city", label: "Město" },
-  {
-    key: "status",
-    label: "Status",
-    render: (row) => (
-      <span className={`admin-badge admin-badge--${row.status === "active" || row.status === "selling" ? "active" : row.status === "archived" ? "inactive" : "running"}`}>
-        {statusLabels[row.status] || row.status}
-      </span>
-    ),
-  },
-  {
-    key: "total_units",
-    label: "Jednotky",
-    render: (row) => `${row.available_units} / ${row.total_units}`,
-  },
-  {
-    key: "price_from",
-    label: "Cena od",
-    render: (row) => row.price_from ? `${Number(row.price_from).toLocaleString("cs")} Kč` : "-",
-  },
-  {
-    key: "active",
-    label: "Stav",
-    render: (row) => (
-      <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
-        {row.active ? "Aktivní" : "Neaktivní"}
-      </span>
-    ),
-  },
-];
-
 export default function AdminProjectsPage() {
+  const t = useT();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
+
+  const statusLabels: Record<string, string> = {
+    planned: t.dashboard.projectStatusPlanned,
+    active: t.dashboard.projectStatusActive,
+    construction: t.dashboard.projectStatusConstruction,
+    selling: t.dashboard.projectStatusSelling,
+    completed: t.dashboard.projectStatusCompleted,
+    archived: t.dashboard.projectStatusArchived,
+  };
+
+  const columns: Column<ProjectRow>[] = [
+    {
+      key: "name",
+      label: t.dashboard.projectNameLabel,
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{row.name}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.developer_name}</div>
+        </div>
+      ),
+    },
+    { key: "city", label: t.dashboard.projectCityLabel },
+    {
+      key: "status",
+      label: t.dashboard.projectStatusLabel,
+      render: (row) => (
+        <span className={`admin-badge admin-badge--${row.status === "active" || row.status === "selling" ? "active" : row.status === "archived" ? "inactive" : "running"}`}>
+          {statusLabels[row.status] || row.status}
+        </span>
+      ),
+    },
+    {
+      key: "total_units",
+      label: t.dashboard.projectUnitsLabel,
+      render: (row) => `${row.available_units} / ${row.total_units}`,
+    },
+    {
+      key: "price_from",
+      label: t.dashboard.projectPriceFromLabel,
+      render: (row) => row.price_from ? `${Number(row.price_from).toLocaleString("cs")} Kč` : "-",
+    },
+    {
+      key: "active",
+      label: t.dashboard.projectStateLabel,
+      render: (row) => (
+        <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
+          {row.active ? t.dashboard.listingStateActive : t.dashboard.listingStateInactive}
+        </span>
+      ),
+    },
+  ];
 
   const fetchData = useCallback(async (params: { page: number; limit: number; search: string; sort: string; order: "asc" | "desc" }) => {
     const qs = new URLSearchParams({
@@ -98,18 +100,18 @@ export default function AdminProjectsPage() {
     <div className="dashboard-page">
       <DataTable<ProjectRow>
         key={tableKey}
-        title="Projekty"
+        title={t.dashboard.adminProjectsTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle názvu, města, developera..."
+        searchPlaceholder={t.dashboard.adminProjectsSearchPlaceholder}
         rowActions={(row) => (
           <div style={{ display: "flex", gap: 4 }}>
             <button
               className="admin-btn admin-btn--danger admin-btn--sm"
               onClick={() => setDeleteId(row.id)}
             >
-              Smazat
+              {t.dashboard.projectDeleteBtn}
             </button>
           </div>
         )}
@@ -117,9 +119,9 @@ export default function AdminProjectsPage() {
 
       <ConfirmDialog
         open={!!deleteId}
-        title="Smazat projekt"
-        message="Opravdu chcete tento projekt smazat? Nemovitosti projektu zůstanou, ale budou odpojeny."
-        confirmLabel="Smazat"
+        title={t.dashboard.projectDeleteTitle}
+        message={t.dashboard.projectDeleteMessage}
+        confirmLabel={t.dashboard.projectDeleteBtn}
         danger
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}

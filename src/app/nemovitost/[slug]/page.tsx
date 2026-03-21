@@ -4,6 +4,8 @@ import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, getPropertyBySlug, getSimilarProperties, getBrokerById, getAgencyById } from "@/lib/api";
+import { t } from "@/i18n";
+import { brand } from "@/brands";
 import { DetailMap } from "./detail-map";
 import { DetailSplitLayout } from "./detail-split-layout";
 import { MediaGallery } from "./media-gallery";
@@ -22,24 +24,6 @@ function buildAddress(parts: (string | undefined)[]): string {
   }).join(", ");
 }
 
-const COUNTRY_LABELS: Record<string, string> = {
-  cz: "\u010Cesk\u00E1 republika",
-  sk: "Slovensko",
-  at: "Rakousko",
-  de: "N\u011Bmecko",
-  hr: "Chorvatsko",
-  cy: "Kypr",
-  bg: "Bulharsko",
-  al: "Alb\u00E1nie",
-  es: "\u0160pan\u011Blsko",
-  it: "It\u00E1lie",
-  gr: "\u0158ecko",
-  fr: "Francie",
-  me: "\u010Cern\u00E1 Hora",
-  tr: "Turecko",
-  pt: "Portugalsko",
-  hu: "Ma\u010Farsko",
-};
 
 type PropertyDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -59,126 +43,126 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   // === Parametry ===
   const params_data = [
-    { label: "Typ", value: property.subtype },
-    { label: "Dispozice", value: property.roomsLabel },
-    { label: "Plocha", value: property.area ? `${property.area} m²` : "" },
-    ...(property.landArea ? [{ label: "Pozemek", value: `${property.landArea} m²` }] : []),
-    ...(property.builtUpArea ? [{ label: "Zastavěná plocha", value: `${property.builtUpArea} m²` }] : []),
-    ...(property.floorArea ? [{ label: "Celková plocha", value: `${property.floorArea} m²` }] : []),
-    ...(property.balconyArea ? [{ label: "Balkón", value: `${property.balconyArea} m²` }] : []),
-    ...(property.terraceArea ? [{ label: "Terasa", value: `${property.terraceArea} m²` }] : []),
-    ...(property.gardenArea ? [{ label: "Zahrada", value: `${property.gardenArea} m²` }] : []),
-    ...(property.loggiaArea ? [{ label: "Lodžie", value: `${property.loggiaArea} m²` }] : []),
-    ...(property.cellarArea ? [{ label: "Sklep", value: `${property.cellarArea} m²` }] : []),
-    ...(property.basinArea ? [{ label: "Bazén", value: `${property.basinArea} m²` }] : []),
-    { label: "Město", value: property.city },
-    { label: "Městská část", value: property.district },
-    ...(property.cityPart ? [{ label: "Část obce", value: property.cityPart }] : []),
-    ...(property.zip ? [{ label: "PSČ", value: property.zip }] : []),
-    ...(property.region ? [{ label: "Region", value: property.region }] : []),
-    ...(property.country && property.country !== "cz" ? [{ label: "Země", value: COUNTRY_LABELS[property.country] || property.country.toUpperCase() }] : []),
-    { label: "Stav", value: property.condition },
-    { label: "Vlastnictví", value: property.ownership },
-    { label: "Vybavení", value: property.furnishing },
-    { label: "Energetický štítek", value: property.energyRating },
-    ...(property.buildingMaterial ? [{ label: "Materiál", value: property.buildingMaterial }] : []),
-    ...(property.flooring ? [{ label: "Podlaha", value: property.flooring }] : []),
-    ...(property.heating?.length ? [{ label: "Topení", value: property.heating.join(", ") }] : []),
-    ...(property.heatingSource?.length ? [{ label: "Zdroj topení", value: property.heatingSource.join(", ") }] : []),
-    ...(property.heatingElement?.length ? [{ label: "Topné těleso", value: property.heatingElement.join(", ") }] : []),
-    ...(property.waterHeatSource?.length ? [{ label: "Ohřev vody", value: property.waterHeatSource.join(", ") }] : []),
-    { label: "Parkování", value: property.parking },
-    ...(property.parkingSpaces ? [{ label: "Parkovací místa", value: String(property.parkingSpaces) }] : []),
-    ...(property.garageCount ? [{ label: "Garáže", value: String(property.garageCount) }] : []),
-    ...(property.floor ? [{ label: "Podlaží", value: property.totalFloors ? `${property.floor}/${property.totalFloors}` : String(property.floor) }] : []),
-    ...(property.totalFloors && !property.floor ? [{ label: "Počet podlaží", value: String(property.totalFloors) }] : []),
-    ...(property.undergroundFloors ? [{ label: "Podzemní podlaží", value: String(property.undergroundFloors) }] : []),
-    ...(property.ceilingHeight ? [{ label: "Výška stropu", value: `${property.ceilingHeight} m` }] : []),
-    ...(property.yearBuilt ? [{ label: "Rok výstavby", value: String(property.yearBuilt) }] : []),
-    ...(property.lastRenovation ? [{ label: "Poslední renovace", value: String(property.lastRenovation) }] : []),
-    ...(property.acceptanceYear ? [{ label: "Rok kolaudace", value: String(property.acceptanceYear) }] : []),
-    ...(property.objectType ? [{ label: "Typ objektu", value: property.objectType }] : []),
-    ...(property.objectKind ? [{ label: "Druh objektu", value: property.objectKind }] : []),
-    ...(property.objectLocation ? [{ label: "Umístění", value: property.objectLocation }] : []),
-    ...(property.flatClass ? [{ label: "Třída bytu", value: property.flatClass }] : []),
-    ...(property.surroundingsType ? [{ label: "Okolí", value: property.surroundingsType }] : []),
-    ...(property.protection ? [{ label: "Ochrana", value: property.protection }] : []),
-    ...(property.numOwners ? [{ label: "Počet vlastníků", value: String(property.numOwners) }] : []),
-    ...(property.apartmentNumber ? [{ label: "Číslo jednotky", value: String(property.apartmentNumber) }] : []),
-    ...(property.shareNumerator && property.shareDenominator ? [{ label: "Podíl", value: `${property.shareNumerator}/${property.shareDenominator}` }] : []),
+    { label: t.filters.subtype, value: property.subtype },
+    { label: t.filters.rooms, value: property.roomsLabel },
+    { label: t.params.area, value: property.area ? `${property.area} m²` : "" },
+    ...(property.landArea ? [{ label: t.params.landArea, value: `${property.landArea} m²` }] : []),
+    ...(property.builtUpArea ? [{ label: t.params.builtUpArea, value: `${property.builtUpArea} m²` }] : []),
+    ...(property.floorArea ? [{ label: t.params.floorArea, value: `${property.floorArea} m²` }] : []),
+    ...(property.balconyArea ? [{ label: t.features.balcony, value: `${property.balconyArea} m²` }] : []),
+    ...(property.terraceArea ? [{ label: t.features.terrace, value: `${property.terraceArea} m²` }] : []),
+    ...(property.gardenArea ? [{ label: t.features.garden, value: `${property.gardenArea} m²` }] : []),
+    ...(property.loggiaArea ? [{ label: t.features.loggia, value: `${property.loggiaArea} m²` }] : []),
+    ...(property.cellarArea ? [{ label: t.features.cellar, value: `${property.cellarArea} m²` }] : []),
+    ...(property.basinArea ? [{ label: t.features.pool, value: `${property.basinArea} m²` }] : []),
+    { label: t.filters.city, value: property.city },
+    { label: t.detail.district, value: property.district },
+    ...(property.cityPart ? [{ label: t.detail.cityPart, value: property.cityPart }] : []),
+    ...(property.zip ? [{ label: t.detail.zip, value: property.zip }] : []),
+    ...(property.region ? [{ label: t.detail.region, value: property.region }] : []),
+    ...(property.country && property.country !== "cz" ? [{ label: t.filters.country, value: t.enumLabels.countries[property.country as keyof typeof t.enumLabels.countries] || property.country.toUpperCase() }] : []),
+    { label: t.params.condition, value: property.condition },
+    { label: t.params.ownership, value: property.ownership },
+    { label: t.params.furnishing, value: property.furnishing },
+    { label: t.params.energyRating, value: property.energyRating },
+    ...(property.buildingMaterial ? [{ label: t.params.material, value: property.buildingMaterial }] : []),
+    ...(property.flooring ? [{ label: t.params.flooring, value: property.flooring }] : []),
+    ...(property.heating?.length ? [{ label: t.params.heating, value: property.heating.join(", ") }] : []),
+    ...(property.heatingSource?.length ? [{ label: t.params.heatingSource, value: property.heatingSource.join(", ") }] : []),
+    ...(property.heatingElement?.length ? [{ label: t.params.heatingElement, value: property.heatingElement.join(", ") }] : []),
+    ...(property.waterHeatSource?.length ? [{ label: t.params.waterHeatSource, value: property.waterHeatSource.join(", ") }] : []),
+    { label: t.detail.parking, value: property.parking },
+    ...(property.parkingSpaces ? [{ label: t.detail.parkingSpaces, value: String(property.parkingSpaces) }] : []),
+    ...(property.garageCount ? [{ label: t.features.garage, value: String(property.garageCount) }] : []),
+    ...(property.floor ? [{ label: t.detail.floor, value: property.totalFloors ? `${property.floor}/${property.totalFloors}` : String(property.floor) }] : []),
+    ...(property.totalFloors && !property.floor ? [{ label: t.detail.totalFloors, value: String(property.totalFloors) }] : []),
+    ...(property.undergroundFloors ? [{ label: t.detail.undergroundFloors, value: String(property.undergroundFloors) }] : []),
+    ...(property.ceilingHeight ? [{ label: t.detail.ceilingHeight, value: `${property.ceilingHeight} m` }] : []),
+    ...(property.yearBuilt ? [{ label: t.detail.yearBuilt, value: String(property.yearBuilt) }] : []),
+    ...(property.lastRenovation ? [{ label: t.detail.lastRenovation, value: String(property.lastRenovation) }] : []),
+    ...(property.acceptanceYear ? [{ label: t.detail.acceptanceYear, value: String(property.acceptanceYear) }] : []),
+    ...(property.objectType ? [{ label: t.params.objectType, value: property.objectType }] : []),
+    ...(property.objectKind ? [{ label: t.params.objectKind, value: property.objectKind }] : []),
+    ...(property.objectLocation ? [{ label: t.params.objectLocation, value: property.objectLocation }] : []),
+    ...(property.flatClass ? [{ label: t.params.flatClass, value: property.flatClass }] : []),
+    ...(property.surroundingsType ? [{ label: t.params.surroundings, value: property.surroundingsType }] : []),
+    ...(property.protection ? [{ label: t.params.protection, value: property.protection }] : []),
+    ...(property.numOwners ? [{ label: t.detail.ownerCount, value: String(property.numOwners) }] : []),
+    ...(property.apartmentNumber ? [{ label: t.detail.apartmentNumber, value: String(property.apartmentNumber) }] : []),
+    ...(property.shareNumerator && property.shareDenominator ? [{ label: t.detail.share_fraction, value: `${property.shareNumerator}/${property.shareDenominator}` }] : []),
   ];
 
   // === Vybavení a vlastnosti ===
   const features = [
-    property.balcony && "Balkon",
-    property.terrace && "Terasa",
-    property.garden && "Zahrada",
-    property.elevator && "Výtah",
-    property.cellar && "Sklep",
-    property.garage && "Garáž",
-    property.pool && "Bazén",
-    property.loggia && "Lodžie",
-    property.easyAccess && "Bezbariérový přístup",
-    property.lowEnergy && "Nízkoenergetický",
-    property.ftvPanels && "Fotovoltaické panely",
-    property.solarPanels && "Solární panely",
-    property.mortgage && "Možnost hypotéky",
-    property.exclusivelyAtRk && "Exkluzivně v RK",
+    property.balcony && t.features.balcony,
+    property.terrace && t.features.terrace,
+    property.garden && t.features.garden,
+    property.elevator && t.features.elevator,
+    property.cellar && t.features.cellar,
+    property.garage && t.features.garage,
+    property.pool && t.features.pool,
+    property.loggia && t.features.loggia,
+    property.easyAccess && t.features.easyAccess,
+    property.lowEnergy && t.features.lowEnergy,
+    property.ftvPanels && t.features.ftvPanels,
+    property.solarPanels && t.features.solarPanels,
+    property.mortgage && t.detail.mortgagePossible,
+    property.exclusivelyAtRk && t.detail.exclusiveAtRk,
   ].filter(Boolean);
 
   // === Inženýrské sítě ===
   const networks = [
-    ...(property.electricity?.length ? [{ label: "Elektřina", value: property.electricity.join(", ") }] : []),
-    ...(property.gas?.length ? [{ label: "Plyn", value: property.gas.join(", ") }] : []),
-    ...(property.water?.length ? [{ label: "Voda", value: property.water.join(", ") }] : []),
-    ...(property.gully?.length ? [{ label: "Kanalizace", value: property.gully.join(", ") }] : []),
-    ...(property.roadType?.length ? [{ label: "Komunikace", value: property.roadType.join(", ") }] : []),
-    ...(property.telecommunication?.length ? [{ label: "Telekomunikace", value: property.telecommunication.join(", ") }] : []),
-    ...(property.transport?.length ? [{ label: "Doprava", value: property.transport.join(", ") }] : []),
-    ...(property.internetConnectionType?.length ? [{ label: "Internet", value: property.internetConnectionType.join(", ") }] : []),
-    ...(property.internetConnectionProvider ? [{ label: "Poskytovatel internetu", value: property.internetConnectionProvider }] : []),
-    ...(property.internetConnectionSpeed ? [{ label: "Rychlost internetu", value: `${property.internetConnectionSpeed} Mbps` }] : []),
-    ...(property.circuitBreaker ? [{ label: "Jistič", value: property.circuitBreaker }] : []),
-    ...(property.phaseDistribution ? [{ label: "Rozvodná fáze", value: property.phaseDistribution }] : []),
-    ...(property.wellType?.length ? [{ label: "Studna", value: property.wellType.join(", ") }] : []),
+    ...(property.electricity?.length ? [{ label: t.params.electricity, value: property.electricity.join(", ") }] : []),
+    ...(property.gas?.length ? [{ label: t.params.gas, value: property.gas.join(", ") }] : []),
+    ...(property.water?.length ? [{ label: t.params.water, value: property.water.join(", ") }] : []),
+    ...(property.gully?.length ? [{ label: t.params.gully, value: property.gully.join(", ") }] : []),
+    ...(property.roadType?.length ? [{ label: t.params.roadType, value: property.roadType.join(", ") }] : []),
+    ...(property.telecommunication?.length ? [{ label: t.params.telecommunication, value: property.telecommunication.join(", ") }] : []),
+    ...(property.transport?.length ? [{ label: t.params.transport, value: property.transport.join(", ") }] : []),
+    ...(property.internetConnectionType?.length ? [{ label: t.params.internet, value: property.internetConnectionType.join(", ") }] : []),
+    ...(property.internetConnectionProvider ? [{ label: t.detail.internetProvider, value: property.internetConnectionProvider }] : []),
+    ...(property.internetConnectionSpeed ? [{ label: t.detail.internetSpeed, value: `${property.internetConnectionSpeed} Mbps` }] : []),
+    ...(property.circuitBreaker ? [{ label: t.detail.circuitBreaker, value: property.circuitBreaker }] : []),
+    ...(property.phaseDistribution ? [{ label: t.detail.phaseDistribution, value: property.phaseDistribution }] : []),
+    ...(property.wellType?.length ? [{ label: t.detail.wellType, value: property.wellType.join(", ") }] : []),
   ];
 
   // === Finanční info ===
   const financials = [
-    ...(property.priceNote ? [{ label: "Poznámka k ceně", value: property.priceNote }] : []),
-    ...(property.priceUnit ? [{ label: "Cena je", value: property.priceUnit === "za_mesic" ? "za měsíc" : property.priceUnit === "za_rok" ? "za rok" : property.priceUnit }] : []),
-    ...(property.priceNegotiation ? [{ label: "Cena", value: "K jednání" }] : []),
-    ...(property.annuity ? [{ label: "Anuita", value: `${property.annuity.toLocaleString("cs")} Kč` }] : []),
-    ...(property.costOfLiving ? [{ label: "Náklady na bydlení", value: property.costOfLiving }] : []),
-    ...(property.commission ? [{ label: "Provize", value: `${property.commission.toLocaleString("cs")} Kč` }] : []),
-    ...(property.refundableDeposit ? [{ label: "Vratná kauce", value: `${property.refundableDeposit.toLocaleString("cs")} Kč` }] : []),
-    ...(property.mortgagePercent ? [{ label: "Hypotéka %", value: `${property.mortgagePercent} %` }] : []),
-    ...(property.sporPercent ? [{ label: "SPOR %", value: `${property.sporPercent} %` }] : []),
+    ...(property.priceNote ? [{ label: t.detail.priceNote, value: property.priceNote }] : []),
+    ...(property.priceUnit ? [{ label: t.detail.priceIs, value: property.priceUnit === "za_mesic" ? t.propertyCard.perMonth.replace("/ ", "") : property.priceUnit === "za_rok" ? t.detail.perYear.replace("/ ", "") : property.priceUnit }] : []),
+    ...(property.priceNegotiation ? [{ label: t.filters.price, value: t.detail.priceNegotiable }] : []),
+    ...(property.annuity ? [{ label: t.detail.annuity, value: `${property.annuity.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
+    ...(property.costOfLiving ? [{ label: t.detail.livingCosts, value: property.costOfLiving }] : []),
+    ...(property.commission ? [{ label: t.detail.commissionFee, value: `${property.commission.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
+    ...(property.refundableDeposit ? [{ label: t.detail.refundableDeposit, value: `${property.refundableDeposit.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
+    ...(property.mortgagePercent ? [{ label: t.detail.mortgagePercent, value: `${property.mortgagePercent} %` }] : []),
+    ...(property.sporPercent ? [{ label: t.detail.sporPercent, value: `${property.sporPercent} %` }] : []),
   ];
 
   // === Pronájem specifické ===
   const rentalInfo = [
-    ...(property.leaseType ? [{ label: "Typ nájmu", value: property.leaseType }] : []),
-    ...(property.readyDate ? [{ label: "Datum nastěhování", value: property.readyDate }] : []),
-    ...(property.tenantNotPayCommission ? [{ label: "Nájemce neplatí provizi", value: "Ano" }] : []),
+    ...(property.leaseType ? [{ label: t.detail.leaseType, value: property.leaseType }] : []),
+    ...(property.readyDate ? [{ label: t.detail.moveInDate, value: property.readyDate }] : []),
+    ...(property.tenantNotPayCommission ? [{ label: t.detail.tenantNoCommission, value: t.common.yes }] : []),
   ];
 
   // === Dražba specifické ===
   const auctionInfo = [
-    ...(property.auctionKind ? [{ label: "Druh dražby", value: property.auctionKind }] : []),
-    ...(property.auctionDate ? [{ label: "Datum dražby", value: property.auctionDate }] : []),
-    ...(property.auctionPlace ? [{ label: "Místo dražby", value: property.auctionPlace }] : []),
-    ...(property.priceAuctionPrincipal ? [{ label: "Jistota", value: `${property.priceAuctionPrincipal.toLocaleString("cs")} Kč` }] : []),
-    ...(property.priceExpertReport ? [{ label: "Znalecký posudek", value: `${property.priceExpertReport.toLocaleString("cs")} Kč` }] : []),
-    ...(property.priceMinimumBid ? [{ label: "Minimální příhoz", value: `${property.priceMinimumBid.toLocaleString("cs")} Kč` }] : []),
+    ...(property.auctionKind ? [{ label: t.detail.auctionKind, value: property.auctionKind }] : []),
+    ...(property.auctionDate ? [{ label: t.detail.auctionDate, value: property.auctionDate }] : []),
+    ...(property.auctionPlace ? [{ label: t.detail.auctionPlace, value: property.auctionPlace }] : []),
+    ...(property.priceAuctionPrincipal ? [{ label: t.detail.auctionDeposit, value: `${property.priceAuctionPrincipal.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
+    ...(property.priceExpertReport ? [{ label: t.detail.expertReport, value: `${property.priceExpertReport.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
+    ...(property.priceMinimumBid ? [{ label: t.detail.minimumBid, value: `${property.priceMinimumBid.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies[property.priceCurrency as keyof typeof t.enumLabels.priceCurrencies] || property.priceCurrency}` }] : []),
   ];
 
   // === Termíny ===
   const dates = [
-    ...(property.beginningDate ? [{ label: "Zahájení výstavby", value: property.beginningDate }] : []),
-    ...(property.finishDate ? [{ label: "Dokončení", value: property.finishDate }] : []),
-    ...(property.saleDate ? [{ label: "Datum prodeje", value: property.saleDate }] : []),
-    ...(property.firstTourDate ? [{ label: "První prohlídka", value: property.firstTourDate }] : []),
+    ...(property.beginningDate ? [{ label: t.detail.constructionStart, value: property.beginningDate }] : []),
+    ...(property.finishDate ? [{ label: t.detail.completionDate, value: property.finishDate }] : []),
+    ...(property.saleDate ? [{ label: t.detail.saleDate, value: property.saleDate }] : []),
+    ...(property.firstTourDate ? [{ label: t.detail.firstTour, value: property.firstTourDate }] : []),
   ];
 
   return (
@@ -196,7 +180,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
-              <span>{"Zp\u011bt na nab\u00eddky"}</span>
+              <span>{t.detail.backToListings}</span>
             </Link>
           </div>
 
@@ -213,7 +197,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 className="detail-listing-badge"
                 style={{ backgroundColor: property.listingType === "sale" ? "var(--badge-sale)" : "var(--badge-rent)" }}
               >
-                {property.listingType === "sale" ? "Prodej" : "Pronájem"}
+                {t.enumLabels.listingTypes[property.listingType as keyof typeof t.enumLabels.listingTypes] || property.listingType}
               </span>
               <h1 className="detail-title">{property.title}</h1>
               <div className="detail-location">
@@ -221,14 +205,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? COUNTRY_LABELS[property.country] || property.country.toUpperCase() : undefined])}
+                {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? t.enumLabels.countries[property.country as keyof typeof t.enumLabels.countries] || property.country.toUpperCase() : undefined])}
               </div>
             </div>
             <div className="detail-price">
               {formatPrice(property.price, property.priceCurrency)}
               {property.priceUnit && (
                 <span style={{ fontSize: "0.5em", fontWeight: 400, color: "var(--text-muted)", marginLeft: 4 }}>
-                  {property.priceUnit === "za_mesic" ? "/ měsíc" : property.priceUnit === "za_rok" ? "/ rok" : `/ ${property.priceUnit}`}
+                  {property.priceUnit === "za_mesic" ? t.propertyCard.perMonth : property.priceUnit === "za_rok" ? t.detail.perYear : `/ ${property.priceUnit}`}
                 </span>
               )}
             </div>
@@ -242,7 +226,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
                   </svg>
-                  Popis
+                  {t.detail.description}
                 </h2>
                 <p className="detail-description" style={{ whiteSpace: "pre-line" }}>{property.description || property.summary}</p>
               </div>
@@ -255,7 +239,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <rect x="14" y="14" width="7" height="7" />
                     <rect x="3" y="14" width="7" height="7" />
                   </svg>
-                  Parametry
+                  {t.detail.parameters}
                 </h2>
                 <div className="detail-params-grid">
                   {params_data.map((param) => (
@@ -274,7 +258,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                       <path d="M22 4L12 14.01l-3-3" />
                     </svg>
-                    Vybavení a vlastnosti
+                    {t.detail.equipment}
                   </h2>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {features.map((f) => (
@@ -303,7 +287,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
                     </svg>
-                    Inženýrské sítě
+                    {t.detail.infrastructure}
                   </h2>
                   <div className="detail-params-grid">
                     {networks.map((param) => (
@@ -322,7 +306,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
-                    Finanční informace
+                    {t.detail.financialInfo}
                   </h2>
                   <div className="detail-params-grid">
                     {financials.map((param) => (
@@ -341,7 +325,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
                     </svg>
-                    Pronájem
+                    {t.listingTypes.rent}
                   </h2>
                   <div className="detail-params-grid">
                     {rentalInfo.map((param) => (
@@ -360,7 +344,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
-                    Dražba
+                    {t.listingTypes.auction}
                   </h2>
                   <div className="detail-params-grid">
                     {auctionInfo.map((param) => (
@@ -379,7 +363,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
-                    Termíny
+                    {t.detail.dates}
                   </h2>
                   <div className="detail-params-grid">
                     {dates.map((param) => (
@@ -398,7 +382,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
                     </svg>
-                    Klíčová slova
+                    {t.detail.keywords}
                   </h2>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {property.keywords.map((kw) => (
@@ -428,7 +412,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             <aside>
               <div className="detail-sidebar-card">
                 <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-                  Makléř
+                  {t.detail.broker}
                 </h3>
                 <div className="broker-card-header">
                   <div className="broker-avatar" style={{ overflow: "hidden", flexShrink: 0 }}>
@@ -471,15 +455,15 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 )}
                 <div style={{ marginTop: 16 }}>
                   <button className="detail-cta-btn detail-cta-btn--primary">
-                    Mám zájem o nabídku
+                    {t.detail.contactBroker}
                   </button>
                   {broker ? (
                     <Link href={`/makleri/${broker.slug}`} className="detail-cta-btn detail-cta-btn--secondary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
-                      Zobrazit profil makléře
+                      {t.detail.viewBrokerProfile}
                     </Link>
                   ) : (
                     <button className="detail-cta-btn detail-cta-btn--secondary">
-                      Zobrazit profil makléře
+                      {t.detail.viewBrokerProfile}
                     </button>
                   )}
                 </div>
@@ -488,7 +472,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
               {agency && (
                 <div className="detail-sidebar-card">
                   <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-                    Kancelář
+                    {t.detail.agency}
                   </h3>
                   <Link href={`/kancelare/${agency.slug}`} style={{ textDecoration: "none", display: "block" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
@@ -543,7 +527,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   )}
                   <div style={{ marginTop: 12 }}>
                     <Link href={`/kancelare/${agency.slug}`} className="detail-cta-btn detail-cta-btn--secondary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
-                      Zobrazit profil kanceláře
+                      {t.detail.viewAgencyProfile}
                     </Link>
                   </div>
                 </div>
@@ -555,10 +539,10 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
               <div className="detail-sidebar-card">
                 <h3 className="detail-section-title" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-                  Lokalita
+                  {t.detail.locality}
                 </h3>
                 <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
-                  {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? COUNTRY_LABELS[property.country] || property.country.toUpperCase() : undefined])}
+                  {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? t.enumLabels.countries[property.country as keyof typeof t.enumLabels.countries] || property.country.toUpperCase() : undefined])}
                 </div>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16 }}>
                   {property.latitude.toFixed(4)}, {property.longitude.toFixed(4)}
@@ -575,7 +559,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
           {similarProperties.length > 0 && (
             <section className="similar-section">
-              <h2 className="section-title">Podobné nabídky</h2>
+              <h2 className="section-title">{t.detail.similarProperties}</h2>
               <div className="similar-grid">
                 {similarProperties.map((item) => (
                   <PropertyCard key={item.id} property={item} />

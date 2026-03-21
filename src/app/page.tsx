@@ -8,6 +8,8 @@ import { SiteHeader } from "@/components/site-header";
 import { AiSearch } from "@/components/ai-search";
 import { filtersToSearchParams } from "@/lib/saved-searches";
 import { Property } from "@/lib/types";
+import { useT } from "@/i18n/provider";
+import { brand } from "@/brands";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -65,13 +67,6 @@ function useHomepageData() {
   return { latest, stats, loading };
 }
 
-const CATEGORIES = [
-  { key: "apartment", label: "Byty", desc: "Prodej i pronájem" },
-  { key: "house", label: "Domy", desc: "Rodinné, vily, chalupy" },
-  { key: "land", label: "Pozemky", desc: "Stavební i komerční" },
-  { key: "commercial", label: "Komerční", desc: "Kanceláře, sklady, obchody" },
-];
-
 const POPULAR_CITIES = [
   { name: "Praha", count: "500+" },
   { name: "Brno", count: "200+" },
@@ -86,6 +81,14 @@ const POPULAR_CITIES = [
 export default function Home() {
   const router = useRouter();
   const { latest, stats, loading } = useHomepageData();
+  const t = useT();
+
+  const categories = [
+    { key: "apartment", label: t.categories.apartment, desc: t.categories.apartmentDesc },
+    { key: "house", label: t.categories.house, desc: t.categories.houseDesc },
+    { key: "land", label: t.categories.land, desc: t.categories.landDesc },
+    { key: "commercial", label: t.categories.commercial, desc: t.categories.commercialDesc },
+  ];
 
   const latestSale = useMemo(() => latest.filter((p) => p.listingType === "sale").slice(0, 4), [latest]);
   const latestRent = useMemo(() => latest.filter((p) => p.listingType === "rent").slice(0, 4), [latest]);
@@ -106,10 +109,10 @@ export default function Home() {
           <div className="hero-content">
             <div className="hero-center">
               <h1 className="hero-headline">
-                Najděte svůj nový domov
+                {t.hero.title}
               </h1>
               <p className="hero-sub">
-                {stats.total > 0 ? `${stats.total.toLocaleString("cs")} nemovitost\u00ed na jednom m\u00edst\u011b` : "Tis\u00edce nemovitost\u00ed na jednom m\u00edst\u011b"}
+                {stats.total > 0 ? `${stats.total.toLocaleString(brand.locale)} ${t.hero.stats.properties} ${t.hero.statsSuffix}` : `${t.hero.statsPrefix} ${t.hero.stats.properties} ${t.hero.statsSuffix}`}
               </p>
 
               <div className="hero-search">
@@ -122,10 +125,12 @@ export default function Home() {
               </div>
 
               <div className="hero-quick-links">
-                <Link href="/nabidky?listingType=sale" className="hero-quick-link">Prodej</Link>
-                <Link href="/nabidky?listingType=rent" className="hero-quick-link">{"Pron\u00e1jem"}</Link>
-                <Link href="/prodat" className="hero-quick-link">{"Hled\u00e1m makl\u00e9\u0159e"}</Link>
-                <Link href="/oceneni" className="hero-quick-link">Odhad ceny</Link>
+                <Link href="/nabidky?listingType=sale" className="hero-quick-link">{t.listingTypes.sale}</Link>
+                <Link href="/nabidky?listingType=rent" className="hero-quick-link">{t.listingTypes.rent}</Link>
+                <Link href="/prodat" className="hero-quick-link">{t.sell.lookingForBroker}</Link>
+                {brand.features.valuation && (
+                  <Link href="/oceneni" className="hero-quick-link">{t.valuation.priceEstimate}</Link>
+                )}
               </div>
             </div>
           </div>
@@ -135,20 +140,20 @@ export default function Home() {
         <section className="hp-stats">
           <div className="container hp-stats-grid">
             <div className="hp-stat">
-              <span className="hp-stat-value">{stats.total > 0 ? stats.total.toLocaleString("cs") : "---"}</span>
-              <span className="hp-stat-label">aktivních nabídek</span>
+              <span className="hp-stat-value">{stats.total > 0 ? stats.total.toLocaleString(brand.locale) : "---"}</span>
+              <span className="hp-stat-label">{t.hero.stats.properties}</span>
             </div>
             <div className="hp-stat">
               <span className="hp-stat-value">{stats.cities > 0 ? stats.cities : "---"}</span>
-              <span className="hp-stat-label">měst a obcí</span>
+              <span className="hp-stat-label">{t.hero.stats.cities}</span>
             </div>
             <div className="hp-stat">
               <span className="hp-stat-value">AI</span>
-              <span className="hp-stat-label">chytré vyhledávání</span>
+              <span className="hp-stat-label">{t.hero.stats.aiSearch}</span>
             </div>
             <div className="hp-stat">
               <span className="hp-stat-value">24/7</span>
-              <span className="hp-stat-label">hlídač nabídek</span>
+              <span className="hp-stat-label">{t.hero.stats.alerts}</span>
             </div>
           </div>
         </section>
@@ -156,9 +161,9 @@ export default function Home() {
         {/* ===== CATEGORIES ===== */}
         <section className="hp-categories">
           <div className="container">
-            <h2 className="hp-section-title">Hledáte nemovitost?</h2>
+            <h2 className="hp-section-title">{t.homepage.searchingTitle}</h2>
             <div className="hp-cat-grid">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <Link key={cat.key} href={`/nabidky?category=${cat.key}`} className="hp-cat-card">
                   <div className="hp-cat-label">{cat.label}</div>
                   <div className="hp-cat-desc">{cat.desc}</div>
@@ -172,14 +177,14 @@ export default function Home() {
         <section className="hp-listings">
           <div className="container">
             <div className="hp-section-header">
-              <h2 className="hp-section-title">Nejnovější nabídky</h2>
+              <h2 className="hp-section-title">{t.homepage.latestTitle}</h2>
               <Link href="/nabidky?sort=newest" className="hp-section-link">
-                Zobrazit vše
+                {t.common.seeAll}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
               </Link>
             </div>
             {loading ? (
-              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>Načítání...</div>
+              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>{t.common.loading}</div>
             ) : (
               <div className="hp-property-grid">
                 {latestAll.map((property) => (
@@ -197,32 +202,34 @@ export default function Home() {
               <div className="hp-step">
                 <span className="hp-step-num">1</span>
                 <div className="hp-step-content">
-                  <h3>Najděte nemovitost</h3>
-                  <p>Prohledejte tisíce nabídek z celé Evropy. Filtry, mapa, AI vyhledávání.</p>
+                  <h3>{t.homepage.step1Title}</h3>
+                  <p>{t.homepage.step1Desc}</p>
                   <Link href="/nabidky" className="hp-step-link">
-                    Prohlížet nabídky
+                    {t.homepage.step1Link}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                   </Link>
                 </div>
               </div>
+              {brand.features.valuation && (
               <div className="hp-step">
                 <span className="hp-step-num">2</span>
                 <div className="hp-step-content">
-                  <h3>Zjistěte reálnou cenu</h3>
-                  <p>Odhad tržní hodnoty zdarma do 24 hodin. Žádné závazky.</p>
+                  <h3>{t.homepage.step2Title}</h3>
+                  <p>{t.homepage.step2Desc}</p>
                   <Link href="/oceneni" className="hp-step-link">
-                    Získat odhad
+                    {t.homepage.step2Link}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                   </Link>
                 </div>
               </div>
+              )}
               <div className="hp-step">
-                <span className="hp-step-num">3</span>
+                <span className="hp-step-num">{brand.features.valuation ? "3" : "2"}</span>
                 <div className="hp-step-content">
-                  <h3>Spojte se se specialistou</h3>
-                  <p>Ověření makléři a kanceláře podle lokality, recenzí a výsledků.</p>
+                  <h3>{t.homepage.step3Title}</h3>
+                  <p>{t.homepage.step3Desc}</p>
                   <Link href="/specialiste" className="hp-step-link">
-                    Najít specialistu
+                    {t.homepage.step3Link}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                   </Link>
                 </div>
@@ -234,12 +241,12 @@ export default function Home() {
         {/* ===== POPULAR LOCATIONS ===== */}
         <section className="hp-locations">
           <div className="container">
-            <h2 className="hp-section-title">Populární lokality</h2>
+            <h2 className="hp-section-title">{t.homepage.popularLocations}</h2>
             <div className="hp-loc-grid">
               {POPULAR_CITIES.map((city) => (
                 <Link key={city.name} href={`/nabidky?location=${encodeURIComponent(city.name)}`} className="hp-loc-card">
                   <span className="hp-loc-name">{city.name}</span>
-                  <span className="hp-loc-count">{city.count} nabídek</span>
+                  <span className="hp-loc-count">{city.count} {t.homepage.listingsCount}</span>
                 </Link>
               ))}
             </div>
@@ -249,11 +256,13 @@ export default function Home() {
         {/* ===== CTA ===== */}
         <section className="hp-cta">
           <div className="container hp-cta-inner">
-            <h2>Chcete prodat nebo pronajmout nemovitost?</h2>
-            <p>Získejte odhad ceny zdarma a oslovte tisíce zájemců.</p>
+            <h2>{t.homepage.ctaTitle}</h2>
+            <p>{t.homepage.ctaSubtitle}</p>
             <div className="hp-cta-buttons">
-              <Link href="/oceneni" className="hp-cta-btn hp-cta-btn--primary">Zjistit hodnotu nemovitosti</Link>
-              <Link href="/specialiste" className="hp-cta-btn hp-cta-btn--secondary">Najít specialistu</Link>
+              {brand.features.valuation && (
+                <Link href="/oceneni" className="hp-cta-btn hp-cta-btn--primary">{t.homepage.ctaValuation}</Link>
+              )}
+              <Link href="/specialiste" className="hp-cta-btn hp-cta-btn--secondary">{t.homepage.ctaSpecialist}</Link>
             </div>
           </div>
         </section>

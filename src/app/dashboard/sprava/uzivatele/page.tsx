@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { DataTable, type Column } from "@/components/admin/data-table";
+import { useT } from "@/i18n/provider";
+import { brand } from "@/brands";
 
 type UserRow = {
   id: string;
@@ -24,37 +26,38 @@ type AccountResult = {
   errors: string[];
 };
 
-const roleLabels: Record<string, string> = {
-  user: "U\u017eivatel",
-  broker: "Makl\u00e9\u0159",
-  admin: "Admin",
-};
-
-const columns: Column<UserRow>[] = [
-  {
-    key: "full_name",
-    label: "Jm\u00e9no",
-    render: (row) => row.full_name || "Bez jm\u00e9na",
-  },
-  {
-    key: "role",
-    label: "Role",
-    render: (row) => (
-      <span className={`admin-badge admin-badge--${row.role}`}>
-        {roleLabels[row.role] || row.role}
-      </span>
-    ),
-  },
-  { key: "phone", label: "Telefon", render: (row) => row.phone || "-" },
-  { key: "preferred_city", label: "M\u011bsto", render: (row) => row.preferred_city || "-" },
-  {
-    key: "created_at",
-    label: "Registrace",
-    render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
-  },
-];
-
 export default function AdminUsersPage() {
+  const t = useT();
+
+  const roleLabels: Record<string, string> = {
+    user: t.dashboard.adminUsersRoleUser,
+    broker: t.dashboard.adminUsersRoleBroker,
+    admin: t.dashboard.adminUsersRoleAdmin,
+  };
+
+  const columns: Column<UserRow>[] = [
+    {
+      key: "full_name",
+      label: t.dashboard.adminUsersNameCol,
+      render: (row) => row.full_name || t.dashboard.adminUsersNoName,
+    },
+    {
+      key: "role",
+      label: t.dashboard.adminUsersRoleCol,
+      render: (row) => (
+        <span className={`admin-badge admin-badge--${row.role}`}>
+          {roleLabels[row.role] || row.role}
+        </span>
+      ),
+    },
+    { key: "phone", label: t.dashboard.adminUsersPhoneCol, render: (row) => row.phone || "-" },
+    { key: "preferred_city", label: t.dashboard.adminUsersCityCol, render: (row) => row.preferred_city || "-" },
+    {
+      key: "created_at",
+      label: t.dashboard.adminUsersRegisteredCol,
+      render: (row) => new Date(row.created_at).toLocaleDateString(brand.locale),
+    },
+  ];
   const [tableKey, setTableKey] = useState(0);
   const [preview, setPreview] = useState<AccountPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -121,11 +124,11 @@ export default function AdminUsersPage() {
     <div className="dashboard-page">
       <DataTable<UserRow>
         key={tableKey}
-        title="U\u017eivatel\u00e9"
+        title={t.dashboard.adminUsersTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder={"Hledat podle jm\u00e9na..."}
+        searchPlaceholder={t.dashboard.adminUsersSearch}
         rowActions={(row) => (
           <select
             className="admin-btn admin-btn--secondary admin-btn--sm"
@@ -133,9 +136,9 @@ export default function AdminUsersPage() {
             value={row.role}
             onChange={(e) => handleRoleChange(row, e.target.value)}
           >
-            <option value="user">{"\u00dA\u017eivatel"}</option>
-            <option value="broker">{"Makl\u00e9\u0159"}</option>
-            <option value="admin">Admin</option>
+            <option value="user">{t.dashboard.adminUsersRoleUser}</option>
+            <option value="broker">{t.dashboard.adminUsersRoleBroker}</option>
+            <option value="admin">{t.dashboard.adminUsersRoleAdmin}</option>
           </select>
         )}
       />
@@ -149,10 +152,10 @@ export default function AdminUsersPage() {
             <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
-          {"Vytvo\u0159it \u00fa\u010dty pro kancel\u00e1\u0159e a makl\u00e9\u0159e"}
+          {t.dashboard.adminUsersCreateAccountsTitle}
         </h3>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16 }}>
-          {"Automaticky vytvo\u0159\u00ed u\u017eivatelsk\u00e9 \u00fa\u010dty pro kancel\u00e1\u0159e a makl\u00e9\u0159e, kte\u0159\u00ed maj\u00ed e-mail ale je\u0161t\u011b nemaj\u00ed \u00fa\u010det. Kontroluje duplicitu e-mail\u016f."}
+          {t.dashboard.adminUsersCreateAccountsDesc}
         </p>
 
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -169,7 +172,7 @@ export default function AdminUsersPage() {
                 <circle cx="12" cy="12" r="3" />
               </svg>
             )}
-            {"Zobrazit p\u0159ehled"}
+            {t.dashboard.adminUsersShowPreview}
           </button>
 
           {preview && (
@@ -188,7 +191,7 @@ export default function AdminUsersPage() {
                   <line x1="22" y1="11" x2="16" y2="11" />
                 </svg>
               )}
-              {`Vytvo\u0159it ${preview.agencies.need_account + preview.brokers.need_account} \u00fa\u010dt\u016f`}
+              {t.dashboard.adminUsersCreateBtn.replace("{count}", String(preview.agencies.need_account + preview.brokers.need_account))}
             </button>
           )}
         </div>
@@ -197,22 +200,22 @@ export default function AdminUsersPage() {
         {preview && (
           <div className="pf-account-preview" style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="admin-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 8 }}>{"Kancel\u00e1\u0159e"}</h4>
+              <h4 style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 8 }}>{t.dashboard.adminUsersAgencies}</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
-                <span>{"Celkem: "}<strong>{preview.agencies.total}</strong></span>
-                <span>{"S \u00fa\u010dtem: "}<strong>{preview.agencies.with_account}</strong></span>
+                <span>{t.dashboard.adminUsersTotal}<strong>{preview.agencies.total}</strong></span>
+                <span>{t.dashboard.adminUsersWithAccount}<strong>{preview.agencies.with_account}</strong></span>
                 <span style={{ color: preview.agencies.need_account > 0 ? "var(--accent)" : "var(--text-muted)" }}>
-                  {"K vytvo\u0159en\u00ed: "}<strong>{preview.agencies.need_account}</strong>
+                  {t.dashboard.adminUsersToCreate}<strong>{preview.agencies.need_account}</strong>
                 </span>
               </div>
             </div>
             <div className="admin-card" style={{ padding: 16 }}>
-              <h4 style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 8 }}>{"Makl\u00e9\u0159i"}</h4>
+              <h4 style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 8 }}>{t.dashboard.adminUsersBrokers}</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
-                <span>{"Celkem: "}<strong>{preview.brokers.total}</strong></span>
-                <span>{"S \u00fa\u010dtem: "}<strong>{preview.brokers.with_account}</strong></span>
+                <span>{t.dashboard.adminUsersTotal}<strong>{preview.brokers.total}</strong></span>
+                <span>{t.dashboard.adminUsersWithAccount}<strong>{preview.brokers.with_account}</strong></span>
                 <span style={{ color: preview.brokers.need_account > 0 ? "var(--accent)" : "var(--text-muted)" }}>
-                  {"K vytvo\u0159en\u00ed: "}<strong>{preview.brokers.need_account}</strong>
+                  {t.dashboard.adminUsersToCreate}<strong>{preview.brokers.need_account}</strong>
                 </span>
               </div>
             </div>
@@ -223,38 +226,38 @@ export default function AdminUsersPage() {
         {result && (
           <div style={{ marginTop: 16 }}>
             <div className="admin-card" style={{ padding: 16, background: result.errors.length > 0 ? "var(--bg-error)" : "var(--bg-success, #f0fdf4)" }}>
-              <h4 style={{ fontSize: "0.9rem", marginBottom: 8 }}>{"V\u00fdsledek"}</h4>
+              <h4 style={{ fontSize: "0.9rem", marginBottom: 8 }}>{t.dashboard.adminUsersResult}</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
                 {result.created.agencies > 0 && (
-                  <span>{"Vytvo\u0159eno \u00fa\u010dt\u016f kancel\u00e1\u0159\u00ed: "}<strong>{result.created.agencies}</strong></span>
+                  <span>{t.dashboard.adminUsersCreatedAgencyAccounts}<strong>{result.created.agencies}</strong></span>
                 )}
                 {result.created.brokers > 0 && (
-                  <span>{"Vytvo\u0159eno \u00fa\u010dt\u016f makl\u00e9\u0159\u016f: "}<strong>{result.created.brokers}</strong></span>
+                  <span>{t.dashboard.adminUsersCreatedBrokerAccounts}<strong>{result.created.brokers}</strong></span>
                 )}
                 {result.skipped.duplicate_email > 0 && (
-                  <span style={{ color: "var(--text-muted)" }}>{"P\u0159eskoceno (duplicitn\u00ed email): "}<strong>{result.skipped.duplicate_email}</strong></span>
+                  <span style={{ color: "var(--text-muted)" }}>{t.dashboard.adminUsersSkippedDuplicate}<strong>{result.skipped.duplicate_email}</strong></span>
                 )}
                 {result.skipped.agencies_no_email > 0 && (
-                  <span style={{ color: "var(--text-muted)" }}>{"Kancel\u00e1\u0159e bez emailu: "}<strong>{result.skipped.agencies_no_email}</strong></span>
+                  <span style={{ color: "var(--text-muted)" }}>{t.dashboard.adminUsersAgenciesNoEmail}<strong>{result.skipped.agencies_no_email}</strong></span>
                 )}
                 {result.skipped.brokers_no_email > 0 && (
-                  <span style={{ color: "var(--text-muted)" }}>{"Makl\u00e9\u0159i bez emailu: "}<strong>{result.skipped.brokers_no_email}</strong></span>
+                  <span style={{ color: "var(--text-muted)" }}>{t.dashboard.adminUsersBrokersNoEmail}<strong>{result.skipped.brokers_no_email}</strong></span>
                 )}
                 {result.errors.length > 0 && (
                   <div style={{ marginTop: 8, color: "var(--error, #ef4444)" }}>
-                    <strong>Chyby:</strong>
+                    <strong>{t.dashboard.adminUsersErrors}</strong>
                     <ul style={{ margin: "4px 0 0 16px", fontSize: "0.8rem" }}>
                       {result.errors.slice(0, 10).map((e, i) => (
                         <li key={i}>{e}</li>
                       ))}
                       {result.errors.length > 10 && (
-                        <li>{"...a dal\u0161\u00edch "}{result.errors.length - 10}</li>
+                        <li>{t.dashboard.adminUsersAndMore}{result.errors.length - 10}</li>
                       )}
                     </ul>
                   </div>
                 )}
                 {result.created.agencies === 0 && result.created.brokers === 0 && result.errors.length === 0 && (
-                  <span>{"V\u0161echny \u00fa\u010dty ji\u017e existuj\u00ed."}</span>
+                  <span>{t.dashboard.adminUsersAllExist}</span>
                 )}
               </div>
             </div>

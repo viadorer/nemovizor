@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { PropertyCard } from "@/components/property-card";
 import { Pagination } from "@/components/pagination";
 import { getBrokerPropertiesPaginated, getAgencyPropertiesPaginated } from "@/lib/api";
 import type { DetailPropertyFilters } from "@/lib/api";
 import type { Property } from "@/lib/types";
+import { useT } from "@/i18n/provider";
 
 const PER_PAGE = 24;
 
@@ -21,6 +22,7 @@ type DropdownProps<T extends string> = {
 function FilterDropdown<T extends string>({ label, value, options, onChange }: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -49,7 +51,7 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
             className={`filter-dropdown-item ${!value ? "filter-dropdown-item--active" : ""}`}
             onClick={() => { onChange(null); setOpen(false); }}
           >
-            Vse
+            {t.filters.all}
           </button>
           {options.map((opt) => (
             <button
@@ -76,13 +78,14 @@ function RangeFilter({ label, minVal, maxVal, onMinChange, onMaxChange, unit }: 
   onMaxChange: (v: string) => void;
   unit: string;
 }) {
+  const t = useT();
   return (
     <div className="detail-range-filter">
       <span className="detail-range-label">{label}</span>
       <input
         type="number"
         className="detail-range-input"
-        placeholder="od"
+        placeholder={t.detailGrid.from}
         value={minVal}
         onChange={(e) => onMinChange(e.target.value)}
       />
@@ -90,7 +93,7 @@ function RangeFilter({ label, minVal, maxVal, onMinChange, onMaxChange, unit }: 
       <input
         type="number"
         className="detail-range-input"
-        placeholder="do"
+        placeholder={t.detailGrid.to}
         value={maxVal}
         onChange={(e) => onMaxChange(e.target.value)}
       />
@@ -98,23 +101,6 @@ function RangeFilter({ label, minVal, maxVal, onMinChange, onMaxChange, unit }: 
     </div>
   );
 }
-
-// ===== Static options =====
-
-const LISTING_TYPE_OPTIONS = [
-  { value: "sale" as const, label: "Prodej" },
-  { value: "rent" as const, label: "Pronajem" },
-  { value: "auction" as const, label: "Drazba" },
-  { value: "shares" as const, label: "Podily" },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: "apartment" as const, label: "Byty" },
-  { value: "house" as const, label: "Domy" },
-  { value: "land" as const, label: "Pozemky" },
-  { value: "commercial" as const, label: "Komercni" },
-  { value: "other" as const, label: "Ostatni" },
-];
 
 // ===== Main component =====
 
@@ -126,7 +112,23 @@ type DetailPropertiesGridProps = {
 };
 
 export function DetailPropertiesGrid({ brokerId, agencyId, initialItems, initialTotal }: DetailPropertiesGridProps) {
+  const t = useT();
   const [page, setPage] = useState(1);
+
+  const LISTING_TYPE_OPTIONS = useMemo(() => [
+    { value: "sale" as const, label: t.enumLabels.listingTypes.sale },
+    { value: "rent" as const, label: t.enumLabels.listingTypes.rent },
+    { value: "auction" as const, label: t.enumLabels.listingTypes.auction },
+    { value: "shares" as const, label: t.enumLabels.listingTypes.shares },
+  ], [t]);
+
+  const CATEGORY_OPTIONS = useMemo(() => [
+    { value: "apartment" as const, label: t.enumLabels.propertyCategories.apartment },
+    { value: "house" as const, label: t.enumLabels.propertyCategories.house },
+    { value: "land" as const, label: t.enumLabels.propertyCategories.land },
+    { value: "commercial" as const, label: t.enumLabels.propertyCategories.commercial },
+    { value: "other" as const, label: t.enumLabels.propertyCategories.other },
+  ], [t]);
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
@@ -203,7 +205,7 @@ export function DetailPropertiesGrid({ brokerId, agencyId, initialItems, initial
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 21v-4h6v4M12 3l9 4H3l9-4z" />
         </svg>
-        <p>Zadne nabidky</p>
+        <p>{t.detailGrid.noListings}</p>
       </div>
     );
   }
@@ -212,30 +214,30 @@ export function DetailPropertiesGrid({ brokerId, agencyId, initialItems, initial
     <div className="detail-cards-section">
       {showFilters && (
         <div className="detail-filters-bar">
-          <FilterDropdown label="Typ nabidky" value={listingType} options={LISTING_TYPE_OPTIONS} onChange={setListingType} />
-          <FilterDropdown label="Typ nemovitosti" value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
-          <RangeFilter label="Cena" minVal={priceMin} maxVal={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} unit="Kc" />
-          <RangeFilter label="Plocha" minVal={areaMin} maxVal={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} unit="m2" />
+          <FilterDropdown label={t.detailGrid.listingTypeLabel} value={listingType} options={LISTING_TYPE_OPTIONS} onChange={setListingType} />
+          <FilterDropdown label={t.detailGrid.categoryLabel} value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
+          <RangeFilter label={t.detailGrid.priceLabel} minVal={priceMin} maxVal={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} unit={t.detailGrid.priceUnit} />
+          <RangeFilter label={t.detailGrid.areaLabel} minVal={areaMin} maxVal={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} unit="m²" />
           {hasActiveFilters && (
             <button className="detail-filters-clear" onClick={clearFilters}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
-              Zrusit filtry
+              {t.detailGrid.clearFilters}
             </button>
           )}
         </div>
       )}
 
       <div className="detail-results-info">
-        {total.toLocaleString("cs")} {total === 1 ? "nabidka" : total >= 2 && total <= 4 ? "nabidky" : "nabidek"}
-        {totalPages > 1 && <span className="detail-results-page"> (str. {page}/{totalPages})</span>}
+        {total.toLocaleString()} {total === 1 ? t.detailGrid.offerOne : total >= 2 && total <= 4 ? t.detailGrid.offerFew : t.detailGrid.offerMany}
+        {totalPages > 1 && <span className="detail-results-page"> ({t.detailGrid.pageInfo.replace("{page}", String(page)).replace("{total}", String(totalPages))})</span>}
       </div>
 
       {items.length === 0 && hasActiveFilters ? (
         <div className="detail-empty">
-          <p>Zadne nabidky odpovidajici filtrum</p>
-          <button className="detail-filters-clear" onClick={clearFilters}>Zrusit filtry</button>
+          <p>{t.detailGrid.noListingsFiltered}</p>
+          <button className="detail-filters-clear" onClick={clearFilters}>{t.detailGrid.clearFilters}</button>
         </div>
       ) : (
         <>

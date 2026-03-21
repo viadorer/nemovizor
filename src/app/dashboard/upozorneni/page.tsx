@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { getProfile, updateProfile, type Profile } from "@/lib/profile";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 type SavedSearchNotif = {
   id: string;
@@ -14,6 +15,7 @@ type SavedSearchNotif = {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const t = useT();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [searches, setSearches] = useState<SavedSearchNotif[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,15 +68,15 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Upozornění</h1>
-        <p className="dashboard-loading">Načítání...</p>
+        <h1 className="dashboard-page-title">{t.dashboard.notificationsTitle}</h1>
+        <p className="dashboard-loading">{t.common.loading}</p>
       </div>
     );
   }
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Upozornění</h1>
+      <h1 className="dashboard-page-title">{t.dashboard.notificationsTitle}</h1>
 
       <div className="dashboard-info-banner">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,16 +84,16 @@ export default function NotificationsPage() {
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        Emailová upozornění budou spuštěna brzy. Zde si můžete předem nastavit preference.
+        {t.dashboard.notificationsInfoBanner}
       </div>
 
       <section className="dashboard-section">
-        <h2 className="dashboard-section-title">Globální nastavení</h2>
+        <h2 className="dashboard-section-title">{t.dashboard.globalSettings}</h2>
 
         <div className="dashboard-toggle-row">
           <div className="dashboard-toggle-info">
-            <span>Emailová upozornění</span>
-            <span className="dashboard-toggle-desc">Zasílat e-maily o nových nabídkách</span>
+            <span>{t.dashboard.emailNotifications}</span>
+            <span className="dashboard-toggle-desc">{t.dashboard.emailNotificationsDesc}</span>
           </div>
           <button
             type="button"
@@ -104,8 +106,8 @@ export default function NotificationsPage() {
 
         <div className="dashboard-toggle-row">
           <div className="dashboard-toggle-info">
-            <span>Push notifikace</span>
-            <span className="dashboard-toggle-desc">Brzy</span>
+            <span>{t.dashboard.pushNotifications}</span>
+            <span className="dashboard-toggle-desc">{t.dashboard.pushNotificationsSoon}</span>
           </div>
           <button type="button" className="dashboard-toggle" disabled>
             <span className="dashboard-toggle-knob" />
@@ -115,7 +117,7 @@ export default function NotificationsPage() {
 
       {searches.length > 0 && (
         <section className="dashboard-section">
-          <h2 className="dashboard-section-title">Upozornění na uložená hledání</h2>
+          <h2 className="dashboard-section-title">{t.dashboard.savedSearchNotifications}</h2>
 
           {searches.map((s) => (
             <div key={s.id} className="dashboard-toggle-row">
@@ -127,9 +129,9 @@ export default function NotificationsPage() {
                     value={s.notify_frequency}
                     onChange={(e) => changeFrequency(s.id, e.target.value)}
                   >
-                    <option value="instant">Okamžitě</option>
-                    <option value="daily">Denně</option>
-                    <option value="weekly">Týdně</option>
+                    <option value="instant">{t.dashboard.frequencyInstant}</option>
+                    <option value="daily">{t.dashboard.frequencyDaily}</option>
+                    <option value="weekly">{t.dashboard.frequencyWeekly}</option>
                   </select>
                 )}
               </div>

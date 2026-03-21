@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 export default function RegisterPage() {
+  const t = useT();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +22,7 @@ export default function RegisterPage() {
     if (!supabase) return;
 
     if (password !== passwordConfirm) {
-      setError("Hesla se neshoduj\u00ed");
+      setError(t.auth.passwordMismatch);
       return;
     }
 
@@ -60,12 +62,12 @@ export default function RegisterPage() {
   if (success) {
     return (
       <>
-        <h1 className="auth-title">{"\u004fv\u011b\u0159en\u00ed e-mailu"}</h1>
+        <h1 className="auth-title">{t.auth.emailVerificationTitle}</h1>
         <div className="auth-success">
-          {"Na adresu "}<strong>{email}</strong>{" jsme odeslali ov\u011b\u0159ovac\u00ed odkaz. Klikn\u011bte na n\u011bj pro dokon\u010den\u00ed registrace."}
+          {t.auth.emailVerificationMessage.replace("{email}", email)}
         </div>
         <p className="auth-switch">
-          <Link href="/prihlaseni">{"Zp\u011bt na p\u0159ihl\u00e1\u0161en\u00ed"}</Link>
+          <Link href="/prihlaseni">{t.auth.backToLogin}</Link>
         </p>
       </>
     );
@@ -73,13 +75,13 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h1 className="auth-title">Registrace</h1>
+      <h1 className="auth-title">{t.auth.registerTitle}</h1>
 
       {error && <div className="auth-error">{error}</div>}
 
       <form onSubmit={handleRegister} className="auth-form">
         <label className="auth-label">
-          {"Jm\u00e9no a p\u0159\u00edjmen\u00ed"}
+          {t.auth.name}
           <input
             type="text"
             value={fullName}
@@ -91,7 +93,7 @@ export default function RegisterPage() {
         </label>
 
         <label className="auth-label">
-          E-mail
+          {t.auth.email}
           <input
             type="email"
             value={email}
@@ -103,7 +105,7 @@ export default function RegisterPage() {
         </label>
 
         <label className="auth-label">
-          Heslo
+          {t.auth.password}
           <input
             type="password"
             value={password}
@@ -116,7 +118,7 @@ export default function RegisterPage() {
         </label>
 
         <label className="auth-label">
-          Heslo znovu
+          {t.auth.confirmPassword}
           <input
             type="password"
             value={passwordConfirm}
@@ -129,12 +131,12 @@ export default function RegisterPage() {
         </label>
 
         <button type="submit" className="auth-submit" disabled={loading}>
-          {loading ? "Registrace..." : "Zaregistrovat se"}
+          {loading ? t.common.loading : t.auth.registerButton}
         </button>
       </form>
 
       <div className="auth-divider">
-        <span>nebo</span>
+        <span>{t.auth.orContinueWith}</span>
       </div>
 
       <button
@@ -149,11 +151,11 @@ export default function RegisterPage() {
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
         </svg>
-        {"Registrovat p\u0159es Google"}
+        {t.auth.registerViaGoogle}
       </button>
 
       <p className="auth-switch">
-        {"U\u017e m\u00e1te \u00fa\u010det? "}<Link href="/prihlaseni">{"\u0050\u0159ihla\u0161te se"}</Link>
+        {t.auth.hasAccount} <Link href="/prihlaseni">{t.nav.login}</Link>
       </p>
     </>
   );

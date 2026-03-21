@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { brand } from "@/brands";
 import Link from "next/link";
 import type { Agency, Broker, Branch, Review } from "@/lib/types";
 
@@ -38,7 +40,7 @@ export function AgencyAboutCard({ agency, parentAgency, hqBranch }: AgencyAboutC
         <div className="profile-card-info">
           <h2 className="profile-card-name">{agency.name}</h2>
           {agency.foundedYear > 0 && (
-            <div className="profile-card-since">Zalozena {agency.foundedYear}</div>
+            <div className="profile-card-since">{t.profile.founded} {agency.foundedYear}</div>
           )}
         </div>
       </div>
@@ -104,7 +106,7 @@ export function AgencyAboutCard({ agency, parentAgency, hqBranch }: AgencyAboutC
 
       {parentAgency && (
         <div className="profile-card-parent">
-          <span className="profile-card-parent-label">Pobocka:</span>
+          <span className="profile-card-parent-label">{t.profile.branch}</span>
           <Link href={`/kancelare/${parentAgency.slug}`} className="profile-card-parent-link">
             {parentAgency.name}
           </Link>
@@ -127,24 +129,24 @@ export function AgencyStatsCard({ agency }: AgencyStatsCardProps) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 20V10M12 20V4M6 20v-6" />
         </svg>
-        Statistiky
+        {t.profile.statistics}
       </h3>
       <div className="profile-stats-grid">
         <div className="profile-stat">
-          <div className="profile-stat-value">{agency.totalListings.toLocaleString("cs")}</div>
-          <div className="profile-stat-label">Aktivnich nabidek</div>
+          <div className="profile-stat-value">{agency.totalListings.toLocaleString(brand.locale)}</div>
+          <div className="profile-stat-label">{t.profile.activeListings}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">{agency.totalBrokers}</div>
-          <div className="profile-stat-label">Makleru</div>
+          <div className="profile-stat-label">{t.profile.brokersCount}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">{agency.rating > 0 ? agency.rating : "-"}</div>
-          <div className="profile-stat-label">Hodnoceni</div>
+          <div className="profile-stat-label">{t.profile.rating}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">{agency.totalDeals}</div>
-          <div className="profile-stat-label">Obchodu</div>
+          <div className="profile-stat-label">{t.profile.dealsCount}</div>
         </div>
       </div>
     </div>
@@ -165,7 +167,7 @@ export function AgencyReviewsCard({ agency, reviews }: AgencyReviewsCardProps) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
-        Hodnoceni
+        {t.profile.reviews}
       </h3>
 
       {reviews.length > 0 ? (
@@ -184,14 +186,14 @@ export function AgencyReviewsCard({ agency, reviews }: AgencyReviewsCardProps) {
                 </div>
                 <p className="profile-review-text">{review.text}</p>
                 <span className="profile-review-date">
-                  {new Date(review.date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long", day: "numeric" })}
+                  {new Date(review.date).toLocaleDateString(brand.locale, { year: "numeric", month: "long", day: "numeric" })}
                 </span>
               </div>
             ))}
           </div>
         </>
       ) : (
-        <p className="profile-card-empty">Zatim zadne hodnoceni</p>
+        <p className="profile-card-empty">{t.profile.noReviews}</p>
       )}
     </div>
   );
@@ -259,15 +261,15 @@ export function AgencyBrokersGrid({ brokers, agencyAddress }: AgencyBrokersGridP
             <div className="profile-broker-stats">
               <div className="profile-stat profile-stat--sm">
                 <div className="profile-stat-value">{broker.activeListings}</div>
-                <div className="profile-stat-label">Nabidek</div>
+                <div className="profile-stat-label">{t.profile.listingsCount}</div>
               </div>
               <div className="profile-stat profile-stat--sm">
                 <div className="profile-stat-value">{broker.rating > 0 ? broker.rating : "-"}</div>
-                <div className="profile-stat-label">Hodnoceni</div>
+                <div className="profile-stat-label">{t.profile.rating}</div>
               </div>
               <div className="profile-stat profile-stat--sm">
                 <div className="profile-stat-value">{broker.totalDeals}</div>
-                <div className="profile-stat-label">Obchodu</div>
+                <div className="profile-stat-label">{t.profile.dealsCount}</div>
               </div>
             </div>
           </div>
@@ -292,7 +294,7 @@ export function AgencyBranchesGrid({ branches }: AgencyBranchesGridProps) {
         <div key={branch.id} className="profile-branch-card">
           <div className="profile-branch-name">
             {branch.city}
-            {branch.isHeadquarters && <span className="profile-branch-hq">Hlavni kancelar</span>}
+            {branch.isHeadquarters && <span className="profile-branch-hq">{t.profile.headquarters}</span>}
           </div>
           <div className="profile-branch-address">{branch.address}</div>
           {branch.phone && (

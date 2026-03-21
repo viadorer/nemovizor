@@ -6,9 +6,12 @@ import { useAuth } from "@/components/auth-provider";
 import { getFavoriteIds } from "@/lib/favorites";
 import { getSearchHistory, type SearchHistoryEntry } from "@/lib/search-history";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
+import { brand } from "@/brands";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const t = useT();
   const [favCount, setFavCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [recentSearches, setRecentSearches] = useState<SearchHistoryEntry[]>([]);
@@ -34,8 +37,8 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-welcome">
-        <h1>Ahoj, {displayName.split(" ")[0] || displayName}</h1>
-        <p className="dashboard-welcome-sub">Vítejte v Nemovizoru</p>
+        <h1>{t.dashboard.greeting}{displayName.split(" ")[0] || displayName}</h1>
+        <p className="dashboard-welcome-sub">{t.dashboard.welcomeMessage.replace("{brandName}", brand.name)}</p>
       </div>
 
       <div className="dashboard-stats">
@@ -46,7 +49,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{favCount}</span>
-          <span className="dashboard-stat-label">Oblíbených</span>
+          <span className="dashboard-stat-label">{t.dashboard.favoritesCount}</span>
         </Link>
 
         <Link href="/dashboard/hledani" className="dashboard-stat-card">
@@ -56,7 +59,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{savedCount}</span>
-          <span className="dashboard-stat-label">Uložených hledání</span>
+          <span className="dashboard-stat-label">{t.dashboard.savedSearchesCount}</span>
         </Link>
 
         <Link href="/dashboard/historie" className="dashboard-stat-card">
@@ -67,7 +70,7 @@ export default function DashboardPage() {
             </svg>
           </div>
           <span className="dashboard-stat-value">{recentSearches.length}</span>
-          <span className="dashboard-stat-label">Posledních hledání</span>
+          <span className="dashboard-stat-label">{t.dashboard.recentSearchesCount}</span>
         </Link>
       </div>
 
@@ -77,17 +80,19 @@ export default function DashboardPage() {
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          Prohlížet nabídky
+          {t.dashboard.browseListings}
         </Link>
-        <Link href="/oceneni" className="dashboard-action-btn dashboard-action-btn--secondary">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="4" y="2" width="16" height="20" rx="2" />
-            <path d="M8 6h8" />
-            <path d="M8 10h8" />
-            <path d="M8 14h4" />
-          </svg>
-          Ocenění nemovitosti
-        </Link>
+        {brand.features.valuation && (
+          <Link href="/oceneni" className="dashboard-action-btn dashboard-action-btn--secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <path d="M8 6h8" />
+              <path d="M8 10h8" />
+              <path d="M8 14h4" />
+            </svg>
+            {t.valuation.title}
+          </Link>
+        )}
       </div>
     </div>
   );

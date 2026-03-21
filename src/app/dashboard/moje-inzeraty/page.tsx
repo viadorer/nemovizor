@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { useT } from "@/i18n/provider";
 
 type PropertyRow = {
   id: string;
@@ -17,52 +18,52 @@ type PropertyRow = {
   created_at: string;
 };
 
-const columns: Column<PropertyRow>[] = [
-  {
-    key: "title",
-    label: "Název",
-    render: (row) => (
-      <div>
-        <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {row.title || "Bez názvu"}
-        </div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.city}</div>
-      </div>
-    ),
-  },
-  {
-    key: "price",
-    label: "Cena",
-    render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kč` : "-",
-  },
-  {
-    key: "listing_type",
-    label: "Typ",
-    render: (row) => {
-      const labels: Record<string, string> = { sale: "Prodej", rent: "Pronájem", auction: "Dražba" };
-      return labels[row.listing_type] || row.listing_type;
-    },
-  },
-  {
-    key: "active",
-    label: "Stav",
-    render: (row) => (
-      <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
-        {row.active ? "Aktivní" : "Neaktivní"}
-      </span>
-    ),
-  },
-  {
-    key: "created_at",
-    label: "Vytvořeno",
-    render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
-  },
-];
-
 export default function BrokerListingsPage() {
   const { user } = useAuth();
+  const t = useT();
   const router = useRouter();
   const [tableKey, setTableKey] = useState(0);
+
+  const columns: Column<PropertyRow>[] = [
+    {
+      key: "title",
+      label: t.dashboard.listingNameLabel,
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {row.title || t.dashboard.listingNoTitle}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.city}</div>
+        </div>
+      ),
+    },
+    {
+      key: "price",
+      label: t.dashboard.listingPriceLabel,
+      render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kč` : "-",
+    },
+    {
+      key: "listing_type",
+      label: t.dashboard.listingTypeLabel,
+      render: (row) => {
+        return t.enumLabels.listingTypes[row.listing_type] || row.listing_type;
+      },
+    },
+    {
+      key: "active",
+      label: t.dashboard.listingStateLabel,
+      render: (row) => (
+        <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
+          {row.active ? t.dashboard.listingStateActive : t.dashboard.listingStateInactive}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      label: t.dashboard.listingCreatedLabel,
+      render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
+    },
+  ];
 
   const fetchData = useCallback(async (params: { page: number; limit: number; search: string; sort: string; order: "asc" | "desc" }) => {
     const supabase = getBrowserSupabase();
@@ -131,11 +132,11 @@ export default function BrokerListingsPage() {
     <div className="dashboard-page">
       <DataTable<PropertyRow>
         key={tableKey}
-        title="Moje inzeráty"
+        title={t.dashboard.myListingsTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle názvu, města..."
+        searchPlaceholder={t.dashboard.myListingsSearchPlaceholder}
         onRowClick={(row) => router.push(`/dashboard/moje-inzeraty/${row.id}/upravit`)}
         actions={
           <button
@@ -146,7 +147,7 @@ export default function BrokerListingsPage() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            {"Nov\u00e1 nemovitost"}
+            {t.dashboard.newProperty}
           </button>
         }
       />

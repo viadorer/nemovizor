@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useT } from "@/i18n/provider";
+import { brand } from "@/brands";
 
 type PropertyRow = {
   id: string;
@@ -18,61 +20,56 @@ type PropertyRow = {
   brokers: { name: string } | null;
 };
 
-const columns: Column<PropertyRow>[] = [
-  {
-    key: "title",
-    label: "N\u00e1zev",
-    render: (row) => (
-      <div>
-        <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {row.title || "Bez n\u00e1zvu"}
-        </div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          {row.city}
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "price",
-    label: "Cena",
-    render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kc` : "-",
-  },
-  {
-    key: "listing_type",
-    label: "Typ",
-    render: (row) => {
-      const labels: Record<string, string> = { sale: "Prodej", rent: "Pron\u00e1jem", auction: "Dra\u017eba", project: "Projekt" };
-      return labels[row.listing_type] || row.listing_type;
-    },
-  },
-  {
-    key: "category",
-    label: "Kategorie",
-    render: (row) => {
-      const labels: Record<string, string> = { apartment: "Byt", house: "D\u016fm", land: "Pozemek", commercial: "Komer\u010dn\u00ed", other: "Ostatn\u00ed" };
-      return labels[row.category] || row.category;
-    },
-  },
-  {
-    key: "active",
-    label: "Stav",
-    render: (row) => (
-      <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
-        {row.active ? "Aktivn\u00ed" : "Neaktivn\u00ed"}
-      </span>
-    ),
-  },
-  {
-    key: "brokers",
-    label: "Makl\u00e9\u0159",
-    sortable: false,
-    render: (row) => row.brokers?.name || "-",
-  },
-];
-
 export default function AdminPropertiesPage() {
+  const t = useT();
   const router = useRouter();
+
+  const columns: Column<PropertyRow>[] = [
+    {
+      key: "title",
+      label: t.dashboard.adminPropertiesTitleCol,
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {row.title || t.dashboard.adminPropertiesNoTitle}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+            {row.city}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "price",
+      label: t.dashboard.adminPropertiesPriceCol,
+      render: (row) => row.price ? `${row.price.toLocaleString(brand.locale)} ${t.enumLabels.priceCurrencies.czk}` : "-",
+    },
+    {
+      key: "listing_type",
+      label: t.dashboard.adminPropertiesTypeCol,
+      render: (row) => t.enumLabels.listingTypes[row.listing_type as keyof typeof t.enumLabels.listingTypes] || row.listing_type,
+    },
+    {
+      key: "category",
+      label: t.dashboard.adminPropertiesCategoryCol,
+      render: (row) => t.enumLabels.propertyCategories[row.category as keyof typeof t.enumLabels.propertyCategories] || row.category,
+    },
+    {
+      key: "active",
+      label: t.dashboard.adminPropertiesStateCol,
+      render: (row) => (
+        <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
+          {row.active ? t.dashboard.adminPropertiesStateActive : t.dashboard.adminPropertiesStateInactive}
+        </span>
+      ),
+    },
+    {
+      key: "brokers",
+      label: t.dashboard.adminPropertiesBrokerCol,
+      sortable: false,
+      render: (row) => row.brokers?.name || "-",
+    },
+  ];
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
 
@@ -117,11 +114,11 @@ export default function AdminPropertiesPage() {
     <div className="dashboard-page">
       <DataTable<PropertyRow>
         key={tableKey}
-        title="Nemovitosti"
+        title={t.dashboard.adminPropertiesTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle n\u00e1zvu, m\u011bsta..."
+        searchPlaceholder={t.dashboard.adminPropertiesSearch}
         onRowClick={(row) => router.push(`/dashboard/sprava/nemovitosti/${row.id}/upravit`)}
         actions={
           <button
@@ -131,7 +128,7 @@ export default function AdminPropertiesPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {"Nov\u00e1 nemovitost"}
+            {t.dashboard.adminPropertiesNewBtn}
           </button>
         }
         rowActions={(row) => (
@@ -139,7 +136,7 @@ export default function AdminPropertiesPage() {
             <button
               className="admin-btn admin-btn--secondary admin-btn--sm"
               onClick={() => router.push(`/dashboard/sprava/nemovitosti/${row.id}/upravit`)}
-              title="Upravit"
+              title={t.common.edit}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -149,14 +146,14 @@ export default function AdminPropertiesPage() {
             <button
               className="admin-btn admin-btn--secondary admin-btn--sm"
               onClick={() => handleToggleActive(row)}
-              title={row.active ? "Deaktivovat" : "Aktivovat" }
+              title={row.active ? t.dashboard.adminPropertiesDeactivate : t.dashboard.adminPropertiesActivate }
             >
-              {row.active ? "Skryt" : "Zobrazit"}
+              {row.active ? t.dashboard.adminPropertiesHide : t.dashboard.adminPropertiesShow}
             </button>
             <button
               className="admin-btn admin-btn--secondary admin-btn--sm"
               onClick={() => handleToggleFeatured(row)}
-              title={row.featured ? "Odebrat z doporu\u010den\u00fdch" : "Doporu\u010dit"}
+              title={row.featured ? t.dashboard.adminPropertiesUnfeature : t.dashboard.adminPropertiesFeature}
             >
               {row.featured ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
@@ -183,9 +180,9 @@ export default function AdminPropertiesPage() {
 
       <ConfirmDialog
         open={!!deleteId}
-        title="Smazat nemovitost"
-        message="Opravdu chcete tuto nemovitost smazat? Tuto akci nelze vr\u00e1tit."
-        confirmLabel="Smazat"
+        title={t.dashboard.adminPropertiesDeleteTitle}
+        message={t.dashboard.adminPropertiesDeleteMessage}
+        confirmLabel={t.dashboard.adminPropertiesDeleteBtn}
         danger
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}

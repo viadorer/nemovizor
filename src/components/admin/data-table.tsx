@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useT } from "@/i18n/provider";
 
 export type Column<T> = {
   key: string;
@@ -35,9 +36,11 @@ export function DataTable<T>({
   actions,
   onRowClick,
   rowActions,
-  searchPlaceholder = "Hledat...",
+  searchPlaceholder,
   pageSize = 20,
 }: DataTableProps<T>) {
+  const t = useT();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t.admin.search;
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -86,7 +89,7 @@ export function DataTable<T>({
         <input
           type="text"
           className="admin-table-search"
-          placeholder={searchPlaceholder}
+          placeholder={resolvedSearchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -107,20 +110,20 @@ export function DataTable<T>({
                   {sort === col.key && (order === "asc" ? " ↑" : " ↓")}
                 </th>
               ))}
-              {rowActions && <th style={{ width: 100 }}>Akce</th>}
+              {rowActions && <th style={{ width: 100 }}>{t.admin.actions}</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan={columns.length + (rowActions ? 1 : 0)} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
-                  Načítání...
+                  {t.admin.loading}
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
                 <td colSpan={columns.length + (rowActions ? 1 : 0)} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
-                  Žádné záznamy
+                  {t.admin.noRecords}
                 </td>
               </tr>
             ) : (
@@ -151,8 +154,8 @@ export function DataTable<T>({
 
       <div className="admin-table-footer">
         <span>
-          {total} záznamů
-          {totalPages > 1 && ` | Strana ${page} z ${totalPages}`}
+          {t.admin.recordsCount.replace("{count}", String(total))}
+          {totalPages > 1 && ` | ${t.admin.pageOf.replace("{page}", String(page)).replace("{total}", String(totalPages))}`}
         </span>
         {totalPages > 1 && (
           <div className="admin-table-pagination">

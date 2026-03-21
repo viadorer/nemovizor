@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useT } from "@/i18n/provider";
 
 type Theme = "dark" | "light";
 
@@ -47,13 +48,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const t = useT();
 
   return (
     <button
       onClick={toggleTheme}
       className="theme-toggle"
       type="button"
-      aria-label={theme === "dark" ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
+      aria-label={t.common.toggleTheme}
     >
       {theme === "dark" ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

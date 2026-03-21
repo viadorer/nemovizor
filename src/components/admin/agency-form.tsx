@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/form-fields";
 import { SingleImageUpload } from "@/components/admin/single-image-upload";
 import { AddressAutocomplete, type MapySuggestion } from "@/components/admin/address-autocomplete";
+import { useT } from "@/i18n/provider";
 
 type AgencyFormProps = {
   mode: "create" | "edit";
@@ -72,6 +73,7 @@ function slugify(value: string): string {
 
 export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
   const router = useRouter();
+  const t = useT();
   const [form, setForm] = useState<AgencyFormData>({ ...EMPTY_FORM });
   const [slugManual, setSlugManual] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -130,10 +132,10 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
             });
             setSlugManual(true);
           } else {
-            setError("Kancelář nebyla nalezena");
+            setError(t.admin.notFound);
           }
         })
-        .catch(() => setError("Chyba při načítání dat"))
+        .catch(() => setError(t.admin.loadError))
         .finally(() => setLoading(false));
     }
   }, [mode, agencyId]);
@@ -151,11 +153,11 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
 
   async function handleSubmit() {
     if (!form.name.trim()) {
-      setError("Název je povinný");
+      setError(t.admin.nameRequired);
       return;
     }
     if (!form.slug.trim()) {
-      setError("Slug je povinný");
+      setError(t.admin.slugRequired);
       return;
     }
 
@@ -195,7 +197,7 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Chyba při ukládání");
+        throw new Error(data?.error || t.admin.saveError);
       }
 
       setSuccess(true);
@@ -203,7 +205,7 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
         router.push(redirectTo || "/dashboard/sprava/kancelare");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Chyba při ukládání");
+      setError(err instanceof Error ? err.message : t.admin.saveError);
     } finally {
       setSaving(false);
     }
@@ -213,7 +215,7 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
     return (
       <div className="pf-loading">
         <div className="pf-spinner" />
-        <span>Načítání...</span>
+        <span>{t.admin.loading}</span>
       </div>
     );
   }
@@ -236,20 +238,20 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 6L9 17l-5-5" />
           </svg>
-          <span>Uloženo. Přesměrování...</span>
+          <span>{t.admin.saved}</span>
         </div>
       )}
 
       <div className="admin-form-grid">
         <TextField
-          label="Název"
+          label={t.admin.agencyName}
           value={form.name}
           onChange={(v) => updateField("name", v)}
-          placeholder="Název kanceláře"
+          placeholder={t.admin.agencyNamePlaceholder}
           required
         />
         <TextField
-          label="Slug"
+          label={t.admin.slug}
           value={form.slug}
           onChange={(v) => {
             setSlugManual(true);
@@ -260,23 +262,23 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
         />
 
         <TextField
-          label="E-mail"
+          label={t.admin.email}
           value={form.email}
           onChange={(v) => updateField("email", v)}
-          placeholder="info@kancelar.cz"
+          placeholder="info@agency.com"
           type="email"
         />
         <TextField
-          label="Telefon"
+          label={t.admin.phone}
           value={form.phone}
           onChange={(v) => updateField("phone", v)}
           placeholder="+420 123 456 789"
         />
         <TextField
-          label="Web"
+          label={t.admin.website}
           value={form.website}
           onChange={(v) => updateField("website", v)}
-          placeholder="https://www.kancelar.cz"
+          placeholder="https://www.example.com"
         />
 
       </div>
@@ -295,13 +297,13 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
 
       <div className="admin-form-grid">
         <TextField
-          label="Mesto sidla"
+          label={t.admin.seatCity}
           value={form.seat_city}
           onChange={(v) => updateField("seat_city", v)}
           placeholder="Praha"
         />
         <TextField
-          label="Adresa sidla"
+          label={t.admin.seatAddress}
           value={form.seat_address}
           onChange={(v) => updateField("seat_address", v)}
           placeholder="Ulice 123, 110 00 Praha"
@@ -309,15 +311,15 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
       </div>
 
       <TextareaField
-        label="Popis"
+        label={t.admin.description}
         value={form.description}
         onChange={(v) => updateField("description", v)}
-        placeholder="Popis kanceláře..."
+        placeholder={t.admin.descriptionPlaceholder}
         rows={4}
       />
 
       <SingleImageUpload
-        label="Logo kancelare"
+        label={t.admin.logo}
         value={form.logo}
         onChange={(v) => updateField("logo", v)}
         shape="square"
@@ -326,7 +328,7 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
 
       <div className="admin-form-grid">
         <NumberField
-          label="Rok založení"
+          label={t.admin.foundedYear}
           value={form.founded_year}
           onChange={(v) => updateField("founded_year", v)}
           step="1"
@@ -335,22 +337,22 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
       </div>
 
       <TagsField
-        label="Specializace"
+        label={t.admin.specializations}
         value={form.specializations}
         onChange={(v) => updateField("specializations", v)}
-        placeholder="Přidat specializaci..."
+        placeholder={t.admin.specializationPlaceholder}
       />
 
       <div className="admin-form-grid">
         <SelectField
-          label="Materska kancelar"
+          label={t.admin.parentAgency}
           value={form.parent_agency_id}
           onChange={(v) => updateField("parent_agency_id", v)}
           options={parentAgencies}
-          placeholder="-- Zadna (samostatna) --"
+          placeholder={t.admin.parentAgencyNone}
         />
         <CheckboxField
-          label="Nezavisla kancelar"
+          label={t.admin.independentAgency}
           checked={form.is_independent}
           onChange={(v) => updateField("is_independent", v)}
         />
@@ -368,12 +370,12 @@ export function AgencyForm({ mode, agencyId, redirectTo }: AgencyFormProps) {
               <svg className="pf-btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
               </svg>
-              Ukládám...
+              {t.admin.saving}
             </>
           ) : mode === "create" ? (
-            "Vytvořit kancelář"
+            t.admin.createAgency
           ) : (
-            "Uložit změny"
+            t.admin.saveChanges
           )}
         </button>
       </div>

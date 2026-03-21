@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { useT } from "@/i18n/provider";
 
 type UploadingFile = {
   id: string;
@@ -20,6 +21,7 @@ export function ImageDropZone({
   imageSrc: string;
   onImageSrcChange: (v: string) => void;
 }) {
+  const t = useT();
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<UploadingFile[]>([]);
   const [urlInput, setUrlInput] = useState("");
@@ -73,7 +75,7 @@ export function ImageDropZone({
       return url;
     } catch {
       setUploading((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, error: "Chyba" } : u))
+        prev.map((u) => (u.id === id ? { ...u, error: t.admin.uploadError } : u))
       );
       return null;
     }
@@ -186,8 +188,8 @@ export function ImageDropZone({
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
-        <span>{"P\u0159et\u00e1hn\u011bte fotky sem nebo klikn\u011bte pro v\u00fdb\u011br"}</span>
-        <span className="pf-dropzone__hint">JPG, PNG, WebP (max 10 MB)</span>
+        <span>{t.admin.dropzoneText}</span>
+        <span className="pf-dropzone__hint">{t.admin.dropzoneHint}</span>
       </div>
 
       {/* Upload progress */}
@@ -223,23 +225,23 @@ export function ImageDropZone({
               )}
               <div className="pf-gallery-actions">
                 {url !== imageSrc && (
-                  <button type="button" onClick={() => setAsMain(url)} title={"Nastavit jako hlavn\u00ed"}>
+                  <button type="button" onClick={() => setAsMain(url)} title={t.admin.setAsMain}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                     </svg>
                   </button>
                 )}
-                <button type="button" onClick={() => moveUp(i)} disabled={i === 0} title="Nahoru">
+                <button type="button" onClick={() => moveUp(i)} disabled={i === 0} title={t.admin.moveUp}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M18 15l-6-6-6 6" />
                   </svg>
                 </button>
-                <button type="button" onClick={() => moveDown(i)} disabled={i === images.length - 1} title="Dol\u016f">
+                <button type="button" onClick={() => moveDown(i)} disabled={i === images.length - 1} title={t.admin.moveDown}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
-                <button type="button" onClick={() => removeImage(i)} title="Odebrat" className="pf-gallery-remove">
+                <button type="button" onClick={() => removeImage(i)} title={t.admin.removeImage} className="pf-gallery-remove">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
@@ -262,10 +264,10 @@ export function ImageDropZone({
               addUrl();
             }
           }}
-          placeholder={"Nebo vlo\u017ete URL fotky..."}
+          placeholder={t.admin.pasteUrlPlaceholder}
         />
         <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={addUrl}>
-          {"P\u0159idat URL"}
+          {t.admin.addUrl}
         </button>
       </div>
     </div>

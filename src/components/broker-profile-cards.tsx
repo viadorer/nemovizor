@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import Link from "next/link";
 import type { Broker, Agency, Review } from "@/lib/types";
 
@@ -45,7 +46,7 @@ export function BrokerAboutCard({ broker, agency, agencyAddress }: BrokerAboutCa
           )}
           <div className="profile-card-spec">{broker.specialization}</div>
           {broker.yearStarted && (
-            <div className="profile-card-since">Od roku {broker.yearStarted}</div>
+            <div className="profile-card-since">{t.profile.sinceYear} {broker.yearStarted}</div>
           )}
         </div>
       </div>
@@ -110,20 +111,20 @@ export function BrokerStatsCard({ broker }: BrokerStatsCardProps) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 20V10M12 20V4M6 20v-6" />
         </svg>
-        Statistiky
+        {t.profile.statistics}
       </h3>
       <div className="profile-stats-grid">
         <div className="profile-stat">
           <div className="profile-stat-value">{broker.activeListings.toLocaleString("cs")}</div>
-          <div className="profile-stat-label">Aktivnich nabidek</div>
+          <div className="profile-stat-label">{t.profile.activeListings}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">{broker.totalDeals}</div>
-          <div className="profile-stat-label">Celkem obchodu</div>
+          <div className="profile-stat-label">{t.profile.totalDeals}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">{broker.rating > 0 ? broker.rating : "-"}</div>
-          <div className="profile-stat-label">Hodnoceni</div>
+          <div className="profile-stat-label">{t.profile.rating}</div>
         </div>
       </div>
     </div>
@@ -142,7 +143,7 @@ export function BrokerReviewsCard({ broker, reviews }: BrokerReviewsCardProps) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
-        Hodnoceni
+        {t.profile.reviews}
       </h3>
 
       {reviews.length > 0 ? (
@@ -168,7 +169,7 @@ export function BrokerReviewsCard({ broker, reviews }: BrokerReviewsCardProps) {
           </div>
         </>
       ) : (
-        <p className="profile-card-empty">Zatim zadne hodnoceni</p>
+        <p className="profile-card-empty">{t.profile.noReviews}</p>
       )}
     </div>
   );

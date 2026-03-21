@@ -8,6 +8,8 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster";
 import { Property } from "@/lib/types";
 import { formatPrice } from "@/lib/api";
+import { useT } from "@/i18n/provider";
+import type { Translation } from "@/i18n/types";
 
 // ===== Vlastní ikona markeru (pointmap.png) =====
 function createMarkerIcon(_isFeatured: boolean) {
@@ -20,11 +22,10 @@ function createMarkerIcon(_isFeatured: boolean) {
 }
 
 // ===== Cenový popup =====
-function createPopupContent(p: Property): string {
+function createPopupContent(p: Property, t: Translation): string {
   const badgeColors: Record<string, string> = { sale: "#22c55e", rent: "#3b82f6", auction: "#dc2626", project: "#7c3aed", shares: "#0891b2" };
-  const badgeLabels: Record<string, string> = { sale: "Prodej", rent: "Pronájem", auction: "Dražba", project: "Projekt", shares: "Podíly" };
   const bg = badgeColors[p.listingType] || "#666";
-  const label = badgeLabels[p.listingType] || p.listingType;
+  const label = t.enumLabels.listingTypes[p.listingType] || p.listingType;
   const badge = `<span style="background:${bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;text-transform:uppercase;">${label}</span>`;
 
   return `
@@ -33,12 +34,12 @@ function createPopupContent(p: Property): string {
       <div class="popup-card-body">
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
           ${badge}
-          ${p.featured ? '<span style="background:#ffb800;color:#1a1a2e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">Premium</span>' : ""}
+          ${p.featured ? `<span style="background:#ffb800;color:#1a1a2e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">${t.badges.premium}</span>` : ""}
         </div>
         <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">${formatPrice(p.price, p.priceCurrency)}</div>
         <div style="font-size:0.85rem;color:#888;margin-bottom:2px;">${p.subtype} • ${p.roomsLabel} • ${p.area} m²</div>
         <div style="font-size:0.82rem;color:#999;">${p.district}</div>
-        <a href="/nemovitost/${p.slug}" style="display:block;margin-top:8px;text-align:center;padding:6px;background:#ffb800;color:#1a1a2e;border-radius:6px;font-weight:600;font-size:0.8rem;text-decoration:none;">Detail nabídky</a>
+        <a href="/nemovitost/${p.slug}" style="display:block;margin-top:8px;text-align:center;padding:6px;background:#ffb800;color:#1a1a2e;border-radius:6px;font-weight:600;font-size:0.8rem;text-decoration:none;">${t.map.detailLink}</a>
       </div>
     </div>
   `;
@@ -76,21 +77,18 @@ function createPriceLabel(p: Property) {
 // ===== Tile layers =====
 type MapStyle = "dark" | "standard" | "satellite";
 
-const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string; label: string }> = {
+const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    label: "Tmavá",
   },
   standard: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    label: "Klasická",
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: '&copy; Esri &mdash; Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    label: "Letecká",
   },
 };
 
@@ -152,11 +150,12 @@ export default function PropertyMap({
   const [poiCategories, setPoiCategories] = useState<string[]>([]);
   const [poiOpen, setPoiOpen] = useState(false);
   const poiRef = useRef<HTMLDivElement>(null);
+  const t = useT();
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    if (typeof window === "undefined") return "classic";
+    if (typeof window === "undefined") return "standard";
     try {
-      return (sessionStorage.getItem("nemovizor-map-style") as MapStyle) || "classic";
-    } catch { return "classic"; }
+      return (sessionStorage.getItem("nemovizor-map-style") as MapStyle) || "standard";
+    } catch { return "standard"; }
   });
 
   // ===== SessionStorage klíč pro uložení stavu mapy =====
@@ -278,7 +277,7 @@ export default function PropertyMap({
         : createMarkerIcon(p.featured);
 
       const marker = L.marker([p.latitude, p.longitude], { icon })
-        .bindPopup(createPopupContent(p), {
+        .bindPopup(createPopupContent(p, t), {
           maxWidth: 260,
           className: "nemovizor-popup",
         });
@@ -351,15 +350,15 @@ export default function PropertyMap({
   }, [mapStyle]);
 
   // ===== POI (Points of Interest) =====
-  const POI_DEFS: Record<string, { label: string; color: string; query: string }> = {
-    school: { label: "Školy", color: "#f59e0b", query: 'node["amenity"~"school|kindergarten"]' },
-    transport: { label: "MHD", color: "#3b82f6", query: 'node["public_transport"="stop_position"]' },
-    shop: { label: "Obchody", color: "#10b981", query: 'node["shop"~"supermarket|convenience|mall"]' },
-    restaurant: { label: "Restaurace", color: "#ef4444", query: 'node["amenity"~"restaurant|cafe|fast_food"]' },
-    health: { label: "Zdravotnictví", color: "#ec4899", query: 'node["amenity"~"hospital|clinic|pharmacy|doctors"]' },
-    sport: { label: "Sport", color: "#8b5cf6", query: 'node["leisure"~"fitness_centre|sports_centre|swimming_pool|pitch"]' },
-    park: { label: "Parky", color: "#22c55e", query: 'node["leisure"~"park|garden|playground"]' },
-  };
+  const POI_DEFS: Record<string, { label: string; color: string; query: string }> = useMemo(() => ({
+    school: { label: t.map.poi.school, color: "#f59e0b", query: 'node["amenity"~"school|kindergarten"]' },
+    transport: { label: t.map.poi.transport, color: "#3b82f6", query: 'node["public_transport"="stop_position"]' },
+    shop: { label: t.map.poi.shop, color: "#10b981", query: 'node["shop"~"supermarket|convenience|mall"]' },
+    restaurant: { label: t.map.poi.restaurant, color: "#ef4444", query: 'node["amenity"~"restaurant|cafe|fast_food"]' },
+    health: { label: t.map.poi.health, color: "#ec4899", query: 'node["amenity"~"hospital|clinic|pharmacy|doctors"]' },
+    sport: { label: t.map.poi.sport, color: "#8b5cf6", query: 'node["leisure"~"fitness_centre|sports_centre|swimming_pool|pitch"]' },
+    park: { label: t.map.poi.park, color: "#22c55e", query: 'node["leisure"~"park|garden|playground"]' },
+  }), [t]);
 
   useEffect(() => {
     if (poiRef.current) {
@@ -419,7 +418,7 @@ export default function PropertyMap({
             // Simple match
             const tags = el.tags || {};
             if (cat === "school" && (tags.amenity === "school" || tags.amenity === "kindergarten")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
-            if (cat === "transport" && tags.public_transport) { color = def.color; tooltip = tooltip || "Zastávka"; break; }
+            if (cat === "transport" && tags.public_transport) { color = def.color; tooltip = tooltip || t.map.poi.transportStop; break; }
             if (cat === "shop" && tags.shop) { color = def.color; tooltip = tooltip || tags.shop; break; }
             if (cat === "restaurant" && (tags.amenity === "restaurant" || tags.amenity === "cafe" || tags.amenity === "fast_food")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
             if (cat === "health" && (tags.amenity === "hospital" || tags.amenity === "clinic" || tags.amenity === "pharmacy" || tags.amenity === "doctors")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
@@ -555,10 +554,10 @@ export default function PropertyMap({
                 key={key}
                 className={`map-style-btn ${mapStyle === key ? "map-style-btn--active" : ""}`}
                 onClick={() => setMapStyle(key)}
-                title={TILE_LAYERS[key].label}
+                title={t.map.styles[key]}
               >
                 <span className="map-style-btn-icon"><MapStyleIcon style={key} /></span>
-                <span className="map-style-btn-label">{TILE_LAYERS[key].label}</span>
+                <span className="map-style-btn-label">{t.map.styles[key]}</span>
               </button>
             ))}
           </div>
@@ -566,7 +565,7 @@ export default function PropertyMap({
             <button
               className={`map-poi-btn ${poiCategories.length > 0 ? "map-poi-btn--active" : ""}`}
               onClick={() => setPoiOpen(!poiOpen)}
-              title="Body zájmu"
+              title={t.map.poi.label}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -577,7 +576,7 @@ export default function PropertyMap({
             </button>
             {poiOpen && (
               <div className="map-poi-menu">
-                <div className="map-poi-menu-title">Body zájmu</div>
+                <div className="map-poi-menu-title">{t.map.poi.label}</div>
                 {Object.entries(POI_DEFS).map(([key, def]) => (
                   <button
                     key={key}
@@ -594,11 +593,11 @@ export default function PropertyMap({
                 ))}
                 {poiCategories.length > 0 && (
                   <button className="map-poi-item map-poi-clear" onClick={() => setPoiCategories([])}>
-                    Skrýt vše
+                    {t.map.poi.hideAll}
                   </button>
                 )}
                 {(mapInstanceRef.current?.getZoom() ?? 0) < 12 && poiCategories.length > 0 && (
-                  <div className="map-poi-hint">Přibližte mapu pro zobrazení POI</div>
+                  <div className="map-poi-hint">{t.map.poi.zoomHint}</div>
                 )}
               </div>
             )}

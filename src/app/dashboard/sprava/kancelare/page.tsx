@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useT } from "@/i18n/provider";
 
 type AgencyRow = {
   id: string;
@@ -19,49 +20,50 @@ type AgencyRow = {
   website: string | null;
 };
 
-const columns: Column<AgencyRow>[] = [
-  {
-    key: "name",
-    label: "Nazev",
-    render: (row) => (
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {row.logo ? (
-          <img src={row.logo} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: 32, height: 32, borderRadius: 6, background: "var(--bg-muted, #f3f4f6)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontWeight: 600, fontSize: "0.75rem" }}>
-            {row.name.charAt(0)}
-          </div>
-        )}
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.name}</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-            {row.seat_city || "-"}
+export default function AdminAgenciesPage() {
+  const t = useT();
+  const router = useRouter();
+
+  const columns: Column<AgencyRow>[] = [
+    {
+      key: "name",
+      label: t.dashboard.adminAgenciesNameCol,
+      render: (row) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {row.logo ? (
+            <img src={row.logo} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover" }} />
+          ) : (
+            <div style={{ width: 32, height: 32, borderRadius: 6, background: "var(--bg-muted, #f3f4f6)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontWeight: 600, fontSize: "0.75rem" }}>
+              {row.name.charAt(0)}
+            </div>
+          )}
+          <div>
+            <div style={{ fontWeight: 600 }}>{row.name}</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              {row.seat_city || "-"}
+            </div>
           </div>
         </div>
-      </div>
-    ),
-  },
-  { key: "email", label: "E-mail" },
-  { key: "phone", label: "Telefon" },
-  {
-    key: "total_brokers",
-    label: "Makleru",
-    render: (row) => String(row.total_brokers || 0),
-  },
-  {
-    key: "total_listings",
-    label: "Inzeratu",
-    render: (row) => String(row.total_listings || 0),
-  },
-  {
-    key: "rating",
-    label: "Hodnoceni",
-    render: (row) => (row.rating ? Number(row.rating).toFixed(1) : "-"),
-  },
-];
-
-export default function AdminAgenciesPage() {
-  const router = useRouter();
+      ),
+    },
+    { key: "email", label: t.dashboard.adminAgenciesEmailCol },
+    { key: "phone", label: t.dashboard.adminAgenciesPhoneCol },
+    {
+      key: "total_brokers",
+      label: t.dashboard.adminAgenciesBrokersCol,
+      render: (row) => String(row.total_brokers || 0),
+    },
+    {
+      key: "total_listings",
+      label: t.dashboard.adminAgenciesListingsCol,
+      render: (row) => String(row.total_listings || 0),
+    },
+    {
+      key: "rating",
+      label: t.dashboard.adminAgenciesRatingCol,
+      render: (row) => (row.rating ? Number(row.rating).toFixed(1) : "-"),
+    },
+  ];
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
 
@@ -97,11 +99,11 @@ export default function AdminAgenciesPage() {
     <div className="dashboard-page">
       <DataTable<AgencyRow>
         key={tableKey}
-        title="Realitni kancelare"
+        title={t.dashboard.adminAgenciesTitle}
         columns={columns}
         fetchData={fetchData}
         rowKey={(row) => row.id}
-        searchPlaceholder="Hledat podle nazvu, mesta..."
+        searchPlaceholder={t.dashboard.adminAgenciesSearch}
         onRowClick={(row) =>
           router.push(`/dashboard/sprava/kancelare/${row.id}/upravit`)
         }
@@ -120,7 +122,7 @@ export default function AdminAgenciesPage() {
             >
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {"Nova kancelar"}
+            {t.dashboard.adminAgenciesNewBtn}
           </button>
         }
         rowActions={(row) => (
@@ -130,7 +132,7 @@ export default function AdminAgenciesPage() {
               onClick={() =>
                 router.push(`/dashboard/sprava/kancelare/${row.id}/upravit`)
               }
-              title="Upravit"
+              title={t.common.edit}
             >
               <svg
                 width="12"
@@ -149,7 +151,7 @@ export default function AdminAgenciesPage() {
               onClick={() =>
                 window.open(`/kancelare/${row.slug}`, "_blank")
               }
-              title="Nahled"
+              title={t.header.detail}
             >
               <svg
                 width="12"
@@ -166,7 +168,7 @@ export default function AdminAgenciesPage() {
             <button
               className="admin-btn admin-btn--danger admin-btn--sm"
               onClick={() => setDeleteId(row.id)}
-              title="Archivovat"
+              title={t.dashboard.adminAgenciesArchiveBtn}
             >
               <svg
                 width="12"
@@ -186,9 +188,9 @@ export default function AdminAgenciesPage() {
 
       <ConfirmDialog
         open={!!deleteId}
-        title="Archivovat kancelar"
-        message="Opravdu chcete tuto kancelar archivovat? Tuto akci nelze vratit."
-        confirmLabel="Archivovat"
+        title={t.dashboard.adminAgenciesArchiveTitle}
+        message={t.dashboard.adminAgenciesArchiveMessage}
+        confirmLabel={t.dashboard.adminAgenciesArchiveBtn}
         danger
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}

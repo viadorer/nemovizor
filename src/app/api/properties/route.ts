@@ -92,10 +92,10 @@ export async function GET(req: NextRequest) {
   const sort = sp.get("sort") || "featured";
   switch (sort) {
     case "price_asc":
-      query = query.order("price", { ascending: true });
+      query = query.gt("price", 0).order("price", { ascending: true });
       break;
     case "price_desc":
-      query = query.order("price", { ascending: false });
+      query = query.gt("price", 0).order("price", { ascending: false });
       break;
     case "newest":
       query = query.order("created_at", { ascending: false });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Agency, Broker, Branch, Review } from "@/lib/types";
+import { t } from "@/i18n";
 
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -40,11 +41,11 @@ export function AgencyProfileHeader({ agency, parentAgency, hqBranch, reviews }:
           <div className="ph-name-block">
             <h1 className="ph-name">{agency.name}</h1>
             {agency.foundedYear > 0 && (
-              <span className="ph-meta">Zalozena {agency.foundedYear}</span>
+              <span className="ph-meta">{t.header.foundedIn} {agency.foundedYear}</span>
             )}
             {parentAgency && (
               <span className="ph-meta">
-                Pobocka{" "}
+                {t.header.branchOf}{" "}
                 <Link href={`/kancelare/${parentAgency.slug}`} className="ph-link">{parentAgency.name}</Link>
               </span>
             )}
@@ -53,24 +54,24 @@ export function AgencyProfileHeader({ agency, parentAgency, hqBranch, reviews }:
         <div className="ph-stats">
           <div className="ph-stat">
             <span className="ph-stat-val">{agency.totalListings.toLocaleString("cs")}</span>
-            <span className="ph-stat-lbl">Nabidek</span>
+            <span className="ph-stat-lbl">{t.profile.listingsCount}</span>
           </div>
           <div className="ph-stat">
             <span className="ph-stat-val">{agency.totalBrokers}</span>
-            <span className="ph-stat-lbl">Makleru</span>
+            <span className="ph-stat-lbl">{t.profile.brokersCount}</span>
           </div>
           {agency.rating > 0 && (
             <div className="ph-stat">
               <span className="ph-stat-val ph-stat-rating">
                 {agency.rating} <Stars rating={agency.rating} />
               </span>
-              <span className="ph-stat-lbl">{reviews.length > 0 ? `${reviews.length} hodnoceni` : "Hodnoceni"}</span>
+              <span className="ph-stat-lbl">{reviews.length > 0 ? `${reviews.length} ${t.profile.reviews}` : t.profile.rating}</span>
             </div>
           )}
           {agency.totalDeals > 0 && (
             <div className="ph-stat">
               <span className="ph-stat-val">{agency.totalDeals}</span>
-              <span className="ph-stat-lbl">Obchodu</span>
+              <span className="ph-stat-lbl">{t.profile.dealsCount}</span>
             </div>
           )}
         </div>
@@ -176,27 +177,27 @@ export function BrokerProfileHeader({ broker, agency, reviews, agencyAddress }: 
                 </Link>
               )}
               {broker.specialization && <span className="ph-meta">{broker.specialization}</span>}
-              {broker.yearStarted && <span className="ph-meta">Od roku {broker.yearStarted}</span>}
+              {broker.yearStarted && <span className="ph-meta">{t.header.sinceYear} {broker.yearStarted}</span>}
             </div>
           </div>
         </div>
         <div className="ph-stats">
           <div className="ph-stat">
             <span className="ph-stat-val">{broker.activeListings.toLocaleString("cs")}</span>
-            <span className="ph-stat-lbl">Nabidek</span>
+            <span className="ph-stat-lbl">{t.profile.listingsCount}</span>
           </div>
           {broker.rating > 0 && (
             <div className="ph-stat">
               <span className="ph-stat-val ph-stat-rating">
                 {broker.rating} <Stars rating={broker.rating} />
               </span>
-              <span className="ph-stat-lbl">{reviews.length > 0 ? `${reviews.length} hodnoceni` : "Hodnoceni"}</span>
+              <span className="ph-stat-lbl">{reviews.length > 0 ? `${reviews.length} ${t.profile.reviews}` : t.profile.rating}</span>
             </div>
           )}
           {broker.totalDeals > 0 && (
             <div className="ph-stat">
               <span className="ph-stat-val">{broker.totalDeals}</span>
-              <span className="ph-stat-lbl">Obchodu</span>
+              <span className="ph-stat-lbl">{t.profile.dealsCount}</span>
             </div>
           )}
         </div>

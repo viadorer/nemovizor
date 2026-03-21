@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useT } from "@/i18n/provider";
 
 type MediaTab = "photos" | "video" | "3d";
 
@@ -29,16 +30,17 @@ export function MediaGallery({
   videoUrl,
   matterportUrl,
 }: MediaGalleryProps) {
+  const t = useT();
   const [activeTab, setActiveTab] = useState<MediaTab>("photos");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const hasTabs = Boolean(videoUrl || matterportUrl);
 
   const tabs: { key: MediaTab; label: string }[] = [
-    { key: "photos", label: "Fotografie" },
-    ...(videoUrl ? [{ key: "video" as MediaTab, label: "Video" }] : []),
+    { key: "photos", label: t.gallery.photos },
+    ...(videoUrl ? [{ key: "video" as MediaTab, label: t.gallery.video }] : []),
     ...(matterportUrl
-      ? [{ key: "3d" as MediaTab, label: "3D prohlídka" }]
+      ? [{ key: "3d" as MediaTab, label: t.gallery.tour3d }]
       : []),
   ];
 
@@ -76,18 +78,18 @@ export function MediaGallery({
           <div
             className={`mg-grid mg-grid--${Math.min(images.length, 5)}`}
             role="group"
-            aria-label="Fotogalerie"
+            aria-label={t.gallery.photoGallery}
           >
             {images.slice(0, visibleCount).map((src, i) => (
               <button
                 key={i}
                 className={`mg-cell${i === 0 ? " mg-cell--main" : ""}`}
                 onClick={() => setLightboxIndex(i)}
-                aria-label={`Zobrazit foto ${i + 1} z ${images.length}`}
+                aria-label={`${t.gallery.showPhoto} ${i + 1} / ${images.length}`}
               >
                 <img src={src} alt={`${alt} - foto ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
                 {i === visibleCount - 1 && extraCount > 0 && (
-                  <span className="mg-more">+ {extraCount} fotek</span>
+                  <span className="mg-more">+ {extraCount} {t.gallery.morePhotos}</span>
                 )}
               </button>
             ))}
@@ -124,12 +126,12 @@ export function MediaGallery({
             {images.length > 1 && (
               <>
                 {carouselIdx > 0 && (
-                  <button className="mg-carousel-btn mg-carousel-btn--prev" onClick={(e) => { e.stopPropagation(); carouselPrev(); }} aria-label="Předchozí">
+                  <button className="mg-carousel-btn mg-carousel-btn--prev" onClick={(e) => { e.stopPropagation(); carouselPrev(); }} aria-label={t.gallery.previous}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
                   </button>
                 )}
                 {carouselIdx < images.length - 1 && (
-                  <button className="mg-carousel-btn mg-carousel-btn--next" onClick={(e) => { e.stopPropagation(); carouselNext(); }} aria-label="Další">
+                  <button className="mg-carousel-btn mg-carousel-btn--next" onClick={(e) => { e.stopPropagation(); carouselNext(); }} aria-label={t.gallery.next}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
                   </button>
                 )}
@@ -140,9 +142,9 @@ export function MediaGallery({
         </>
       )}
 
-      {activeTab === "video" && videoUrl && <VideoEmbed url={videoUrl} />}
+      {activeTab === "video" && videoUrl && <VideoEmbed url={videoUrl} videoTourLabel={t.gallery.videoTour} videoNotSupported={t.gallery.videoNotSupported} />}
       {activeTab === "3d" && matterportUrl && (
-        <MatterportEmbed url={matterportUrl} />
+        <MatterportEmbed url={matterportUrl} tour3dLabel={t.gallery.tour3d} />
       )}
 
       {lightboxIndex !== null && (
@@ -150,13 +152,14 @@ export function MediaGallery({
           images={images}
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
+          labels={{ close: t.gallery.close, previous: t.gallery.previous, next: t.gallery.next, photo: t.gallery.showPhoto, thumbnail: t.gallery.thumbnail }}
         />
       )}
     </>
   );
 }
 
-function VideoEmbed({ url }: { url: string }) {
+function VideoEmbed({ url, videoTourLabel, videoNotSupported }: { url: string; videoTourLabel: string; videoNotSupported: string }) {
   const youtubeId = getYoutubeId(url);
   const vimeoId = getVimeoId(url);
 
@@ -165,7 +168,7 @@ function VideoEmbed({ url }: { url: string }) {
       <div className="mg-embed">
         <iframe
           src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
-          title="Video prohlídka"
+          title={videoTourLabel}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           loading="lazy"
@@ -179,7 +182,7 @@ function VideoEmbed({ url }: { url: string }) {
       <div className="mg-embed">
         <iframe
           src={`https://player.vimeo.com/video/${vimeoId}`}
-          title="Video prohlídka"
+          title={videoTourLabel}
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           loading="lazy"
@@ -191,18 +194,18 @@ function VideoEmbed({ url }: { url: string }) {
   return (
     <div className="mg-embed">
       <video controls preload="metadata" src={url}>
-        Váš prohlížeč nepodporuje video.
+        {videoNotSupported}
       </video>
     </div>
   );
 }
 
-function MatterportEmbed({ url }: { url: string }) {
+function MatterportEmbed({ url, tour3dLabel }: { url: string; tour3dLabel: string }) {
   return (
     <div className="mg-embed">
       <iframe
         src={url}
-        title="3D prohlídka"
+        title={tour3dLabel}
         allow="xr-spatial-tracking"
         allowFullScreen
         loading="lazy"
@@ -215,10 +218,12 @@ function Lightbox({
   images,
   startIndex,
   onClose,
+  labels,
 }: {
   images: string[];
   startIndex: number;
   onClose: () => void;
+  labels: { close: string; previous: string; next: string; photo: string; thumbnail: string };
 }) {
   const [index, setIndex] = useState(startIndex);
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
@@ -325,7 +330,7 @@ function Lightbox({
         {index + 1} / {images.length}
       </div>
 
-      <button className="lb-close" onClick={onClose} aria-label="Zavřít">
+      <button className="lb-close" onClick={onClose} aria-label={labels.close}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 6L6 18M6 6l12 12" />
         </svg>
@@ -335,7 +340,7 @@ function Lightbox({
         <button
           className="lb-nav lb-nav--prev"
           onClick={(e) => { e.stopPropagation(); prev(); }}
-          aria-label="Predchozi"
+          aria-label={labels.previous}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M15 18l-6-6 6-6" />
@@ -347,7 +352,7 @@ function Lightbox({
         ref={imgRef}
         className={`lb-image${slideClass}`}
         src={images[index]}
-        alt={`Foto ${index + 1}`}
+        alt={`${labels.photo} ${index + 1}`}
         draggable={false}
       />
 
@@ -355,7 +360,7 @@ function Lightbox({
         <button
           className="lb-nav lb-nav--next"
           onClick={(e) => { e.stopPropagation(); next(); }}
-          aria-label="Dalsi"
+          aria-label={labels.next}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 18l6-6-6-6" />
@@ -372,7 +377,7 @@ function Lightbox({
               className={`lb-thumb${i === index ? " lb-thumb--active" : ""}`}
               onClick={(e) => { e.stopPropagation(); setSlideDir(i > index ? "left" : "right"); setIndex(i); }}
             >
-              <img src={src} alt={`Miniatura ${i + 1}`} loading="lazy" draggable={false} />
+              <img src={src} alt={`${labels.thumbnail} ${i + 1}`} loading="lazy" draggable={false} />
             </button>
           ))}
         </div>

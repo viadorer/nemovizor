@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/i18n/provider";
 
 type Stats = {
   properties: number;
@@ -14,6 +15,7 @@ type Stats = {
 };
 
 export default function AdminAnalyticsPage() {
+  const t = useT();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +29,8 @@ export default function AdminAnalyticsPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Analytika</h1>
-        <p style={{ color: "var(--text-muted)" }}>Načítání...</p>
+        <h1 className="dashboard-page-title">{t.dashboard.adminAnalyticsTitle}</h1>
+        <p style={{ color: "var(--text-muted)" }}>{t.common.loading}</p>
       </div>
     );
   }
@@ -36,18 +38,18 @@ export default function AdminAnalyticsPage() {
   if (!stats) return null;
 
   const cards = [
-    { label: "Nemovitosti celkem", value: stats.properties, sub: `${stats.activeProperties} aktivních` },
-    { label: "Projekty", value: stats.projects },
-    { label: "Makléři", value: stats.brokers },
-    { label: "Kanceláří", value: stats.agencies },
-    { label: "Uživatelé", value: stats.users },
-    { label: "Oblíbené", value: stats.favorites },
-    { label: "Uložená hledání", value: stats.savedSearches },
+    { label: t.dashboard.adminTotalProperties, value: stats.properties, sub: `${stats.activeProperties} ${t.dashboard.activeCount}` },
+    { label: t.dashboard.adminProjects, value: stats.projects },
+    { label: t.dashboard.adminBrokersLabel, value: stats.brokers },
+    { label: t.dashboard.adminAgenciesLabel, value: stats.agencies },
+    { label: t.dashboard.adminUsersLabel, value: stats.users },
+    { label: t.dashboard.adminFavorites, value: stats.favorites },
+    { label: t.dashboard.adminSavedSearches, value: stats.savedSearches },
   ];
 
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-page-title">Analytika</h1>
+      <h1 className="dashboard-page-title">{t.dashboard.adminAnalyticsTitle}</h1>
 
       <div className="admin-stats">
         {cards.map((card) => (

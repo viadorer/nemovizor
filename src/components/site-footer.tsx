@@ -1,24 +1,27 @@
+import { t } from "@/i18n";
+import { brand } from "@/brands";
+
 export function SiteFooter() {
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer-content">
           <div className="footer-logo">
-            <img src="/branding/logo_nemovizor_web.png" alt="Nemovizor" />
+            <img src="/branding/logo_nemovizor_web.png" alt={brand.name} />
           </div>
           <div className="footer-links">
             <ul>
               <li>
-                <a href="#">O nás</a>
+                <a href="#">{t.footer.about}</a>
               </li>
               <li>
-                <a href="#">Kontakt</a>
+                <a href="#">{t.footer.contact}</a>
               </li>
               <li>
-                <a href="#">Kariéra</a>
+                <a href="#">{t.footer.career}</a>
               </li>
               <li>
-                <a href="#">Podmínky</a>
+                <a href="#">{t.footer.terms}</a>
               </li>
             </ul>
           </div>
@@ -35,7 +38,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>© 2026 Nemovizor. Všechna práva vyhrazena.</p>
+          <p>&copy; {new Date().getFullYear()} {t.footer.copyright}. {t.footer.allRightsReserved}</p>
         </div>
       </div>
     </footer>

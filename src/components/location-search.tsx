@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useT } from "@/i18n/provider";
 
 // ===== Mapy.com Suggest API =====
 const MAPY_API_KEY = process.env.NEXT_PUBLIC_MAPY_API_KEY ?? "";
@@ -49,10 +50,12 @@ type LocationSearchProps = {
 export function LocationSearch({
   onSelect,
   onClear,
-  placeholder = "Hledat lokalitu...",
+  placeholder,
   initialValue = "",
   dbCities = [],
 }: LocationSearchProps) {
+  const t = useT();
+  const resolvedPlaceholder = placeholder ?? t.locationSearch.placeholder;
   const [query, setQuery] = useState(initialValue);
   const [results, setResults] = useState<SuggestItem[]>([]);
   const [dbMatches, setDbMatches] = useState<DbCity[]>([]);
@@ -371,7 +374,7 @@ export function LocationSearch({
           ref={inputRef}
           type="text"
           className="location-search-input"
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={query}
           onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -392,7 +395,7 @@ export function LocationSearch({
           {/* DB cities with property counts */}
           {dbMatches.length > 0 && (
             <>
-              <div className="location-search-group-label">Města s nabídkami</div>
+              <div className="location-search-group-label">{t.locationSearch.citiesWithListings}</div>
               {dbMatches.map((city, i) => (
                 <button
                   key={`db-${city.value}`}
@@ -409,7 +412,7 @@ export function LocationSearch({
                   <div className="location-search-item-text">
                     <span className="location-search-item-name">{city.value}</span>
                   </div>
-                  <span className="location-search-item-count">{city.count} nabídek</span>
+                  <span className="location-search-item-count">{city.count} {t.locationSearch.listingsCount}</span>
                 </button>
               ))}
             </>

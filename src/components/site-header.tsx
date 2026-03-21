@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-provider";
 import { useAuth } from "@/components/auth-provider";
+import { useT } from "@/i18n/provider";
+import { brand } from "@/brands";
 
-const navItems = [
+const allNavItems = [
   {
     href: "/nabidky",
-    label: "Nab\u00EDdky",
+    tKey: "listings" as const,
+    feature: null,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="11" cy="11" r="8" />
@@ -19,7 +22,8 @@ const navItems = [
   },
   {
     href: "/specialiste",
-    label: "RK / makl\u00E9\u0159i",
+    tKey: "brokers" as const,
+    feature: null,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -31,7 +35,8 @@ const navItems = [
   },
   {
     href: "/oceneni",
-    label: "Ocen\u011Bn\u00ED",
+    tKey: "valuation" as const,
+    feature: "valuation" as const,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="4" y="2" width="16" height="20" rx="2" />
@@ -43,10 +48,15 @@ const navItems = [
   },
 ];
 
+const navItems = allNavItems.filter(
+  (item) => item.feature === null || brand.features[item.feature]
+);
+
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -91,7 +101,7 @@ export function SiteHeader() {
         <div className="navbar">
           <div className="logo-container">
             <Link href="/">
-              <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt="Nemovizor Logo" className="logo logo--dark" />
+              <img src="/branding/nemovizor_logo.png" alt={`${brand.name} Logo`} className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt={`${brand.name} Logo`} className="logo logo--dark" />
             </Link>
           </div>
           <nav className="navbar-desktop-nav">
@@ -99,7 +109,7 @@ export function SiteHeader() {
               {navItems.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className={pathname === item.href ? "active" : undefined}>
-                    {item.label}
+                    {t.nav[item.tKey]}
                   </Link>
                 </li>
               ))}
@@ -113,7 +123,7 @@ export function SiteHeader() {
                   className="user-avatar-btn"
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  aria-label="Uživatelské menu"
+                  aria-label={t.header.userMenu}
                 >
                   {user.user_metadata?.avatar_url ? (
                     <img
@@ -141,14 +151,14 @@ export function SiteHeader() {
                         <rect x="3" y="14" width="7" height="7" />
                         <rect x="14" y="14" width="7" height="7" />
                       </svg>
-                      Dashboard
+                      {t.nav.dashboard}
                     </Link>
                     <Link href="/dashboard/nastaveni" className="user-dropdown-item" onClick={() => setUserMenuOpen(false)}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="3" />
                         <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                       </svg>
-                      Nastavení
+                      {t.dashboard.settings}
                     </Link>
                     <div className="user-dropdown-divider" />
                     <button type="button" className="user-dropdown-item user-dropdown-logout" onClick={handleSignOut}>
@@ -157,14 +167,14 @@ export function SiteHeader() {
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
                       </svg>
-                      Odhlásit se
+                      {t.nav.logout}
                     </button>
                   </div>
                 )}
               </div>
             ) : !loading ? (
               <Link href="/prihlaseni" className="login-btn">
-                Prihlasit
+                {t.nav.login}
               </Link>
             ) : null}
           </div>
@@ -173,7 +183,7 @@ export function SiteHeader() {
           <button
             className="hamburger-btn"
             onClick={() => setMenuOpen(true)}
-            aria-label="Otevřít menu"
+            aria-label={t.header.openMenu}
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -189,12 +199,12 @@ export function SiteHeader() {
       <div className={`mobile-menu-overlay ${menuOpen ? "mobile-menu-overlay--open" : ""}`}>
         <div className="mobile-menu-header">
           <Link href="/" onClick={() => setMenuOpen(false)}>
-            <img src="/branding/nemovizor_logo.png" alt="Nemovizor Logo" className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt="Nemovizor Logo" className="logo logo--dark" />
+            <img src="/branding/nemovizor_logo.png" alt={`${brand.name} Logo`} className="logo logo--light" /><img src="/branding/nemovizor_logo1.png" alt={`${brand.name} Logo`} className="logo logo--dark" />
           </Link>
           <button
             className="mobile-menu-close"
             onClick={() => setMenuOpen(false)}
-            aria-label="Zavřít menu"
+            aria-label={t.header.closeMenu}
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -213,7 +223,7 @@ export function SiteHeader() {
               onClick={() => setMenuOpen(false)}
             >
               <span className="mobile-menu-link-icon">{item.icon}</span>
-              {item.label}
+              {t.nav[item.tKey]}
             </Link>
           ))}
         </nav>
@@ -223,7 +233,7 @@ export function SiteHeader() {
         <div className="mobile-menu-footer">
           <div className="mobile-menu-theme">
             <ThemeToggle />
-            <span>Přepnout režim</span>
+            <span>{t.common.toggleTheme}</span>
           </div>
           {user ? (
             <>
@@ -238,7 +248,7 @@ export function SiteHeader() {
                   <rect x="3" y="14" width="7" height="7" />
                   <rect x="14" y="14" width="7" height="7" />
                 </svg>
-                Dashboard
+                {t.nav.dashboard}
               </Link>
               <button
                 type="button"
@@ -250,7 +260,7 @@ export function SiteHeader() {
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
-                Odhlásit se
+                {t.nav.logout}
               </button>
             </>
           ) : (
@@ -259,7 +269,7 @@ export function SiteHeader() {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              Přihlásit
+              {t.nav.login}
             </Link>
           )}
         </div>

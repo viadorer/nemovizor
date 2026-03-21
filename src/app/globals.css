@@ -1,60 +1,10 @@
 @import "tailwindcss";
+@import "../brands/nemovizor/theme.css";
 
-/* ===== THEME SYSTEM ===== */
-:root {
-  --bg: #0a0a0f;
-  --bg-secondary: #121218;
-  --bg-card: #1a1a24;
-  --bg-card-hover: #22222e;
-  --bg-header: rgba(10, 10, 15, 0.85);
-  --bg-filter: #1a1a24;
-  --bg-input: #2a2a36;
-  --text: #f0f0f5;
-  --text-secondary: #b0b0c0;
-  --text-muted: #7a7a8e;
-  --accent: #ffb800;
-  --accent-hover: #ffc933;
-  --accent-text: #1a1a2e;
-  --border: #2a2a36;
-  --border-light: #22222e;
-  --shadow: rgba(0, 0, 0, 0.3);
-  --shadow-strong: rgba(0, 0, 0, 0.5);
-  --badge-sale: #22c55e;
-  --badge-rent: #3b82f6;
-  --map-bg: #1a1a24;
-  --glass-bg: rgba(15, 15, 25, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --overlay-gradient: linear-gradient(transparent 0%, rgba(10, 10, 15, 0.3) 60%, rgba(10, 10, 15, 0.7) 100%);
-}
-
-html[data-theme="light"] .hero::before {
-  background-image: url("/branding/hero-light.png");
-}
-html[data-theme="light"] {
-  --bg: #f5f5f7;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f8f8fa;
-  --bg-header: rgba(255, 255, 255, 0.85);
-  --bg-filter: #f0f0f2;
-  --bg-input: #e8e8ec;
-  --text: #1a1a2e;
-  --text-secondary: #4a4a5a;
-  --text-muted: #7a7a8a;
-  --accent: #ffb800;
-  --accent-hover: #e6a600;
-  --accent-text: #1a1a2e;
-  --border: #e0e0e5;
-  --border-light: #ececf0;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --shadow-strong: rgba(0, 0, 0, 0.15);
-  --badge-sale: #16a34a;
-  --badge-rent: #2563eb;
-  --map-bg: #e8e8ec;
-  --glass-bg: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --overlay-gradient: linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.15) 40%, rgba(0, 0, 0, 0.65) 98%);
-}
+/* ===== THEME SYSTEM =====
+   Proměnné jsou definovány v src/brands/<brand>/theme.css
+   Tento soubor je importuje — per-brand build přepne import.
+   ===== */
 
 @theme inline {
   --color-background: var(--bg);
@@ -95,7 +45,7 @@ a {
 .site-header {
   position: fixed;
   width: 100%;
-  z-index: 100;
+  z-index: 1000;
   padding: 0;
   background-color: var(--bg-header);
   backdrop-filter: blur(12px);

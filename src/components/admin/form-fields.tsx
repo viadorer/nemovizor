@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/provider";
 
 export function SelectField({
   label,
@@ -17,6 +18,7 @@ export function SelectField({
   placeholder?: string;
   required?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="admin-form-group">
       <label>
@@ -24,7 +26,7 @@ export function SelectField({
         {required && <span className="pf-required">*</span>}
       </label>
       <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{placeholder ?? `-- Vyberte --`}</option>
+        <option value="">{placeholder ?? t.admin.selectPlaceholder}</option>
         {Object.entries(options).map(([k, v]) => (
           <option key={k} value={k}>
             {v}
@@ -204,6 +206,7 @@ export function TagsField({
   onChange: (v: string[]) => void;
   placeholder?: string;
 }) {
+  const t = useT();
   const [input, setInput] = useState("");
 
   function addTag() {
@@ -245,7 +248,7 @@ export function TagsField({
                 addTag();
               }
             }}
-            placeholder={placeholder ?? "P\u0159idat..."}
+            placeholder={placeholder ?? t.admin.addPlaceholder}
           />
           <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={addTag}>
             +

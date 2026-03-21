@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useT } from "@/i18n/provider";
 
 const MAPY_API_KEY = process.env.NEXT_PUBLIC_MAPY_API_KEY ?? "";
 const SUGGEST_URL = "https://api.mapy.cz/v1/suggest";
@@ -51,6 +52,7 @@ export function AddressAutocomplete({
   onSelect: (s: MapySuggestion) => void;
   isLand: boolean;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<MapySuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -169,15 +171,15 @@ export function AddressAutocomplete({
   if (!MAPY_API_KEY) {
     return (
       <div className="admin-form-group">
-        <label>{"\u0412yhled\u00e1v\u00e1n\u00ed adresy"}</label>
+        <label>{t.addressSearch.manualLabel}</label>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={"Zadejte adresu ru\u010dn\u011b n\u00ed\u017ee..."}
+          placeholder={t.addressSearch.manualPlaceholder}
         />
         {isLand && (
-          <p className="pf-hint">{"U pozemk\u016f adresa nemus\u00ed existovat \u2014 zadejte \u00fadaje ru\u010dn\u011b."}</p>
+          <p className="pf-hint">{t.addressSearch.landHint}</p>
         )}
       </div>
     );
@@ -185,7 +187,7 @@ export function AddressAutocomplete({
 
   return (
     <div className="admin-form-group pf-address-suggest" ref={wrapRef}>
-      <label>{"Vyhledat adresu"}</label>
+      <label>{t.addressSearch.searchLabel}</label>
       <div className="pf-address-input-wrap">
         <svg className="pf-address-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8" />

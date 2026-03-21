@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { getSearchHistory, clearSearchHistory, type SearchHistoryEntry } from "@/lib/search-history";
 import { generateSearchName, filtersToSearchParams, type SearchFilters } from "@/lib/saved-searches";
+import { useT } from "@/i18n/provider";
 
 export default function HistoryPage() {
   const { user } = useAuth();
+  const t = useT();
   const [entries, setEntries] = useState<SearchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +30,8 @@ export default function HistoryPage() {
   if (loading) {
     return (
       <div className="dashboard-page">
-        <h1 className="dashboard-page-title">Historie hledání</h1>
-        <p className="dashboard-loading">Načítání...</p>
+        <h1 className="dashboard-page-title">{t.dashboard.historyTitle}</h1>
+        <p className="dashboard-loading">{t.common.loading}</p>
       </div>
     );
   }
@@ -37,10 +39,10 @@ export default function HistoryPage() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-page-header">
-        <h1 className="dashboard-page-title">Historie hledání</h1>
+        <h1 className="dashboard-page-title">{t.dashboard.historyTitle}</h1>
         {entries.length > 0 && (
           <button type="button" className="dashboard-clear-btn" onClick={handleClear}>
-            Smazat vše
+            {t.dashboard.clearAll}
           </button>
         )}
       </div>
@@ -51,8 +53,8 @@ export default function HistoryPage() {
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <p>Zatím nemáte žádnou historii hledání</p>
-          <Link href="/nabidky" className="dashboard-action-btn">Hledat nemovitosti</Link>
+          <p>{t.dashboard.historyEmpty}</p>
+          <Link href="/nabidky" className="dashboard-action-btn">{t.dashboard.searchProperties}</Link>
         </div>
       ) : (
         <div className="dashboard-history-list">
@@ -72,11 +74,11 @@ export default function HistoryPage() {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                    {entry.result_count != null && ` \u00B7 ${entry.result_count} výsledků`}
+                    {entry.result_count != null && ` \u00B7 ${entry.result_count} ${t.dashboard.resultsCount}`}
                   </span>
                 </div>
                 <Link href={`/nabidky?${params.toString()}`} className="dashboard-use-btn">
-                  Zopakovat
+                  {t.dashboard.repeatSearch}
                 </Link>
               </div>
             );

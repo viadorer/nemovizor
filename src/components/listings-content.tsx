@@ -13,12 +13,14 @@ import {
   ListingType, PropertyCategory,
   ApartmentSubtypes, HouseSubtypes, LandSubtypes, CommercialSubtypes, OtherSubtypes,
 } from "@/lib/types";
+import { brand } from "@/brands";
 import { LocationSearch } from "@/components/location-search";
 import type { DbCity } from "@/components/location-search";
 import { SavedSearches } from "@/components/saved-searches";
 import { AiSearch } from "@/components/ai-search";
 import { saveCurrentSearch } from "@/lib/saved-searches";
 import type { SavedSearch } from "@/lib/types";
+import { useT } from "@/i18n/provider";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -33,17 +35,9 @@ const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ),
 });
 
-const categoryLabels: Record<PropertyCategory, string> = {
-  apartment: "Byt", house: "Dům", land: "Pozemek", commercial: "Komerční", other: "Ostatní",
-};
-
 const subtypesByCategory: Record<PropertyCategory, Record<string, string>> = {
   apartment: ApartmentSubtypes, house: HouseSubtypes, land: LandSubtypes,
   commercial: CommercialSubtypes, other: OtherSubtypes,
-};
-
-const listingTypeLabels: Record<ListingType, string> = {
-  sale: "Prodej", rent: "Pronájem", auction: "Dražba", shares: "Podíly", project: "Projekt",
 };
 
 // Country bounding boxes [west, south, east, north]
@@ -79,6 +73,7 @@ type DropdownProps<T extends string> = {
 };
 
 function FilterDropdown<T extends string>({ label, value, options, onChange }: DropdownProps<T>) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -109,7 +104,7 @@ function FilterDropdown<T extends string>({ label, value, options, onChange }: D
             className={`filter-dropdown-item ${!value ? "filter-dropdown-item--active" : ""}`}
             onClick={() => { onChange(null); setOpen(false); }}
           >
-            Vše
+            {t.filters.all}
           </button>
           {options.map((opt) => (
             <button
@@ -141,6 +136,7 @@ type MultiDropdownProps = {
 };
 
 function MultiFilterDropdown({ label, values, options, groups, onChange }: MultiDropdownProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -202,7 +198,7 @@ function MultiFilterDropdown({ label, values, options, groups, onChange }: Multi
             className={`filter-dropdown-item ${!isActive ? "filter-dropdown-item--active" : ""}`}
             onClick={() => { onChange([]); }}
           >
-            Vše
+            {t.filters.all}
           </button>
           {groups ? (
             groups.map((g) => (
@@ -331,30 +327,6 @@ type PropertiesResponse = {
   page: number;
   pages: number;
   limit: number;
-};
-
-const COUNTRY_LABELS: Record<string, string> = {
-  cz: "\u010Cesko",
-  sk: "Slovensko",
-  at: "Rakousko",
-  de: "N\u011Bmecko",
-  hr: "Chorvatsko",
-  cy: "Kypr",
-  bg: "Bulharsko",
-  al: "Alb\u00E1nie",
-  es: "\u0160pan\u011Blsko",
-  it: "It\u00E1lie",
-  gr: "\u0158ecko",
-  fr: "Francie",
-  me: "\u010Cern\u00E1 Hora",
-  tr: "Turecko",
-  pt: "Portugalsko",
-  hu: "Ma\u010Farsko",
-  ch: "\u0160v\u00FDcarsko",
-  be: "Belgie",
-  nl: "Nizozemsko",
-  gb: "Velk\u00E1 Brit\u00E1nie",
-  mc: "Monako",
 };
 
 // ===== Helper: build query string from filters =====
@@ -515,6 +487,7 @@ export type ListingsContentProps = {
 };
 
 export function ListingsContent({ brokerId, agencyId, embedded }: ListingsContentProps = {}) {
+  const t = useT();
   const searchParams = useSearchParams();
   const initialCategory = embedded ? null : searchParams.get("category") as PropertyCategory | null;
   const initialListingType = embedded ? null : searchParams.get("listingType") as ListingType | null;
@@ -713,16 +686,16 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   // Build dropdown options from filter-options API
   const listingTypeOptions = useMemo(() => {
     if (!filterOptions) {
-      return (Object.entries(listingTypeLabels) as [ListingType, string][]).map(([value, label]) => ({ value, label }));
+      return (Object.entries(t.enumLabels.listingTypes) as [string, string][]).map(([value, label]) => ({ value: value as ListingType, label }));
     }
     return (filterOptions.listingTypes ?? [])
       .map((o) => ({
         value: o.value as ListingType,
-        label: listingTypeLabels[o.value as ListingType] || o.value,
+        label: t.enumLabels.listingTypes[o.value] || o.value,
         count: o.count,
       }))
       .filter((o) => o.label);
-  }, [filterOptions]);
+  }, [filterOptions, t]);
 
   const categoryOptions = useMemo(() => {
     // Always show all categories, using counts from filterOptions when available
@@ -732,12 +705,12 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
         countMap.set(o.value, o.count);
       }
     }
-    return (Object.entries(categoryLabels) as [PropertyCategory, string][]).map(([value, label]) => ({
-      value,
+    return (Object.entries(t.enumLabels.propertyCategories) as [string, string][]).map(([value, label]) => ({
+      value: value as PropertyCategory,
       label,
       count: countMap.get(value),
     }));
-  }, [filterOptions]);
+  }, [filterOptions, t]);
 
   // All subtype labels merged into a single lookup
   const allSubtypeLabels = useMemo(() => {
@@ -772,10 +745,10 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
           opts = opts.filter((o) => o.count !== undefined && o.count > 0)
             .sort((a, b) => (b.count || 0) - (a.count || 0));
         }
-        return { groupLabel: categoryLabels[cat], options: opts };
+        return { groupLabel: t.enumLabels.propertyCategories[cat] || cat, options: opts };
       })
       .filter((g) => g.options.length > 0);
-  }, [categories, filterOptions]);
+  }, [categories, filterOptions, t]);
 
   // Flat list fallback (used when only 1 category selected)
   const subtypeOptions = useMemo(() => {
@@ -786,9 +759,9 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const countryOptions = useMemo(() => {
     if (!filterOptions?.countries?.length) return [];
     return filterOptions.countries
-      .map((o) => ({ value: o.value, label: COUNTRY_LABELS[o.value] || o.value.toUpperCase(), count: o.count }))
+      .map((o) => ({ value: o.value, label: t.enumLabels.countries[o.value] || o.value.toUpperCase(), count: o.count }))
       .sort((a, b) => a.label.localeCompare(b.label, "cs"));
-  }, [filterOptions]);
+  }, [filterOptions, t]);
 
   // DB cities for LocationSearch autocomplete
   const dbCities: DbCity[] = useMemo(() => {
@@ -934,18 +907,18 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
             <div className="search-filters-bar">
               <AiSearch onFiltersReady={handleAiFilters} compact />
               <div className="search-filters-row">
-              <FilterDropdown label="Typ nabídky" value={listingType} options={listingTypeOptions} onChange={setListingType} />
+              <FilterDropdown label={t.filters.listingType} value={listingType} options={listingTypeOptions} onChange={setListingType} />
               <MultiFilterDropdown
-                label="Typ nemovitosti" values={categories} options={categoryOptions}
+                label={t.filters.category} values={categories} options={categoryOptions}
                 onChange={(vals) => { setCategories(vals); setSubtypes([]); }}
               />
               {categories.length > 0 && subtypeOptions.length > 0 && (
-                <MultiFilterDropdown label="Podtyp" values={subtypes} options={subtypeOptions} groups={subtypeGroups.length > 1 ? subtypeGroups : undefined} onChange={setSubtypes} />
+                <MultiFilterDropdown label={t.filters.subtype} values={subtypes} options={subtypeOptions} groups={subtypeGroups.length > 1 ? subtypeGroups : undefined} onChange={setSubtypes} />
               )}
-              <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
-              <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
+              <RangeDropdown label={t.filters.price} minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit={t.enumLabels.priceCurrencies[brand.currency] || brand.currency} />
+              <RangeDropdown label={t.filters.area} minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
               {countryOptions.length > 1 && (
-                <MultiFilterDropdown label="Země" values={countries} options={countryOptions} onChange={(vals) => {
+                <MultiFilterDropdown label={t.filters.country} values={countries} options={countryOptions} onChange={(vals) => {
                   setCountries(vals);
                   if (vals.length === 1) {
                     const bbox = COUNTRY_BBOXES[vals[0]];
@@ -955,7 +928,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               )}
 
               <LocationSearch
-                placeholder="Hledat město, ulici..."
+                placeholder={t.filters.searchLocation}
                 dbCities={dbCities}
                 onSelect={(item) => {
                   setMapFlyTo({ lat: item.lat, lon: item.lon, bbox: item.bbox });
@@ -979,7 +952,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
-                  {locationLabel || "Celé Česko"}
+                  {locationLabel || t.header.defaultLocation}
                 </button>
               )}
 
@@ -988,7 +961,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
-                  Smazat filtry
+                  {t.filters.resetFilters}
                 </button>
               )}
 
@@ -1000,29 +973,29 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
 
               <div className="search-results-bar">
                 <span className="search-results-count">
-                  {totalResults.toLocaleString("cs")} {totalResults === 1 ? "nabídka" : totalResults < 5 ? "nabídky" : "nabídek"}
-                  {locationLabel ? ` v ${locationLabel}` : isZoomed ? " v této oblasti" : ""}
-                  {totalPages > 1 && ` (str. ${page}/${totalPages})`}
+                  {totalResults.toLocaleString("cs")} {totalResults === 1 ? t.results.offerOne : totalResults < 5 ? t.results.offerFew : t.results.offerMany}
+                  {locationLabel ? ` v ${locationLabel}` : isZoomed ? ` ${t.results.inArea}` : ""}
+                  {totalPages > 1 && ` (${t.results.page} ${page}/${totalPages})`}
                 </span>
                 <select
                   className="search-sort-select"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <option value="featured">{"Doporu\u010den\u00e9"}</option>
-                  <option value="newest">{"Nejnov\u011bj\u0161\u00ed"}</option>
-                  <option value="oldest">{"Nejstar\u0161\u00ed"}</option>
-                  <option value="price_desc">{"Nejdra\u017e\u0161\u00ed"}</option>
-                  <option value="price_asc">{"Nejlevn\u011bj\u0161\u00ed"}</option>
-                  <option value="area_desc">{"Nejv\u011bt\u0161\u00ed plocha"}</option>
-                  <option value="area_asc">{"Nejmen\u0161\u00ed plocha"}</option>
+                  <option value="featured">{t.sort.recommended}</option>
+                  <option value="newest">{t.sort.newest}</option>
+                  <option value="oldest">{t.sort.oldest}</option>
+                  <option value="price_desc">{t.sort.priceDesc}</option>
+                  <option value="price_asc">{t.sort.priceAsc}</option>
+                  <option value="area_desc">{t.sort.areaDesc}</option>
+                  <option value="area_asc">{t.sort.areaAsc}</option>
                 </select>
                 <div className="view-toggle">
                   <button
                     className={`view-toggle__btn ${viewMode === "grid" ? "view-toggle__btn--active" : ""}`}
                     onClick={() => setViewMode("grid")}
-                    title="M\u0159\u00ed\u017eka"
-                    aria-label="Zobrazen\u00ed m\u0159\u00ed\u017ekou"
+                    title={t.header.gridViewTitle}
+                    aria-label={t.header.gridViewLabel}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -1034,8 +1007,8 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                   <button
                     className={`view-toggle__btn ${viewMode === "list" ? "view-toggle__btn--active" : ""}`}
                     onClick={() => setViewMode("list")}
-                    title="Seznam"
-                    aria-label="Zobrazen\u00ed seznamem"
+                    title={t.header.listViewTitle}
+                    aria-label={t.header.listViewLabel}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" />
@@ -1050,7 +1023,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
             <div className="search-results-scroll">
               {loading && properties.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                  Načítání...
+                  {t.common.loading}
                 </div>
               ) : (
                 <>
@@ -1076,7 +1049,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                     ))}
                     {properties.length === 0 && !loading && (
                       <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                        {"\u017d\u00e1dn\u00e9 nemovitosti neodpov\u00eddaj\u00ed zadan\u00fdm filtr\u016fm."}
+                        {t.results.noResults}
                       </div>
                     )}
                   </div>
@@ -1180,14 +1153,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-          <span>Domov</span>
+          <span>{t.nav.home}</span>
         </Link>
         <Link href="/nabidky" className="mobile-bar-item mobile-bar-item--active">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          <span>Nabídky</span>
+          <span>{t.nav.listings}</span>
         </Link>
         <button
           className="mobile-bar-toggle"
@@ -1207,21 +1180,23 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               <path d="M3 6h.01" /><path d="M3 12h.01" /><path d="M3 18h.01" />
             </svg>
           )}
-          <span>{mobileView === "list" ? "Mapa" : "Seznam"}</span>
+          <span>{mobileView === "list" ? t.results.mapView : t.results.listView}</span>
         </button>
-        <Link href="/oceneni" className="mobile-bar-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="4" y="2" width="16" height="20" rx="2" />
-            <path d="M8 6h8" /><path d="M8 10h8" /><path d="M8 14h4" />
-          </svg>
-          <span>Ocenění</span>
-        </Link>
+        {brand.features.valuation && (
+          <Link href="/oceneni" className="mobile-bar-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <path d="M8 6h8" /><path d="M8 10h8" /><path d="M8 14h4" />
+            </svg>
+            <span>{t.nav.valuation}</span>
+          </Link>
+        )}
         <Link href="/" className="mobile-bar-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          <span>Profil</span>
+          <span>{t.nav.profile}</span>
         </Link>
       </div>}
     </div>

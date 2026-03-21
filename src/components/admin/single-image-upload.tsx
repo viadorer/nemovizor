@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
+import { useT } from "@/i18n/provider";
 
 type SingleImageUploadProps = {
   label: string;
@@ -19,6 +20,7 @@ export function SingleImageUpload({
   shape = "square",
   size = 96,
 }: SingleImageUploadProps) {
+  const t = useT();
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -31,11 +33,11 @@ export function SingleImageUpload({
 
   async function uploadFile(file: File) {
     if (!ACCEPTED.includes(file.type)) {
-      setError("Povolene formaty: JPG, PNG, WebP");
+      setError(t.admin.allowedFormats);
       return;
     }
     if (file.size > MAX_SIZE) {
-      setError("Maximalni velikost: 10 MB");
+      setError(t.admin.maxFileSize);
       return;
     }
 
@@ -75,10 +77,10 @@ export function SingleImageUpload({
       if (url) {
         onChange(url);
       } else {
-        setError("Chyba pri nahravani");
+        setError(t.admin.uploadErrorGeneric);
       }
     } catch {
-      setError("Chyba pri nahravani");
+      setError(t.admin.uploadErrorGeneric);
     } finally {
       setUploading(false);
       setProgress(0);
@@ -182,10 +184,10 @@ export function SingleImageUpload({
         {/* Info + actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-            Pretahnete obrazek nebo kliknete pro vyber
+            {t.admin.dragOrClick}
           </span>
           <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-            JPG, PNG, WebP (max 10 MB)
+            {t.admin.dropzoneHint}
           </span>
 
           {error && (
@@ -201,14 +203,14 @@ export function SingleImageUpload({
                 className="admin-btn admin-btn--secondary admin-btn--sm"
                 onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
               >
-                Zmenit
+                {t.admin.change}
               </button>
               <button
                 type="button"
                 className="admin-btn admin-btn--danger admin-btn--sm"
                 onClick={(e) => { e.stopPropagation(); handleRemove(); }}
               >
-                Odebrat
+                {t.admin.remove}
               </button>
             </div>
           )}

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -41,7 +42,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
   const tabs = [
     {
       id: "nabidky",
-      label: "Nabidky",
+      label: t.nav.listings,
       count: propertiesPage1.total,
       content: (
         <DetailPropertiesGrid
