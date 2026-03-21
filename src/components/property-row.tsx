@@ -10,9 +10,10 @@ import { useT } from "@/i18n/provider";
 
 type PropertyRowProps = {
   property: Property;
+  isTip?: boolean;
 };
 
-export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowProps) {
+export const PropertyRow = memo(function PropertyRow({ property, isTip }: PropertyRowProps) {
   const t = useT();
   return (
     <div className="property-row">
@@ -32,8 +33,8 @@ export const PropertyRow = memo(function PropertyRow({ property }: PropertyRowPr
         <span className={`property-badge property-badge--${property.listingType}`}>
           {t.enumLabels.listingTypes[property.listingType] || property.listingType}
         </span>
-        {property.featured && (
-          <span className="property-badge property-badge--featured">{t.badges.premium}</span>
+        {isTip && (
+          <span className="property-badge property-badge--featured">{t.badges.tip}</span>
         )}
         <div className="property-broker-avatar">
           {property.showAgencyLogo ? (

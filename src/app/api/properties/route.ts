@@ -123,9 +123,18 @@ export async function GET(req: NextRequest) {
   }
 
   const total = count ?? 0;
+  const now = new Date().toISOString();
+
+  // Expire featured: if featured_until is set and past, treat as not featured
+  const rows = (data || []).map((row: Record<string, unknown>) => {
+    if (row.featured && row.featured_until && (row.featured_until as string) < now) {
+      return { ...row, featured: false };
+    }
+    return row;
+  });
 
   return NextResponse.json(
-    { data, total, page, pages: Math.ceil(total / limit), limit },
+    { data: rows, total, page, pages: Math.ceil(total / limit), limit },
     { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
   );
 }

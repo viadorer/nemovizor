@@ -118,6 +118,7 @@ const cs: Translation = {
   // ===== VÝSLEDKY =====
   results: {
     found: "nalezených nabídek",
+    tipListings: "Tip nabídky",
     noResults: "Žádné nemovitosti neodpovídají zadaným filtrům.",
     noResultsHint: "Zkuste změnit filtry nebo rozšířit oblast vyhledávání.",
     showing: "Zobrazeno",
@@ -144,6 +145,7 @@ const cs: Translation = {
   // ===== BADGE =====
   badges: {
     premium: "PREMIUM",
+    tip: "TIP",
     new: "NOVINKA",
     reduced: "SLEVA",
     reserved: "REZERVOVÁNO",
@@ -727,6 +729,14 @@ const cs: Translation = {
     activeCount: "aktivních",
     totalRequests: "Poptávky celkem",
     newCount: "nových",
+    tipStatsTitle: "TIP nabídky — statistiky",
+    tipImpressions: "Zobrazení v TIP sekci",
+    tipClicks: "Kliknutí z TIP",
+    tipContacts: "Poptávky z TIP",
+    tipActive: "Aktivní TIP nabídky",
+    tipExpiresLabel: "Platí do",
+    tipNoActive: "Žádné aktivní TIP nabídky",
+    last7days: "za 7 dní",
     // My listings page
     myListingsTitle: "Moje inzeráty",
     myListingsSearchPlaceholder: "Hledat podle názvu, města...",

@@ -118,6 +118,7 @@ const fr: Translation = {
   // ===== RÉSULTATS =====
   results: {
     found: "annonces trouvées",
+    tipListings: "Nos coups de coeur",
     noResults: "Aucune annonce trouvée",
     noResultsHint: "Essayez de modifier vos filtres ou d'élargir la zone de recherche.",
     showing: "Affichage",
@@ -144,6 +145,7 @@ const fr: Translation = {
   // ===== BADGES =====
   badges: {
     premium: "PREMIUM",
+    tip: "TOP",
     new: "NOUVEAU",
     reduced: "RÉDUIT",
     reserved: "RÉSERVÉ",
@@ -727,6 +729,14 @@ const fr: Translation = {
     activeCount: "actives",
     totalRequests: "Total des demandes",
     newCount: "nouvelles",
+    tipStatsTitle: "Annonces TIP — statistiques",
+    tipImpressions: "Vues en section TIP",
+    tipClicks: "Clics depuis TIP",
+    tipContacts: "Demandes depuis TIP",
+    tipActive: "Annonces TIP actives",
+    tipExpiresLabel: "Valable jusqu'au",
+    tipNoActive: "Aucune annonce TIP active",
+    last7days: "7 derniers jours",
     // My listings page
     myListingsTitle: "Mes annonces",
     myListingsSearchPlaceholder: "Rechercher par titre, ville...",

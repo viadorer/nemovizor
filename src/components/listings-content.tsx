@@ -532,6 +532,17 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const [mapLoading, setMapLoading] = useState(true);
   const [mapTruncated, setMapTruncated] = useState(false);
 
+  // Track TIP impressions (fire once per set of tip IDs)
+  const trackedTipIdsRef = useRef<string>("");
+  const trackViews = useCallback((propertyIds: string[], viewType: string) => {
+    if (propertyIds.length === 0) return;
+    fetch("/api/properties/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ propertyIds, viewType }),
+    }).catch(() => {});
+  }, []);
+
   // UI
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(null);
@@ -788,7 +799,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     try {
       const params = new URLSearchParams({
         query: cityName, lang: "cs", limit: "1", type: "regional",
-        locality: "cz", apikey: apiKey,
+        apikey: apiKey,
       });
       const res = await fetch(`https://api.mapy.cz/v1/suggest?${params}`, {
         headers: { "X-Mapy-Api-Key": apiKey },
@@ -866,11 +877,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const handleAiFilters = useCallback(async (aiFilters: Record<string, unknown>) => {
     if (aiFilters.listingType) setListingType(aiFilters.listingType as ListingType);
     if (aiFilters.category) setCategories([aiFilters.category as string]);
-    if (aiFilters.subtype) setSubtypes([aiFilters.subtype as string]);
+    if (aiFilters.subtypes) setSubtypes(aiFilters.subtypes as string[]);
     if (aiFilters.priceMin) setPriceMin(aiFilters.priceMin as number);
     if (aiFilters.priceMax) setPriceMax(aiFilters.priceMax as number);
     if (aiFilters.areaMin) setAreaMin(aiFilters.areaMin as number);
     if (aiFilters.areaMax) setAreaMax(aiFilters.areaMax as number);
+    if (aiFilters.country) {
+      setCountries([aiFilters.country as string]);
+    }
     if (aiFilters.city) {
       const cityName = aiFilters.city as string;
       setLocationLabel(cityName);
@@ -1027,32 +1041,76 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                 </div>
               ) : (
                 <>
-                  <div className={isMobile ? "search-results-grid" : viewMode === "list" ? "search-results-list" : "search-results-grid"} ref={(el) => {
-                    if (el && properties.length > 0) {
-                      try { sessionStorage.setItem("listing-slugs", JSON.stringify(properties.map(p => p.slug))); } catch {}
-                    }
-                  }}>
-                    {properties.map((property) => (
-                      <div
-                        key={property.id}
-                        onMouseEnter={() => setSelectedPropertyId(property.id)}
-                        onMouseLeave={() => setSelectedPropertyId(null)}
-                      >
-                        {isMobile ? (
-                          <PropertyRow property={property} />
-                        ) : viewMode === "list" ? (
-                          <PropertyRow property={property} />
-                        ) : (
-                          <PropertyCard property={property} />
+                  {/* Tip listings section — only on page 1 */}
+                  {(() => {
+                    const tipProperties = page === 1 ? properties.filter(p => p.featured).slice(0, 3) : [];
+                    const tipIds = new Set(tipProperties.map(p => p.id));
+                    const normalProperties = properties.filter(p => !tipIds.has(p.id));
+
+                    return (
+                      <>
+                        {tipProperties.length > 0 && (() => {
+                          // Track tip impressions once per unique set
+                          const tipKey = tipProperties.map(p => p.id).sort().join(",");
+                          if (tipKey && tipKey !== trackedTipIdsRef.current) {
+                            trackedTipIdsRef.current = tipKey;
+                            trackViews(tipProperties.map(p => p.id), "tip_impression");
+                          }
+                          return true;
+                        })() && (
+                          <>
+                            <div className="tip-section-header">{t.results.tipListings}</div>
+                            <div className={isMobile ? "search-results-grid" : viewMode === "list" ? "search-results-list" : "search-results-grid"}>
+                              {tipProperties.map((property) => (
+                                <div
+                                  key={`tip-${property.id}`}
+                                  onMouseEnter={() => setSelectedPropertyId(property.id)}
+                                  onMouseLeave={() => setSelectedPropertyId(null)}
+                                  onClick={() => trackViews([property.id], "detail_click")}
+                                >
+                                  {isMobile ? (
+                                    <PropertyRow property={property} isTip />
+                                  ) : viewMode === "list" ? (
+                                    <PropertyRow property={property} isTip />
+                                  ) : (
+                                    <PropertyCard property={property} isTip />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="tip-section-divider" />
+                          </>
                         )}
-                      </div>
-                    ))}
-                    {properties.length === 0 && !loading && (
-                      <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                        {t.results.noResults}
-                      </div>
-                    )}
-                  </div>
+
+                        <div className={isMobile ? "search-results-grid" : viewMode === "list" ? "search-results-list" : "search-results-grid"} ref={(el) => {
+                          if (el && properties.length > 0) {
+                            try { sessionStorage.setItem("listing-slugs", JSON.stringify(properties.map(p => p.slug))); } catch {}
+                          }
+                        }}>
+                          {normalProperties.map((property) => (
+                            <div
+                              key={property.id}
+                              onMouseEnter={() => setSelectedPropertyId(property.id)}
+                              onMouseLeave={() => setSelectedPropertyId(null)}
+                            >
+                              {isMobile ? (
+                                <PropertyRow property={property} />
+                              ) : viewMode === "list" ? (
+                                <PropertyRow property={property} />
+                              ) : (
+                                <PropertyCard property={property} />
+                              )}
+                            </div>
+                          ))}
+                          {normalProperties.length === 0 && tipProperties.length === 0 && !loading && (
+                            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
+                              {t.results.noResults}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {/* Pagination */}
                   {totalPages > 1 && (

@@ -114,7 +114,7 @@ export function LocationSearch({
       if (MAPY_API_KEY) {
         const params = new URLSearchParams({
           query: q, lang: "cs", limit: "6", type: "regional",
-          locality: "cz", apikey: MAPY_API_KEY,
+          apikey: MAPY_API_KEY,
         });
 
         const res = await fetch(`${SUGGEST_URL}?${params}`, {
@@ -221,7 +221,7 @@ export function LocationSearch({
       try {
         const params = new URLSearchParams({
           query: city.value, lang: "cs", limit: "1", type: "regional",
-          locality: "cz", apikey: MAPY_API_KEY,
+          apikey: MAPY_API_KEY,
         });
         const res = await fetch(`${SUGGEST_URL}?${params}`, {
           headers: { "X-Mapy-Api-Key": MAPY_API_KEY },

@@ -118,6 +118,7 @@ const en: Translation = {
   // ===== RESULTS =====
   results: {
     found: "properties found",
+    tipListings: "Top picks",
     noResults: "No properties found",
     noResultsHint: "Try changing your filters or expanding the search area.",
     showing: "Showing",
@@ -144,6 +145,7 @@ const en: Translation = {
   // ===== BADGES =====
   badges: {
     premium: "PREMIUM",
+    tip: "TIP",
     new: "NEW",
     reduced: "REDUCED",
     reserved: "RESERVED",
@@ -727,6 +729,14 @@ const en: Translation = {
     activeCount: "active",
     totalRequests: "Total inquiries",
     newCount: "new",
+    tipStatsTitle: "TIP listings — statistics",
+    tipImpressions: "TIP section views",
+    tipClicks: "Clicks from TIP",
+    tipContacts: "Inquiries from TIP",
+    tipActive: "Active TIP listings",
+    tipExpiresLabel: "Valid until",
+    tipNoActive: "No active TIP listings",
+    last7days: "last 7 days",
     // My listings page
     myListingsTitle: "My listings",
     myListingsSearchPlaceholder: "Search by title, city...",

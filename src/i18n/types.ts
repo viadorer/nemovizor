@@ -122,6 +122,7 @@ export interface Translation {
   // ===== VÝSLEDKY =====
   results: {
     found: string;
+    tipListings: string;
     noResults: string;
     noResultsHint: string;
     showing: string;
@@ -148,6 +149,7 @@ export interface Translation {
   // ===== BADGE =====
   badges: {
     premium: string;
+    tip: string;
     new: string;
     reduced: string;
     reserved: string;
@@ -733,6 +735,14 @@ export interface Translation {
     activeCount: string;
     totalRequests: string;
     newCount: string;
+    tipStatsTitle: string;
+    tipImpressions: string;
+    tipClicks: string;
+    tipContacts: string;
+    tipActive: string;
+    tipExpiresLabel: string;
+    tipNoActive: string;
+    last7days: string;
     // My listings page
     myListingsTitle: string;
     myListingsSearchPlaceholder: string;

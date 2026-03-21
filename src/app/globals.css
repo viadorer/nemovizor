@@ -2265,6 +2265,23 @@ a.ph-contact:hover { color: var(--accent); }
   min-width: unset;
 }
 
+/* ===== TIP SECTION ===== */
+.tip-section-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 0 8px 0;
+}
+
+.tip-section-divider {
+  height: 1px;
+  background-color: #d0d0d0 !important;
+  margin: 20px 0;
+  border: none;
+}
+
 /* ===== VIEW TOGGLE ===== */
 .view-toggle {
   display: flex;
