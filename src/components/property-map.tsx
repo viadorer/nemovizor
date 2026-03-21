@@ -144,9 +144,14 @@ export default function PropertyMap({
   truncatedRef.current = truncated;
   const restoredFromSessionRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const poiLayerRef = useRef<L.LayerGroup | null>(null);
+  const poiCacheRef = useRef<Map<string, L.CircleMarker[]>>(new Map());
   const onFlyToDoneRef = useRef(onFlyToDone);
   onFlyToDoneRef.current = onFlyToDone;
   const flyToActiveRef = useRef(false);
+  const [poiCategories, setPoiCategories] = useState<string[]>([]);
+  const [poiOpen, setPoiOpen] = useState(false);
+  const poiRef = useRef<HTMLDivElement>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     if (typeof window === "undefined") return "classic";
     try {
@@ -345,6 +350,150 @@ export default function PropertyMap({
     try { sessionStorage.setItem("nemovizor-map-style", mapStyle); } catch {}
   }, [mapStyle]);
 
+  // ===== POI (Points of Interest) =====
+  const POI_DEFS: Record<string, { label: string; color: string; query: string }> = {
+    school: { label: "Školy", color: "#f59e0b", query: 'node["amenity"~"school|kindergarten"]' },
+    transport: { label: "MHD", color: "#3b82f6", query: 'node["public_transport"="stop_position"]' },
+    shop: { label: "Obchody", color: "#10b981", query: 'node["shop"~"supermarket|convenience|mall"]' },
+    restaurant: { label: "Restaurace", color: "#ef4444", query: 'node["amenity"~"restaurant|cafe|fast_food"]' },
+    health: { label: "Zdravotnictví", color: "#ec4899", query: 'node["amenity"~"hospital|clinic|pharmacy|doctors"]' },
+    sport: { label: "Sport", color: "#8b5cf6", query: 'node["leisure"~"fitness_centre|sports_centre|swimming_pool|pitch"]' },
+    park: { label: "Parky", color: "#22c55e", query: 'node["leisure"~"park|garden|playground"]' },
+  };
+
+  useEffect(() => {
+    if (poiRef.current) {
+      const handler = (e: MouseEvent) => {
+        if (poiRef.current && !poiRef.current.contains(e.target as Node)) setPoiOpen(false);
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
+  }, [poiOpen]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (!poiLayerRef.current) {
+      poiLayerRef.current = L.layerGroup().addTo(map);
+    }
+    const layer = poiLayerRef.current;
+    layer.clearLayers();
+
+    if (poiCategories.length === 0) return;
+
+    const bounds = map.getBounds();
+    const south = bounds.getSouth(), west = bounds.getWest(), north = bounds.getNorth(), east = bounds.getEast();
+    const zoom = map.getZoom();
+    if (zoom < 12) return; // Don't fetch POI at low zoom
+
+    const queries = poiCategories.map((cat) => {
+      const def = POI_DEFS[cat];
+      if (!def) return "";
+      return `${def.query}(${south},${west},${north},${east});`;
+    }).join("");
+
+    const overpassQuery = `[out:json][timeout:10];(${queries});out center 500;`;
+    const cacheKey = `${poiCategories.sort().join(",")}-${south.toFixed(3)},${west.toFixed(3)},${north.toFixed(3)},${east.toFixed(3)}`;
+
+    if (poiCacheRef.current.has(cacheKey)) {
+      poiCacheRef.current.get(cacheKey)!.forEach((m) => layer.addLayer(m));
+      return;
+    }
+
+    fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const markers: L.CircleMarker[] = [];
+        for (const el of data.elements || []) {
+          const lat = el.lat ?? el.center?.lat;
+          const lon = el.lon ?? el.center?.lon;
+          if (!lat || !lon) continue;
+
+          // Determine category
+          let color = "#888";
+          let tooltip = el.tags?.name || "";
+          for (const cat of poiCategories) {
+            const def = POI_DEFS[cat];
+            if (!def) continue;
+            // Simple match
+            const tags = el.tags || {};
+            if (cat === "school" && (tags.amenity === "school" || tags.amenity === "kindergarten")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
+            if (cat === "transport" && tags.public_transport) { color = def.color; tooltip = tooltip || "Zastávka"; break; }
+            if (cat === "shop" && tags.shop) { color = def.color; tooltip = tooltip || tags.shop; break; }
+            if (cat === "restaurant" && (tags.amenity === "restaurant" || tags.amenity === "cafe" || tags.amenity === "fast_food")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
+            if (cat === "health" && (tags.amenity === "hospital" || tags.amenity === "clinic" || tags.amenity === "pharmacy" || tags.amenity === "doctors")) { color = def.color; tooltip = tooltip || tags.amenity; break; }
+            if (cat === "sport" && tags.leisure) { color = def.color; tooltip = tooltip || tags.leisure; break; }
+            if (cat === "park" && tags.leisure) { color = def.color; tooltip = tooltip || tags.leisure; break; }
+          }
+
+          const marker = L.circleMarker([lat, lon], {
+            radius: 5, fillColor: color, color: "#fff", weight: 1, fillOpacity: 0.85,
+          });
+          if (tooltip) marker.bindTooltip(tooltip, { direction: "top", offset: [0, -6] });
+          markers.push(marker);
+          layer.addLayer(marker);
+        }
+        poiCacheRef.current.set(cacheKey, markers);
+      })
+      .catch(() => {});
+
+    // Re-fetch on move
+    const onMoveEnd = () => {
+      if (poiCategories.length === 0) return;
+      const b = map.getBounds();
+      const z = map.getZoom();
+      if (z < 12) { layer.clearLayers(); return; }
+      const s = b.getSouth(), w = b.getWest(), n = b.getNorth(), e = b.getEast();
+      const qs = poiCategories.map((cat) => {
+        const def = POI_DEFS[cat];
+        return def ? `${def.query}(${s},${w},${n},${e});` : "";
+      }).join("");
+      const q = `[out:json][timeout:10];(${qs});out center 500;`;
+      const ck = `${poiCategories.sort().join(",")}-${s.toFixed(3)},${w.toFixed(3)},${n.toFixed(3)},${e.toFixed(3)}`;
+      if (poiCacheRef.current.has(ck)) {
+        layer.clearLayers();
+        poiCacheRef.current.get(ck)!.forEach((m) => layer.addLayer(m));
+        return;
+      }
+      fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          layer.clearLayers();
+          const ms: L.CircleMarker[] = [];
+          for (const el of data.elements || []) {
+            const lat2 = el.lat ?? el.center?.lat;
+            const lon2 = el.lon ?? el.center?.lon;
+            if (!lat2 || !lon2) continue;
+            let col = "#888", tt = el.tags?.name || "";
+            for (const cat of poiCategories) {
+              const def = POI_DEFS[cat];
+              if (!def) continue;
+              const t = el.tags || {};
+              if ((cat === "school" && (t.amenity === "school" || t.amenity === "kindergarten")) ||
+                  (cat === "transport" && t.public_transport) ||
+                  (cat === "shop" && t.shop) ||
+                  (cat === "restaurant" && (t.amenity === "restaurant" || t.amenity === "cafe" || t.amenity === "fast_food")) ||
+                  (cat === "health" && (t.amenity === "hospital" || t.amenity === "clinic" || t.amenity === "pharmacy" || t.amenity === "doctors")) ||
+                  (cat === "sport" && t.leisure) ||
+                  (cat === "park" && t.leisure)) {
+                col = def.color; tt = tt || t.amenity || t.leisure || t.shop || def.label;
+                break;
+              }
+            }
+            const m = L.circleMarker([lat2, lon2], { radius: 5, fillColor: col, color: "#fff", weight: 1, fillOpacity: 0.85 });
+            if (tt) m.bindTooltip(tt, { direction: "top", offset: [0, -6] });
+            ms.push(m);
+            layer.addLayer(m);
+          }
+          poiCacheRef.current.set(ck, ms);
+        })
+        .catch(() => {});
+    };
+    map.on("moveend", onMoveEnd);
+    return () => { map.off("moveend", onMoveEnd); };
+  }, [poiCategories]);
+
   // FlyTo from location search — only depend on flyTo, use ref for callback
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -399,19 +548,62 @@ export default function PropertyMap({
         }}
       />
       {!singleProperty && (
-        <div className="map-style-switcher">
-          {(Object.keys(TILE_LAYERS) as MapStyle[]).map((key) => (
+        <>
+          <div className="map-style-switcher">
+            {(Object.keys(TILE_LAYERS) as MapStyle[]).map((key) => (
+              <button
+                key={key}
+                className={`map-style-btn ${mapStyle === key ? "map-style-btn--active" : ""}`}
+                onClick={() => setMapStyle(key)}
+                title={TILE_LAYERS[key].label}
+              >
+                <span className="map-style-btn-icon"><MapStyleIcon style={key} /></span>
+                <span className="map-style-btn-label">{TILE_LAYERS[key].label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="map-poi-control" ref={poiRef}>
             <button
-              key={key}
-              className={`map-style-btn ${mapStyle === key ? "map-style-btn--active" : ""}`}
-              onClick={() => setMapStyle(key)}
-              title={TILE_LAYERS[key].label}
+              className={`map-poi-btn ${poiCategories.length > 0 ? "map-poi-btn--active" : ""}`}
+              onClick={() => setPoiOpen(!poiOpen)}
+              title="Body zájmu"
             >
-              <span className="map-style-btn-icon"><MapStyleIcon style={key} /></span>
-              <span className="map-style-btn-label">{TILE_LAYERS[key].label}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>POI</span>
+              {poiCategories.length > 0 && <span className="map-poi-badge">{poiCategories.length}</span>}
             </button>
-          ))}
-        </div>
+            {poiOpen && (
+              <div className="map-poi-menu">
+                <div className="map-poi-menu-title">Body zájmu</div>
+                {Object.entries(POI_DEFS).map(([key, def]) => (
+                  <button
+                    key={key}
+                    className={`map-poi-item ${poiCategories.includes(key) ? "map-poi-item--active" : ""}`}
+                    onClick={() => {
+                      setPoiCategories((prev) =>
+                        prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]
+                      );
+                    }}
+                  >
+                    <span className="map-poi-dot" style={{ background: def.color }} />
+                    <span>{def.label}</span>
+                  </button>
+                ))}
+                {poiCategories.length > 0 && (
+                  <button className="map-poi-item map-poi-clear" onClick={() => setPoiCategories([])}>
+                    Skrýt vše
+                  </button>
+                )}
+                {(mapInstanceRef.current?.getZoom() ?? 0) < 12 && poiCategories.length > 0 && (
+                  <div className="map-poi-hint">Přibližte mapu pro zobrazení POI</div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
