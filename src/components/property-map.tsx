@@ -15,9 +15,9 @@ import type { Translation } from "@/i18n/types";
 function createMarkerIcon(_isFeatured: boolean) {
   return L.icon({
     iconUrl: "/branding/pointmap.png",
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30],
   });
 }
 
@@ -212,7 +212,7 @@ export default function PropertyMap({
         return L.divIcon({
           html: `<div class="map-cluster-icon">${count}${plus}</div>`,
           className: "map-cluster-wrapper",
-          iconSize: [40, 40],
+          iconSize: [34, 34],
         });
       },
     }).addTo(map);
@@ -427,7 +427,7 @@ export default function PropertyMap({
           }
 
           const marker = L.circleMarker([lat, lon], {
-            radius: 5, fillColor: color, color: "#fff", weight: 1, fillOpacity: 0.85,
+            radius: 4, fillColor: color, color: "#fff", weight: 1, fillOpacity: 0.85,
           });
           if (tooltip) marker.bindTooltip(tooltip, { direction: "top", offset: [0, -6] });
           markers.push(marker);
@@ -480,7 +480,7 @@ export default function PropertyMap({
                 break;
               }
             }
-            const m = L.circleMarker([lat2, lon2], { radius: 5, fillColor: col, color: "#fff", weight: 1, fillOpacity: 0.85 });
+            const m = L.circleMarker([lat2, lon2], { radius: 4, fillColor: col, color: "#fff", weight: 1, fillOpacity: 0.85 });
             if (tt) m.bindTooltip(tt, { direction: "top", offset: [0, -6] });
             ms.push(m);
             layer.addLayer(m);

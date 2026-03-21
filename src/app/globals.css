@@ -980,11 +980,11 @@ nav ul li a.active {
 
 .property-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -4738,8 +4738,8 @@ a.ph-contact:hover { color: var(--accent); }
   background: transparent !important;
 }
 .map-cluster-icon {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-text);

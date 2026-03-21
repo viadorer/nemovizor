@@ -1396,6 +1396,19 @@ const cs: Translation = {
     sinceYear: "Od roku",
   },
 
+  // ===== HYPOTEČNÍ KALKULAČKA =====
+  mortgage: {
+    title: "Hypoteční kalkulačka",
+    monthlyPayment: "Měsíční splátka",
+    ownFunds: "Vlastní zdroje",
+    interestRate: "Úroková sazba",
+    repaymentPeriod: "Doba splatnosti",
+    yearsLabel: "let",
+    loanAmount: "Výše úvěru",
+    totalPaid: "Celkem zaplaceno",
+    ofWhichInterest: "Z toho úroky",
+  },
+
   // ===== SPOLEČNÉ =====
   common: {
     save: "Uložit",

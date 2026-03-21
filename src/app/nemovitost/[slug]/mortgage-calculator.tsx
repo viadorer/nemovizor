@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useT } from "@/i18n/provider";
 
 type MortgageCalculatorProps = {
   propertyPrice: number;
@@ -15,6 +16,7 @@ function fmtMortgage(n: number, currency: string): string {
 }
 
 export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCalculatorProps) {
+  const t = useT();
   const [downPaymentPct, setDownPaymentPct] = useState(20);
   const [rate, setRate] = useState(4.0);
   const [years, setYears] = useState(30);
@@ -53,17 +55,17 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
           <rect x="4" y="2" width="16" height="20" rx="2" />
           <path d="M8 6h8M8 10h8M8 14h3M13 14h3M8 18h3M13 18h3" />
         </svg>
-        Hypoteční kalkulačka
+        {t.mortgage.title}
       </h3>
 
       <div className="mortgage-result-main">
-        <span className="mortgage-result-label">Měsíční splátka</span>
+        <span className="mortgage-result-label">{t.mortgage.monthlyPayment}</span>
         <span className="mortgage-result-value">{fmt(result.monthly)}</span>
       </div>
 
       <div className="mortgage-slider-group">
         <div className="mortgage-slider-header">
-          <span>Vlastní zdroje</span>
+          <span>{t.mortgage.ownFunds}</span>
           <span className="mortgage-slider-value">{downPaymentPct} % ({fmt(propertyPrice * downPaymentPct / 100)})</span>
         </div>
         <input
@@ -83,7 +85,7 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
 
       <div className="mortgage-slider-group">
         <div className="mortgage-slider-header">
-          <span>Úroková sazba</span>
+          <span>{t.mortgage.interestRate}</span>
           <span className="mortgage-slider-value">{rate.toFixed(1)} %</span>
         </div>
         <input
@@ -103,8 +105,8 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
 
       <div className="mortgage-slider-group">
         <div className="mortgage-slider-header">
-          <span>Doba splatnosti</span>
-          <span className="mortgage-slider-value">{years} let</span>
+          <span>{t.mortgage.repaymentPeriod}</span>
+          <span className="mortgage-slider-value">{years} {t.mortgage.yearsLabel}</span>
         </div>
         <input
           type="range"
@@ -123,15 +125,15 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
 
       <div className="mortgage-summary">
         <div className="mortgage-summary-row">
-          <span>Výše úvěru</span>
+          <span>{t.mortgage.loanAmount}</span>
           <span>{fmt(result.principal)}</span>
         </div>
         <div className="mortgage-summary-row">
-          <span>Celkem zaplaceno</span>
+          <span>{t.mortgage.totalPaid}</span>
           <span>{fmt(result.totalPaid)}</span>
         </div>
         <div className="mortgage-summary-row mortgage-summary-row--interest">
-          <span>Z toho úroky</span>
+          <span>{t.mortgage.ofWhichInterest}</span>
           <span>{fmt(result.totalInterest)}</span>
         </div>
       </div>

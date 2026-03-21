@@ -1396,6 +1396,19 @@ const fr: Translation = {
     sinceYear: "Depuis",
   },
 
+  // ===== CALCULATEUR HYPOTHÉCAIRE =====
+  mortgage: {
+    title: "Calculateur hypothécaire",
+    monthlyPayment: "Mensualité",
+    ownFunds: "Apport personnel",
+    interestRate: "Taux d'intérêt",
+    repaymentPeriod: "Durée du prêt",
+    yearsLabel: "ans",
+    loanAmount: "Montant du prêt",
+    totalPaid: "Total remboursé",
+    ofWhichInterest: "Dont intérêts",
+  },
+
   // ===== COMMUN =====
   common: {
     save: "Enregistrer",

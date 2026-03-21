@@ -30,6 +30,24 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/**",
       },
+      {
+        // Realitní portály (scraped listings)
+        protocol: "https",
+        hostname: "*.rmcl.cz",
+        pathname: "/**",
+      },
+      {
+        // Sreality a jiné portály
+        protocol: "https",
+        hostname: "*.sreality.cz",
+        pathname: "/**",
+      },
+      {
+        // Bezrealitky
+        protocol: "https",
+        hostname: "*.bezrealitky.cz",
+        pathname: "/**",
+      },
     ],
   },
 };

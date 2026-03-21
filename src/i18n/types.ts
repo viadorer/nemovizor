@@ -1209,6 +1209,19 @@ export interface Translation {
     sinceYear: string;
   };
 
+  // ===== HYPOTEČNÍ KALKULAČKA =====
+  mortgage: {
+    title: string;
+    monthlyPayment: string;
+    ownFunds: string;
+    interestRate: string;
+    repaymentPeriod: string;
+    yearsLabel: string;
+    loanAmount: string;
+    totalPaid: string;
+    ofWhichInterest: string;
+  };
+
   // ===== SPOLEČNÉ =====
   common: {
     save: string;

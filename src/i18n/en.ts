@@ -1396,6 +1396,19 @@ const en: Translation = {
     sinceYear: "Since",
   },
 
+  // ===== MORTGAGE CALCULATOR =====
+  mortgage: {
+    title: "Mortgage calculator",
+    monthlyPayment: "Monthly payment",
+    ownFunds: "Down payment",
+    interestRate: "Interest rate",
+    repaymentPeriod: "Loan term",
+    yearsLabel: "years",
+    loanAmount: "Loan amount",
+    totalPaid: "Total paid",
+    ofWhichInterest: "Of which interest",
+  },
+
   // ===== COMMON =====
   common: {
     save: "Save",

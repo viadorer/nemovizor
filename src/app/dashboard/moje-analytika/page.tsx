@@ -145,7 +145,7 @@ export default function BrokerAnalyticsPage() {
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #e0e0e0", fontSize: 13, color: "var(--text-muted)" }}>
-                      Nabídka
+                      {t.dashboard.listingNameLabel}
                     </th>
                     <th style={{ textAlign: "center", padding: "8px 12px", borderBottom: "1px solid #e0e0e0", fontSize: 13, color: "var(--text-muted)" }}>
                       {t.dashboard.tipImpressions}
