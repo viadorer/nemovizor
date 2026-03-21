@@ -144,7 +144,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                   </svg>
                   Popis
                 </h2>
-                <p className="detail-description">{property.summary}</p>
+                <p className="detail-description" style={{ whiteSpace: "pre-line" }}>{property.description || property.summary}</p>
               </div>
 
               <div className="detail-section">

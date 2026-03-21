@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ============================================================
-// Bienici.com Scraper — French Coast (53 cities)
+// Bienici.com Scraper — Monaco Area (FR Riviera towns bordering Monaco)
 // Uses targeted zone API with access_token
-// Usage: node scripts/scrape-bienici-coast.mjs [--delay 800] [--max-per-city 500]
+// Usage: node scripts/scrape-monaco.mjs [--delay 2000] [--max-per-city 500] [--pages 20]
 // ============================================================
 
 import { createClient } from "@supabase/supabase-js";
@@ -20,106 +20,31 @@ function getArg(name, def) {
   return i >= 0 && args[i + 1] ? args[i + 1] : def;
 }
 
-const DELAY_MS = Number(getArg("--delay", "800"));
+const DELAY_MS = Number(getArg("--delay", "2000"));
 const MAX_PER_CITY = Number(getArg("--max-per-city", "500"));
+const DEFAULT_PAGES = Number(getArg("--pages", "20"));
 const PER_PAGE = 24;
-const MAX_PAGES_PER_CITY = Math.ceil(MAX_PER_CITY / PER_PAGE);
-const MAX_IMAGES = 6;
+const MAX_PAGES_PER_CITY = Math.min(DEFAULT_PAGES, Math.ceil(MAX_PER_CITY / PER_PAGE));
+const MAX_IMAGES = 8;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 const BASE = "https://www.bienici.com/realEstateAds.json";
 const TOKEN = "IPHtg0ppwnnMfdB+tJ/3/t5jfBKBAfi0cmag4L/hyjw=:69bd829d18f67000b49bc797";
 const TOKEN_ID = "69bd829d18f67000b49bc797";
+const SUGGEST_URL = "https://res.bienici.com/suggest.json";
 
-// === French coastal cities ===
+// === Monaco-area zones (FR towns bordering Monaco) ===
+// Monaco itself is not on bienici.com (French portal only).
+// We scrape the surrounding FR Riviera towns that form the "Monaco area".
 const ZONES = [
-  // Côte d'Azur
-  { name: "Nice", id: "-170100" },
-  { name: "Cannes", id: "-91734" },
-  { name: "Antibes", id: "-74687" },
-  { name: "Menton", id: "-74727" },
-  { name: "Saint-Tropez", id: "-970823" },
-  { name: "Fréjus", id: "-186322" },
-  { name: "Saint-Raphaël", id: "-190208" },
-  { name: "Villefranche-sur-Mer", id: "-174961" },
-  { name: "Beaulieu-sur-Mer", id: "-174955" },
-  { name: "Cap-d'Ail", id: "-174956" },
-  { name: "Èze", id: "-174959" },
-  { name: "Roquebrune-Cap-Martin", id: "-174558" },
-  { name: "Mougins", id: "-89292" },
-  { name: "Grasse", id: "-102748" },
-  { name: "Mandelieu-la-Napoule", id: "-91777" },
-  { name: "Théoule-sur-Mer", id: "-74695" },
-  // Var coast
-  { name: "Toulon", id: "-35280" },
-  { name: "Hyères", id: "-380060" },
-  { name: "Bandol", id: "-1203272" },
-  { name: "Sanary-sur-Mer", id: "-163056" },
-  { name: "Six-Fours-les-Plages", id: "-194637" },
-  { name: "La Seyne-sur-Mer", id: "-29188" },
-  { name: "Sainte-Maxime", id: "-223565" },
-  { name: "Cavalaire-sur-Mer", id: "-971022" },
-  { name: "Le Lavandou", id: "-970872" },
-  // Provence
-  { name: "Marseille", id: "-76469" },
-  { name: "Cassis", id: "-76425" },
-  { name: "La Ciotat", id: "-67741" },
-  { name: "Aix-en-Provence", id: "-70279" },
-  // Languedoc
-  { name: "Montpellier", id: "-28722" },
-  { name: "Sète", id: "-255450" },
-  { name: "Agde", id: "-254843" },
-  { name: "Narbonne", id: "-54737" },
-  { name: "Perpignan", id: "-18000" },
-  { name: "Collioure", id: "-18409" },
-  { name: "Banyuls-sur-Mer", id: "-18391" },
-  // Atlantic / Basque
-  { name: "Biarritz", id: "-166717" },
-  { name: "Bayonne", id: "-166713" },
-  { name: "Saint-Jean-de-Luz", id: "-166727" },
-  { name: "Arcachon", id: "-109382" },
-  { name: "La Rochelle", id: "-117858" },
-  { name: "Les Sables-d'Olonne", id: "-156591" },
-  // Brittany
-  { name: "Saint-Malo", id: "-905534" },
-  { name: "Dinard", id: "-177066" },
-  // Normandy
-  { name: "Deauville", id: "-135589" },
-  { name: "Honfleur", id: "-126415" },
-  { name: "Étretat", id: "-2673357" },
-  { name: "Dieppe", id: "-110435" },
-  // Corsica — all
-  { name: "Ajaccio", id: "-73283" },
-  { name: "Bastia", id: "-73444" },
-  { name: "Porto-Vecchio", id: "-89326" },
-  { name: "Bonifacio", id: "-122377" },
-  { name: "Calvi", id: "-1151255" },
-  { name: "Propriano", id: "-73343" },
-  { name: "Sartène", id: "-1112243" },
-  { name: "Corte", id: "-1772249" },
-  { name: "L'Île-Rousse", id: "-1928202" },
-  { name: "Saint-Florent", id: "-1133644" },
-  { name: "Ghisonaccia", id: "-76886" },
-  { name: "Aléria", id: "-76760" },
-  { name: "Sari-Solenzara", id: "-77318" },
-  { name: "Figari", id: "-122378" },
-  { name: "Cargèse", id: "-1110906" },
-  { name: "Piana", id: "-1112167" },
-  { name: "Serra-di-Ferro", id: "-73196" },
-  { name: "Olmeto", id: "-73339" },
-  { name: "Zonza", id: "-85496" },
-  { name: "Lecci", id: "-85886" },
-  { name: "Lumio", id: "-1132307" },
-  { name: "Algajola", id: "-1115363" },
-  { name: "Belgodère", id: "-74160" },
-  { name: "Patrimonio", id: "-3226798" },
-  { name: "Grosseto-Prugna", id: "-73286" },
-  { name: "Pietrosella", id: "-73260" },
-  { name: "Coti-Chiavari", id: "-73218" },
-  { name: "Vico", id: "-1110949" },
-  { name: "Ota", id: "-1110926" },
-  { name: "Galéria", id: "-1127838" },
-  { name: "Bastelicaccia", id: "-73267" },
-  { name: "Peri", id: "-150120" },
+  { name: "Beausoleil", id: "-174562" },      // Directly borders Monaco
+  { name: "Cap-d'Ail", id: "-174956" },       // West of Monaco
+  { name: "Menton", id: "-74727" },            // East of Monaco
+  { name: "Roquebrune-Cap-Martin", id: "" },   // Will be discovered
+  { name: "La Turbie", id: "" },               // Above Monaco
+  { name: "Èze", id: "" },                     // Near Monaco
+  { name: "Villefranche-sur-Mer", id: "" },    // Near Monaco
+  { name: "Beaulieu-sur-Mer", id: "" },        // Near Monaco
+  { name: "Saint-Jean-Cap-Ferrat", id: "" },   // Near Monaco
 ];
 
 // ===== Load env =====
@@ -152,7 +77,7 @@ const r2 = (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY)
 if (!r2) console.warn("WARNING: R2 not configured — images skipped");
 
 // ===== State =====
-const STATE_FILE = resolve(ROOT, "scripts/.scrape-bienici-coast-state.json");
+const STATE_FILE = resolve(ROOT, "scripts/.scrape-state-monaco.json");
 function loadState() {
   try { return JSON.parse(readFileSync(STATE_FILE, "utf8")); }
   catch { return { seen: {}, stats: { properties: 0, images: 0, skipped: 0 }, completedZones: [] }; }
@@ -171,6 +96,39 @@ function mapPropertyType(t) {
   return map[t] || "other";
 }
 function mapAdType(t) { return t === "rent" ? "rent" : "sale"; }
+
+// ===== Discover missing zone IDs from suggest API =====
+async function resolveZoneIds() {
+  console.log("  Resolving zone IDs from bienici suggest API...");
+  const resolved = [];
+  for (const zone of ZONES) {
+    if (zone.id) {
+      resolved.push(zone);
+      console.log(`  ${zone.name}: ${zone.id} (hardcoded)`);
+      continue;
+    }
+    try {
+      const url = `${SUGGEST_URL}?q=${encodeURIComponent(zone.name)}`;
+      const resp = await fetch(url, {
+        headers: { "User-Agent": UA, "Referer": "https://www.bienici.com/" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (data.length && data[0].zoneIds?.length) {
+        zone.id = data[0].zoneIds[0];
+        resolved.push(zone);
+        console.log(`  ${zone.name}: ${zone.id} (discovered)`);
+      } else {
+        console.log(`  ${zone.name}: not found`);
+      }
+      await sleep(300);
+    } catch (e) {
+      console.warn(`  ${zone.name}: error ${e.message}`);
+    }
+  }
+  return resolved;
+}
 
 // ===== R2 Upload =====
 async function uploadToR2(imageUrl, slug) {
@@ -198,7 +156,7 @@ async function geocodeCity(city, postalCode) {
   const key = `${city}-${postalCode || ""}`;
   if (geoCache.has(key)) return geoCache.get(key);
   try {
-    const q = encodeURIComponent(`${city} ${postalCode || ""} France`);
+    const q = encodeURIComponent(`${city} ${postalCode || ""} Monaco`);
     const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
       headers: { "User-Agent": "Nemovizor/1.0 (educational)" }, signal: AbortSignal.timeout(5000),
     });
@@ -218,12 +176,12 @@ async function geocodeCity(city, postalCode) {
 async function insertProperty(ad, r2Images) {
   const id = ad.id;
   const title = ad.title || `${ad.propertyType === "flat" ? "Appartement" : "Maison"} ${ad.roomsQuantity || ""}p - ${ad.city}`;
-  const city = ad.city || "France";
+  const city = ad.city || "Monaco";
   const district = ad.district?.name || ad.displayDistrictName || city;
   const rawPrice = ad.price;
   const price = Array.isArray(rawPrice) ? rawPrice[0] : (typeof rawPrice === "number" ? rawPrice : parseFloat(rawPrice) || 0);
   if (price < 1000 && mapAdType(ad.adType) === "sale") return { skipped: true };
-  if (price > 120000000) return { skipped: true };
+  if (price > 500000000) return { skipped: true }; // Monaco can have very expensive properties
 
   const slug = slugify(title + "-" + city + "-bn" + id.replace(/[^a-z0-9]/gi, "").slice(-8));
   const { data: dup } = await sb.from("properties").select("id").eq("title", title).eq("city", city).maybeSingle();
@@ -249,7 +207,7 @@ async function insertProperty(ad, r2Images) {
     rooms_label: ad.roomsQuantity ? `${ad.roomsQuantity} pieces` : undefined,
     price, price_currency: "eur",
     price_unit: mapAdType(ad.adType) === "rent" ? "za_mesic" : undefined,
-    city, district,
+    city, district, country: "fr",
     location_label: `${district}, ${city} ${ad.postalCode || ""}`.trim(),
     latitude: lat, longitude: lng,
     area: typeof area === "number" ? area : parseFloat(area) || 0,
@@ -261,6 +219,7 @@ async function insertProperty(ad, r2Images) {
     garage: ad.hasParking || false,
     image_src: r2Images[0], image_alt: title, images: r2Images,
     featured: false, active: true,
+    source: "bienici",
   };
 
   const { error } = await sb.from("properties").insert(property);
@@ -289,20 +248,25 @@ async function fetchPage(type, page, zoneId) {
 
 // ===== Main =====
 async function main() {
-  console.log(`\n  Bienici FRENCH COAST Scraper — ${ZONES.length} cities | Delay: ${DELAY_MS}ms\n`);
+  console.log(`\n  Bienici MONACO Scraper | Delay: ${DELAY_MS}ms | Max per city: ${MAX_PER_CITY}\n`);
+
+  // Discover zones dynamically
+  console.log("  Discovering Monaco zones from bienici suggest API...");
+  const ZONES = await resolveZoneIds();
+  console.log(`  Using ${ZONES.length} zone(s): ${ZONES.map(z => z.name).join(", ")}\n`);
+
   const state = loadState();
   const t0 = Date.now();
   let newProps = 0, newImages = 0, skipped = 0;
 
   for (const zone of ZONES) {
-    // Skip already completed zones (for resumability)
-    const zoneKey = `${zone.id}-buy`;
-    if (state.completedZones?.includes(zoneKey)) {
-      console.log(`\n  [skip] ${zone.name} — already completed`);
-      continue;
-    }
+    for (const type of ["buy", "rent"]) {
+      const zoneKey = `${zone.id}-${type}`;
+      if (state.completedZones?.includes(zoneKey)) {
+        console.log(`\n  [skip] ${zone.name} (${type}) — already completed`);
+        continue;
+      }
 
-    for (const type of ["buy"]) {
       console.log(`\n== ${zone.name} — ${type === "buy" ? "Achat" : "Location"} ==`);
       let page = 0;
       while (page < MAX_PAGES_PER_CITY) {
@@ -319,7 +283,7 @@ async function main() {
             await sleep(DELAY_MS);
             const photos = (ad.photos || []).slice(0, MAX_IMAGES);
             const r2Urls = [];
-            const imgSlug = slugify(ad.city || "france");
+            const imgSlug = slugify(ad.city || "monaco");
             for (const photo of photos) {
               const urls = [photo.url, photo.url_photo].filter(Boolean);
               let r2Url = null;
@@ -342,12 +306,12 @@ async function main() {
         page++;
         if (result.ads.length < PER_PAGE) break;
       }
-    }
 
-    // Mark zone as completed
-    if (!state.completedZones) state.completedZones = [];
-    state.completedZones.push(zoneKey);
-    saveState(state);
+      // Mark zone+type as completed
+      if (!state.completedZones) state.completedZones = [];
+      state.completedZones.push(zoneKey);
+      saveState(state);
+    }
   }
 
   saveState(state);
