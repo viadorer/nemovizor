@@ -301,11 +301,11 @@ async function main() {
             const garden = getFeature(features, "/garden") || "";
             const buildingCondition = getFeature(features, "/building_condition") || "";
 
-            // Location
+            // Location — geo fields are objects with .value, extract string values
             const geo = item.geo || {};
-            const city = geo.city || geo.town || search.cityName;
-            const town = geo.town || "";
-            const region = geo.region || "";
+            const city = (typeof geo.city === "object" ? geo.city?.value : geo.city) || search.cityName;
+            const town = (typeof geo.town === "object" ? geo.town?.value : geo.town) || "";
+            const region = (typeof geo.region === "object" ? geo.region?.value : geo.region) || "";
 
             const slug = slugify(title || `immobile-${listId}`) + `-sub${String(listId).replace(/[^a-z0-9]/gi, "").slice(-8)}`;
 
@@ -327,8 +327,8 @@ async function main() {
             for (const img of rawImages) {
               // img is { cdnBaseUrl: "https://images.sbito.it/api/v1/..." }
               const baseUrl = typeof img === "string" ? img : (img.cdnBaseUrl || img.uri || img.url || "");
-              // Append size suffix for full resolution
-              const imgUrl = baseUrl ? `${baseUrl}{rule}`.replace("{rule}", "/rule/gallery-2x") : "";
+              // Use query parameter format: ?rule=fullscreen-1x-auto
+              const imgUrl = baseUrl ? `${baseUrl}?rule=fullscreen-1x-auto` : "";
               if (!imgUrl) continue;
               const r2Url = await uploadToR2(imgUrl, slug);
               if (r2Url) { r2Images.push(r2Url); totalImages++; }

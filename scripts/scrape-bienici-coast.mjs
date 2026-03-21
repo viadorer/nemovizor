@@ -260,6 +260,7 @@ async function insertProperty(ad, r2Images) {
     balcony: ad.hasBalcony || false, garden: ad.hasGarden || false,
     garage: ad.hasParking || false,
     image_src: r2Images[0], image_alt: title, images: r2Images,
+    country: "fr",
     featured: false, active: true,
   };
 

@@ -50,6 +50,12 @@ export async function GET(req: NextRequest) {
   }
   if (city) query = query.eq("city", city);
 
+  const country = sp.get("country");
+  if (country) {
+    const countries = country.split(",");
+    query = countries.length === 1 ? query.eq("country", countries[0]) : query.in("country", countries);
+  }
+
   // Broker / Agency filter
   const brokerId = sp.get("broker_id");
   const agencyId = sp.get("agency_id");

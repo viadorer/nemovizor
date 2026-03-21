@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
   const category = sp.get("category");
   const subtype = sp.get("subtype");
   const city = sp.get("city");
+  const countryParam = sp.get("country");
 
   // Broker / Agency filter
   let brokerIds: string[] | null = null;
@@ -81,6 +82,10 @@ export async function GET(req: NextRequest) {
       q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
     }
     if (city) q = q.eq("city", city);
+    if (countryParam) {
+      const countries = countryParam.split(",");
+      q = countries.length === 1 ? q.eq("country", countries[0]) : q.in("country", countries);
+    }
     if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
     if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
     if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
@@ -122,6 +127,10 @@ export async function GET(req: NextRequest) {
       q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
     }
     if (city) q = q.eq("city", city);
+    if (countryParam) {
+      const countries = countryParam.split(",");
+      q = countries.length === 1 ? q.eq("country", countries[0]) : q.in("country", countries);
+    }
     if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
     if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
     if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));

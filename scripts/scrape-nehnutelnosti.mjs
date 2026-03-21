@@ -296,6 +296,7 @@ async function insertProperty(item, r2Images, listingType) {
     images: r2Images,
     featured: false,
     active: true,
+    country: "sk",
   };
 
   const { error } = await sb.from("properties").insert(property);

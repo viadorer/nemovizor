@@ -49,32 +49,42 @@ async function fallbackFilterOptions(
 ) {
   if (!client) return NextResponse.json({ error: "No client" }, { status: 503 });
 
-  // Fetch a lightweight subset to compute aggregates client-side
-  let query = client
-    .from("properties")
-    .select("listing_type, category, subtype, city, price, area")
-    .eq("active", true);
-
-  if (listingType) query = query.eq("listing_type", listingType as string);
-  if (category) {
-    const cats = category.split(",");
-    query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
+  // Fetch all active properties in pages (Supabase caps at 1000 per request)
+  function buildQuery() {
+    let q = client!
+      .from("properties")
+      .select("listing_type, category, subtype, city, country, price, area")
+      .eq("active", true);
+    if (listingType) q = q.eq("listing_type", listingType as string);
+    if (category) {
+      const cats = category.split(",");
+      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+    }
+    if (brokerIds) {
+      q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
+    }
+    return q;
   }
-  if (brokerIds) {
-    query = brokerIds.length === 1 ? query.eq("broker_id", brokerIds[0]) : query.in("broker_id", brokerIds);
+
+  const pageSize = 1000;
+  const allData: Record<string, unknown>[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: page, error } = await buildQuery().range(offset, offset + pageSize - 1);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!page || page.length === 0) break;
+    allData.push(...page);
+    if (page.length < pageSize) break;
   }
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  type FilterRow = { listing_type: string | null; category: string | null; subtype: string | null; city: string | null; price: number | null; area: number | null };
-  const rows = (data || []) as FilterRow[];
+  type FilterRow = { listing_type: string | null; category: string | null; subtype: string | null; city: string | null; country: string | null; price: number | null; area: number | null };
+  const rows = allData as FilterRow[];
 
   // Aggregate
   const categoryMap = new Map<string, number>();
   const cityMap = new Map<string, number>();
   const subtypeMap = new Map<string, number>();
   const ltMap = new Map<string, number>();
+  const countryMap = new Map<string, number>();
   let priceMin = Infinity, priceMax = 0, areaMin = Infinity, areaMax = 0;
 
   for (const r of rows) {
@@ -82,6 +92,7 @@ async function fallbackFilterOptions(
     if (r.city) cityMap.set(r.city, (cityMap.get(r.city) || 0) + 1);
     if (r.subtype) subtypeMap.set(r.subtype, (subtypeMap.get(r.subtype) || 0) + 1);
     if (r.listing_type) ltMap.set(r.listing_type, (ltMap.get(r.listing_type) || 0) + 1);
+    if (r.country) countryMap.set(r.country, (countryMap.get(r.country) || 0) + 1);
     if (r.price && r.price > 0) { priceMin = Math.min(priceMin, r.price); priceMax = Math.max(priceMax, r.price); }
     if (r.area && r.area > 0) { areaMin = Math.min(areaMin, r.area); areaMax = Math.max(areaMax, r.area); }
   }
@@ -95,6 +106,7 @@ async function fallbackFilterOptions(
       cities: toArr(cityMap).slice(0, 100),
       subtypes: toArr(subtypeMap),
       listingTypes: toArr(ltMap),
+      countries: toArr(countryMap),
       priceRange: { min: priceMin === Infinity ? 0 : priceMin, max: priceMax },
       areaRange: { min: areaMin === Infinity ? 0 : areaMin, max: areaMax },
     },

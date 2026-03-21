@@ -46,6 +46,29 @@ const listingTypeLabels: Record<ListingType, string> = {
   sale: "Prodej", rent: "Pronájem", auction: "Dražba", shares: "Podíly", project: "Projekt",
 };
 
+// Country bounding boxes [west, south, east, north]
+const COUNTRY_BBOXES: Record<string, [number, number, number, number]> = {
+  cz: [12.09, 48.55, 18.86, 51.06],
+  sk: [16.84, 47.73, 22.57, 49.61],
+  de: [5.87, 47.27, 15.04, 55.06],
+  at: [9.53, 46.37, 17.16, 49.02],
+  fr: [-5.14, 41.36, 9.56, 51.09],
+  it: [6.63, 36.62, 18.52, 47.09],
+  es: [-9.39, 27.64, 4.33, 43.79],
+  pt: [-9.53, 36.84, -6.19, 42.15],
+  gb: [-8.18, 49.91, 1.77, 58.64],
+  hr: [13.49, 42.39, 19.43, 46.55],
+  gr: [19.37, 34.80, 29.65, 41.75],
+  al: [19.26, 39.64, 21.06, 42.66],
+  cy: [32.27, 34.57, 34.60, 35.70],
+  me: [18.43, 41.85, 20.36, 43.56],
+  bg: [22.36, 41.24, 28.61, 44.22],
+  tr: [25.66, 35.82, 44.83, 42.11],
+  hu: [16.11, 45.74, 22.90, 48.59],
+  mc: [7.41, 43.72, 7.44, 43.75],
+  ch: [5.96, 45.82, 10.49, 47.81],
+  be: [2.54, 49.50, 6.41, 51.50],
+};
 
 // ===== DROPDOWN COMPONENT (single-select) =====
 type DropdownProps<T extends string> = {
@@ -280,6 +303,7 @@ type FilterOptionsResponse = {
   cities: FilterOption[];
   subtypes: FilterOption[];
   listingTypes: FilterOption[];
+  countries: FilterOption[];
   priceRange: { min: number; max: number };
   areaRange: { min: number; max: number };
 };
@@ -309,11 +333,36 @@ type PropertiesResponse = {
   limit: number;
 };
 
+const COUNTRY_LABELS: Record<string, string> = {
+  cz: "\u010Cesko",
+  sk: "Slovensko",
+  at: "Rakousko",
+  de: "N\u011Bmecko",
+  hr: "Chorvatsko",
+  cy: "Kypr",
+  bg: "Bulharsko",
+  al: "Alb\u00E1nie",
+  es: "\u0160pan\u011Blsko",
+  it: "It\u00E1lie",
+  gr: "\u0158ecko",
+  fr: "Francie",
+  me: "\u010Cern\u00E1 Hora",
+  tr: "Turecko",
+  pt: "Portugalsko",
+  hu: "Ma\u010Farsko",
+  ch: "\u0160v\u00FDcarsko",
+  be: "Belgie",
+  nl: "Nizozemsko",
+  gb: "Velk\u00E1 Brit\u00E1nie",
+  mc: "Monako",
+};
+
 // ===== Helper: build query string from filters =====
 function buildFilterParams(filters: {
   listingType: string | null;
   categories: string[];
   subtypes: string[];
+  countries: string[];
   city: string | null;
   priceMin: number | null;
   priceMax: number | null;
@@ -324,6 +373,7 @@ function buildFilterParams(filters: {
   if (filters.listingType) p.set("listing_type", filters.listingType);
   if (filters.categories.length) p.set("category", filters.categories.join(","));
   if (filters.subtypes.length) p.set("subtype", filters.subtypes.join(","));
+  if (filters.countries.length) p.set("country", filters.countries.join(","));
   if (filters.city) p.set("city", filters.city);
   if (filters.priceMin) p.set("price_min", String(filters.priceMin));
   if (filters.priceMax) p.set("price_max", String(filters.priceMax));
@@ -487,6 +537,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     initialCategory ? [initialCategory] : (hasUrlParams ? [] : persisted?.categories ?? [])
   );
   const [subtypes, setSubtypes] = useState<string[]>(initialSubtype ? [initialSubtype] : (hasUrlParams ? [] : persisted?.subtypes ?? []));
+  const [countries, setCountries] = useState<string[]>([]);
   const [priceMin, setPriceMin] = useState<number | null>(initialPriceMin ? Number(initialPriceMin) : (hasUrlParams ? null : persisted?.priceMin ?? null));
   const [priceMax, setPriceMax] = useState<number | null>(initialPriceMax ? Number(initialPriceMax) : (hasUrlParams ? null : persisted?.priceMax ?? null));
   const [areaMin, setAreaMin] = useState<number | null>(initialAreaMin ? Number(initialAreaMin) : (hasUrlParams ? null : persisted?.areaMin ?? null));
@@ -528,9 +579,9 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
 
   // Build filter params object (no city — location is controlled by map bounds)
   const filters = useMemo(() => ({
-    listingType, categories, subtypes, city: null as string | null,
+    listingType, categories, subtypes, countries, city: null as string | null,
     priceMin, priceMax, areaMin, areaMax, sortBy,
-  }), [listingType, categories, subtypes, priceMin, priceMax, areaMin, areaMax, sortBy]);
+  }), [listingType, categories, subtypes, countries, priceMin, priceMax, areaMin, areaMax, sortBy]);
 
   // Reset page when filters or sort change
   useEffect(() => { setPage(1); }, [filters, sortBy]);
@@ -731,6 +782,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     return subtypeGroups.flatMap((g) => g.options);
   }, [subtypeGroups]);
 
+  // Country options from API
+  const countryOptions = useMemo(() => {
+    if (!filterOptions?.countries?.length) return [];
+    return filterOptions.countries
+      .map((o) => ({ value: o.value, label: COUNTRY_LABELS[o.value] || o.value.toUpperCase(), count: o.count }))
+      .sort((a, b) => a.label.localeCompare(b.label, "cs"));
+  }, [filterOptions]);
+
   // DB cities for LocationSearch autocomplete
   const dbCities: DbCity[] = useMemo(() => {
     if (!filterOptions) return [];
@@ -738,7 +797,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   }, [filterOptions]);
 
   const clearFilters = () => {
-    setListingType(null); setCategories([]); setSubtypes([]);
+    setListingType(null); setCategories([]); setSubtypes([]); setCountries([]);
     setPriceMin(null); setPriceMax(null);
     setAreaMin(null); setAreaMax(null);
     setSortBy("featured");
@@ -861,7 +920,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     }
   }, [geocodeCity]);
 
-  const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || priceMin || priceMax || areaMin || areaMax || sortBy !== "featured";
+  const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || countries.length > 0 || priceMin || priceMax || areaMin || areaMax || sortBy !== "featured";
 
   const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
   const areaPresets = [30, 50, 80, 100, 150, 200, 300];
@@ -885,6 +944,15 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               )}
               <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit="Kč" />
               <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
+              {countryOptions.length > 1 && (
+                <MultiFilterDropdown label="Země" values={countries} options={countryOptions} onChange={(vals) => {
+                  setCountries(vals);
+                  if (vals.length === 1) {
+                    const bbox = COUNTRY_BBOXES[vals[0]];
+                    if (bbox) setMapFlyTo({ lat: (bbox[1] + bbox[3]) / 2, lon: (bbox[0] + bbox[2]) / 2, bbox });
+                  }
+                }} />
+              )}
 
               <LocationSearch
                 placeholder="Hledat město, ulici..."

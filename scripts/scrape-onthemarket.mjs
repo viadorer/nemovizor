@@ -201,6 +201,7 @@ async function insertProperty(prop, locationLabel, r2Images) {
     images: r2Images,
     featured: false,
     active: true,
+    country: "gb",
   };
 
   const { error } = await sb.from("properties").insert(property);
