@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/api";
@@ -15,12 +15,38 @@ type PropertyCardProps = {
 
 export const PropertyCard = memo(function PropertyCard({ property, isTip }: PropertyCardProps) {
   const t = useT();
+
+  // Build image list: use images[] if available, else fall back to imageSrc
+  const images: string[] = property.images?.length
+    ? property.images
+    : property.imageSrc
+    ? [property.imageSrc]
+    : [];
+  const hasMultiple = images.length > 1;
+
+  const [idx, setIdx] = useState(0);
+
+  const prev = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIdx((i) => (i - 1 + images.length) % images.length);
+  }, [images.length]);
+
+  const next = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIdx((i) => (i + 1) % images.length);
+  }, [images.length]);
+
+  const currentSrc = images[idx] || property.imageSrc;
+  const currentAlt = idx === 0 ? property.imageAlt : `${property.imageAlt} ${idx + 1}`;
+
   return (
     <Link href={`/nemovitost/${property.slug}`} className="property-card">
       <div className="property-image-wrapper">
         <Image
-          src={property.imageSrc}
-          alt={property.imageAlt}
+          src={currentSrc}
+          alt={currentAlt}
           className="property-image"
           width={400}
           height={300}
@@ -74,6 +100,27 @@ export const PropertyCard = memo(function PropertyCard({ property, isTip }: Prop
               </span>
             )}
           </div>
+        )}
+
+        {/* Photo navigation arrows — visible on hover when multiple images */}
+        {hasMultiple && (
+          <>
+            <button className="pc-arrow pc-arrow--prev" onClick={prev} aria-label="Předchozí foto">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button className="pc-arrow pc-arrow--next" onClick={next} aria-label="Další foto">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+            <div className="pc-dots">
+              {images.slice(0, 8).map((_, i) => (
+                <span key={i} className={`pc-dot${i === idx ? " pc-dot--active" : ""}`} />
+              ))}
+            </div>
+          </>
         )}
       </div>
       <div className="property-info">

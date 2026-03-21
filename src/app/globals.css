@@ -953,14 +953,16 @@ nav ul li a.active {
   min-width: 280px;
 }
 
-.property-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px var(--shadow-strong);
-  border-color: var(--border);
-}
+@media (hover: hover) {
+  .property-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px var(--shadow-strong);
+    border-color: var(--border);
+  }
 
-.property-card:hover .property-image {
-  transform: scale(1.05);
+  .property-card:hover .property-image {
+    transform: scale(1.05);
+  }
 }
 
 .property-image-wrapper {
@@ -2394,9 +2396,11 @@ a.ph-contact:hover { color: var(--accent); }
   overflow: hidden;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.property-row:hover {
-  border-color: var(--accent);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+@media (hover: hover) {
+  .property-row:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .property-row__image-wrapper {
@@ -8043,4 +8047,70 @@ table.admin-table tr:hover td {
   font-size: 0.82rem;
   font-weight: 600;
   text-align: center;
+}
+
+/* ===== PROPERTY CARD - PHOTO CAROUSEL ARROWS ===== */
+.pc-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+  z-index: 5;
+  backdrop-filter: blur(4px);
+}
+
+.pc-arrow--prev { left: 8px; }
+.pc-arrow--next { right: 8px; }
+
+.pc-arrow:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+@media (hover: hover) {
+  .property-card:hover .pc-arrow {
+    opacity: 1;
+  }
+}
+
+/* Dots */
+.pc-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+@media (hover: hover) {
+  .property-card:hover .pc-dots {
+    opacity: 1;
+  }
+}
+
+.pc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.pc-dot--active {
+  background: #fff;
+  transform: scale(1.3);
 }
