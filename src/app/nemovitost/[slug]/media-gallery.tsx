@@ -46,6 +46,14 @@ export function MediaGallery({
   const visibleCount = Math.min(images.length, 3);
   const extraCount = images.length - visibleCount;
 
+  // Mobile carousel state
+  const [carouselIdx, setCarouselIdx] = useState(0);
+  const carouselTouch = useRef<{ x: number; t: number } | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const carouselPrev = useCallback(() => setCarouselIdx((i) => Math.max(0, i - 1)), []);
+  const carouselNext = useCallback(() => setCarouselIdx((i) => Math.min(images.length - 1, i + 1)), [images.length]);
+
   return (
     <>
       {hasTabs && (
@@ -63,25 +71,73 @@ export function MediaGallery({
       )}
 
       {activeTab === "photos" && (
-        <div
-          className={`mg-grid mg-grid--${Math.min(images.length, 5)}`}
-          role="group"
-          aria-label="Fotogalerie"
-        >
-          {images.slice(0, visibleCount).map((src, i) => (
-            <button
-              key={i}
-              className={`mg-cell${i === 0 ? " mg-cell--main" : ""}`}
-              onClick={() => setLightboxIndex(i)}
-              aria-label={`Zobrazit foto ${i + 1} z ${images.length}`}
+        <>
+          {/* Desktop grid */}
+          <div
+            className={`mg-grid mg-grid--${Math.min(images.length, 5)}`}
+            role="group"
+            aria-label="Fotogalerie"
+          >
+            {images.slice(0, visibleCount).map((src, i) => (
+              <button
+                key={i}
+                className={`mg-cell${i === 0 ? " mg-cell--main" : ""}`}
+                onClick={() => setLightboxIndex(i)}
+                aria-label={`Zobrazit foto ${i + 1} z ${images.length}`}
+              >
+                <img src={src} alt={`${alt} - foto ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
+                {i === visibleCount - 1 && extraCount > 0 && (
+                  <span className="mg-more">+ {extraCount} fotek</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile swipe carousel */}
+          <div
+            className="mg-carousel"
+            ref={carouselRef}
+            onTouchStart={(e) => {
+              carouselTouch.current = { x: e.touches[0].clientX, t: Date.now() };
+            }}
+            onTouchEnd={(e) => {
+              if (!carouselTouch.current) return;
+              const dx = e.changedTouches[0].clientX - carouselTouch.current.x;
+              if (Math.abs(dx) > 40) {
+                if (dx > 0) carouselPrev();
+                else carouselNext();
+              }
+              carouselTouch.current = null;
+            }}
+            onClick={() => setLightboxIndex(carouselIdx)}
+          >
+            <div
+              className="mg-carousel-track"
+              style={{ transform: `translateX(-${carouselIdx * 100}%)` }}
             >
-              <img src={src} alt={`${alt} - foto ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
-              {i === visibleCount - 1 && extraCount > 0 && (
-                <span className="mg-more">+ {extraCount} fotek</span>
-              )}
-            </button>
-          ))}
-        </div>
+              {images.map((src, i) => (
+                <div key={i} className="mg-carousel-slide">
+                  <img src={src} alt={`${alt} - foto ${i + 1}`} loading={i < 2 ? "eager" : "lazy"} />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 && (
+              <>
+                {carouselIdx > 0 && (
+                  <button className="mg-carousel-btn mg-carousel-btn--prev" onClick={(e) => { e.stopPropagation(); carouselPrev(); }} aria-label="Předchozí">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                )}
+                {carouselIdx < images.length - 1 && (
+                  <button className="mg-carousel-btn mg-carousel-btn--next" onClick={(e) => { e.stopPropagation(); carouselNext(); }} aria-label="Další">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
+                  </button>
+                )}
+                <div className="mg-carousel-counter">{carouselIdx + 1} / {images.length}</div>
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {activeTab === "video" && videoUrl && <VideoEmbed url={videoUrl} />}

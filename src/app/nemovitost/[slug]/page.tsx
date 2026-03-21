@@ -4,12 +4,12 @@ import { PropertyCard } from "@/components/property-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, getPropertyBySlug, getSimilarProperties, getBrokerById, getAgencyById } from "@/lib/api";
-import { DetailMap, WideDetailMap } from "./detail-map";
+import { DetailMap } from "./detail-map";
+import { DetailSplitLayout } from "./detail-split-layout";
 import { MediaGallery } from "./media-gallery";
 import { PointsOfInterest } from "./points-of-interest";
 import { AutoSaveSearch } from "./auto-save-search";
 import { MortgageCalculator } from "./mortgage-calculator";
-import { ListingNav } from "./listing-nav";
 
 function buildAddress(parts: (string | undefined)[]): string {
   const seen = new Set<string>();
@@ -186,9 +186,11 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
       <SiteHeader />
       <AutoSaveSearch />
       <main className="detail-page">
-        <div className="detail-wide-layout">
-        <div className="detail-wide-content">
-        <div className="container" style={{ paddingTop: 24, paddingBottom: 48 }}>
+        <DetailSplitLayout
+          properties={[property, ...similarProperties]}
+          selectedPropertyId={property.id}
+        >
+        <div className="detail-split-content">
           <div className="detail-top-nav">
             <Link href="/nabidky" className="detail-back">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -196,7 +198,6 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
               </svg>
               <span>{"Zp\u011bt na nab\u00eddky"}</span>
             </Link>
-            <ListingNav currentSlug={slug} />
           </div>
 
           <MediaGallery
@@ -583,16 +584,9 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             </section>
           )}
         </div>
-        </div>
-        <div className="detail-wide-map">
-          <WideDetailMap
-            properties={[property, ...similarProperties]}
-            selectedPropertyId={property.id}
-          />
-        </div>
-        </div>
+        <SiteFooter />
+        </DetailSplitLayout>
       </main>
-      <SiteFooter />
     </div>
   );
 }

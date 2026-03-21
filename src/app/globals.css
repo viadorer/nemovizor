@@ -2558,9 +2558,8 @@ a.ph-contact:hover { color: var(--accent); }
 
 /* ===== DETAIL PAGE ===== */
 .detail-page {
-  padding-top: 80px;
+  padding-top: 64px;
   background-color: var(--bg);
-  min-height: 100vh;
 }
 
 .detail-top-nav {
@@ -2653,6 +2652,11 @@ a.ph-contact:hover { color: var(--accent); }
   color: #000;
   border-color: var(--accent);
   font-weight: 600;
+}
+
+/* Mobile carousel — hidden on desktop */
+.mg-carousel {
+  display: none;
 }
 
 .mg-grid {
@@ -2995,27 +2999,62 @@ a.ph-contact:hover { color: var(--accent); }
   margin-bottom: 8px;
 }
 
-/* Wide-screen layout: map on right for ultra-wide monitors */
-.detail-wide-layout {
+/* Detail split layout — own classes, independent of search layout */
+.detail-split-layout {
   display: flex;
-  min-height: 100vh;
+  height: calc(100vh - 64px);
 }
-.detail-wide-content {
-  flex: 1;
+.detail-split-sidebar {
+  width: 75%;
+  height: 100%;
+  overflow-y: auto;
   min-width: 0;
 }
-.detail-wide-map {
-  display: none;
+.detail-split-content {
+  padding: 16px;
+  padding-top: 24px;
+  padding-bottom: 48px;
 }
-@media (min-width: 1600px) {
-  .detail-wide-map {
+.detail-split-handle {
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  transition: background 0.15s ease;
+}
+.detail-split-handle:hover,
+.detail-split-handle:active {
+  background: var(--accent);
+}
+.detail-split-handle:hover .search-resize-grip,
+.detail-split-handle:active .search-resize-grip {
+  background: var(--accent-text);
+}
+.detail-split-map {
+  width: 25%;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+}
+@media (max-width: 1024px) {
+  .detail-split-layout {
     display: block;
-    width: 420px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 64px;
-    height: calc(100vh - 64px);
-    border-left: 1px solid var(--border-light);
+    height: auto;
+  }
+  .detail-split-sidebar {
+    width: 100% !important;
+    height: auto;
+    overflow: visible;
+  }
+  .detail-split-handle {
+    display: none;
+  }
+  .detail-split-map {
+    display: none;
   }
 }
 
@@ -4159,10 +4198,10 @@ a.ph-contact:hover { color: var(--accent); }
     font-size: 1.5rem;
   }
 
-  /* Detail page mobile: icon-only nav + full-width gallery */
-  .detail-page .container {
-    width: 100%;
-    padding: 0 16px;
+  /* Detail page mobile */
+  .detail-split-content {
+    padding: 16px;
+    padding-bottom: 48px;
   }
   .detail-top-nav {
     margin-bottom: 8px;
@@ -4178,10 +4217,63 @@ a.ph-contact:hover { color: var(--accent); }
   }
 
   .mg-grid {
+    display: none;
+  }
+
+  .mg-carousel {
+    display: block;
+    position: relative;
+    overflow: hidden;
     border-radius: 0;
     margin-left: -16px;
     margin-right: -16px;
     margin-bottom: 20px;
+    aspect-ratio: 4 / 3;
+    background: var(--bg-filter);
+  }
+  .mg-carousel-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.3s ease;
+  }
+  .mg-carousel-slide {
+    flex: 0 0 100%;
+    height: 100%;
+  }
+  .mg-carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .mg-carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .mg-carousel-btn--prev { left: 8px; }
+  .mg-carousel-btn--next { right: 8px; }
+  .mg-carousel-counter {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    z-index: 2;
   }
 
   .detail-header {
@@ -4194,30 +4286,6 @@ a.ph-contact:hover { color: var(--accent); }
 
   .detail-price {
     font-size: 1.5rem;
-  }
-
-  .mg-grid--2,
-  .mg-grid--3,
-  .mg-grid--4,
-  .mg-grid--5 {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    aspect-ratio: auto;
-  }
-
-  .mg-grid--2 .mg-cell--main,
-  .mg-grid--3 .mg-cell--main,
-  .mg-grid--4 .mg-cell--main,
-  .mg-grid--5 .mg-cell--main {
-    grid-row: auto;
-    aspect-ratio: 4 / 3;
-  }
-
-  .mg-grid--2 .mg-cell:not(.mg-cell--main),
-  .mg-grid--3 .mg-cell:not(.mg-cell--main),
-  .mg-grid--4 .mg-cell:not(.mg-cell--main),
-  .mg-grid--5 .mg-cell:not(.mg-cell--main) {
-    display: none;
   }
 
   .poi-grid {
