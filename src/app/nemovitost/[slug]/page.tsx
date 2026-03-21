@@ -57,27 +57,58 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   const broker = property.brokerId ? await getBrokerById(property.brokerId) : undefined;
   const agency = broker?.agencyId ? await getAgencyById(broker.agencyId) : undefined;
 
+  // === Parametry ===
   const params_data = [
     { label: "Typ", value: property.subtype },
     { label: "Dispozice", value: property.roomsLabel },
-    { label: "Plocha", value: `${property.area} m²` },
+    { label: "Plocha", value: property.area ? `${property.area} m²` : "" },
     ...(property.landArea ? [{ label: "Pozemek", value: `${property.landArea} m²` }] : []),
+    ...(property.builtUpArea ? [{ label: "Zastavěná plocha", value: `${property.builtUpArea} m²` }] : []),
+    ...(property.floorArea ? [{ label: "Celková plocha", value: `${property.floorArea} m²` }] : []),
+    ...(property.balconyArea ? [{ label: "Balkón", value: `${property.balconyArea} m²` }] : []),
+    ...(property.terraceArea ? [{ label: "Terasa", value: `${property.terraceArea} m²` }] : []),
+    ...(property.gardenArea ? [{ label: "Zahrada", value: `${property.gardenArea} m²` }] : []),
+    ...(property.loggiaArea ? [{ label: "Lodžie", value: `${property.loggiaArea} m²` }] : []),
+    ...(property.cellarArea ? [{ label: "Sklep", value: `${property.cellarArea} m²` }] : []),
+    ...(property.basinArea ? [{ label: "Bazén", value: `${property.basinArea} m²` }] : []),
     { label: "Město", value: property.city },
     { label: "Městská část", value: property.district },
+    ...(property.cityPart ? [{ label: "Část obce", value: property.cityPart }] : []),
+    ...(property.zip ? [{ label: "PSČ", value: property.zip }] : []),
+    ...(property.region ? [{ label: "Region", value: property.region }] : []),
     ...(property.country && property.country !== "cz" ? [{ label: "Země", value: COUNTRY_LABELS[property.country] || property.country.toUpperCase() }] : []),
     { label: "Stav", value: property.condition },
     { label: "Vlastnictví", value: property.ownership },
     { label: "Vybavení", value: property.furnishing },
     { label: "Energetický štítek", value: property.energyRating },
     ...(property.buildingMaterial ? [{ label: "Materiál", value: property.buildingMaterial }] : []),
+    ...(property.flooring ? [{ label: "Podlaha", value: property.flooring }] : []),
     ...(property.heating?.length ? [{ label: "Topení", value: property.heating.join(", ") }] : []),
+    ...(property.heatingSource?.length ? [{ label: "Zdroj topení", value: property.heatingSource.join(", ") }] : []),
+    ...(property.heatingElement?.length ? [{ label: "Topné těleso", value: property.heatingElement.join(", ") }] : []),
+    ...(property.waterHeatSource?.length ? [{ label: "Ohřev vody", value: property.waterHeatSource.join(", ") }] : []),
     { label: "Parkování", value: property.parking },
-    ...(property.floor ? [{ label: "Podlaží", value: `${property.floor}/${property.totalFloors}` }] : []),
+    ...(property.parkingSpaces ? [{ label: "Parkovací místa", value: String(property.parkingSpaces) }] : []),
+    ...(property.garageCount ? [{ label: "Garáže", value: String(property.garageCount) }] : []),
+    ...(property.floor ? [{ label: "Podlaží", value: property.totalFloors ? `${property.floor}/${property.totalFloors}` : String(property.floor) }] : []),
+    ...(property.totalFloors && !property.floor ? [{ label: "Počet podlaží", value: String(property.totalFloors) }] : []),
+    ...(property.undergroundFloors ? [{ label: "Podzemní podlaží", value: String(property.undergroundFloors) }] : []),
+    ...(property.ceilingHeight ? [{ label: "Výška stropu", value: `${property.ceilingHeight} m` }] : []),
     ...(property.yearBuilt ? [{ label: "Rok výstavby", value: String(property.yearBuilt) }] : []),
     ...(property.lastRenovation ? [{ label: "Poslední renovace", value: String(property.lastRenovation) }] : []),
-    ...(property.totalFloors && !property.floor ? [{ label: "Počet podlaží", value: String(property.totalFloors) }] : []),
+    ...(property.acceptanceYear ? [{ label: "Rok kolaudace", value: String(property.acceptanceYear) }] : []),
+    ...(property.objectType ? [{ label: "Typ objektu", value: property.objectType }] : []),
+    ...(property.objectKind ? [{ label: "Druh objektu", value: property.objectKind }] : []),
+    ...(property.objectLocation ? [{ label: "Umístění", value: property.objectLocation }] : []),
+    ...(property.flatClass ? [{ label: "Třída bytu", value: property.flatClass }] : []),
+    ...(property.surroundingsType ? [{ label: "Okolí", value: property.surroundingsType }] : []),
+    ...(property.protection ? [{ label: "Ochrana", value: property.protection }] : []),
+    ...(property.numOwners ? [{ label: "Počet vlastníků", value: String(property.numOwners) }] : []),
+    ...(property.apartmentNumber ? [{ label: "Číslo jednotky", value: String(property.apartmentNumber) }] : []),
+    ...(property.shareNumerator && property.shareDenominator ? [{ label: "Podíl", value: `${property.shareNumerator}/${property.shareDenominator}` }] : []),
   ];
 
+  // === Vybavení a vlastnosti ===
   const features = [
     property.balcony && "Balkon",
     property.terrace && "Terasa",
@@ -87,7 +118,68 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
     property.garage && "Garáž",
     property.pool && "Bazén",
     property.loggia && "Lodžie",
+    property.easyAccess && "Bezbariérový přístup",
+    property.lowEnergy && "Nízkoenergetický",
+    property.ftvPanels && "Fotovoltaické panely",
+    property.solarPanels && "Solární panely",
+    property.mortgage && "Možnost hypotéky",
+    property.exclusivelyAtRk && "Exkluzivně v RK",
   ].filter(Boolean);
+
+  // === Inženýrské sítě ===
+  const networks = [
+    ...(property.electricity?.length ? [{ label: "Elektřina", value: property.electricity.join(", ") }] : []),
+    ...(property.gas?.length ? [{ label: "Plyn", value: property.gas.join(", ") }] : []),
+    ...(property.water?.length ? [{ label: "Voda", value: property.water.join(", ") }] : []),
+    ...(property.gully?.length ? [{ label: "Kanalizace", value: property.gully.join(", ") }] : []),
+    ...(property.roadType?.length ? [{ label: "Komunikace", value: property.roadType.join(", ") }] : []),
+    ...(property.telecommunication?.length ? [{ label: "Telekomunikace", value: property.telecommunication.join(", ") }] : []),
+    ...(property.transport?.length ? [{ label: "Doprava", value: property.transport.join(", ") }] : []),
+    ...(property.internetConnectionType?.length ? [{ label: "Internet", value: property.internetConnectionType.join(", ") }] : []),
+    ...(property.internetConnectionProvider ? [{ label: "Poskytovatel internetu", value: property.internetConnectionProvider }] : []),
+    ...(property.internetConnectionSpeed ? [{ label: "Rychlost internetu", value: `${property.internetConnectionSpeed} Mbps` }] : []),
+    ...(property.circuitBreaker ? [{ label: "Jistič", value: property.circuitBreaker }] : []),
+    ...(property.phaseDistribution ? [{ label: "Rozvodná fáze", value: property.phaseDistribution }] : []),
+    ...(property.wellType?.length ? [{ label: "Studna", value: property.wellType.join(", ") }] : []),
+  ];
+
+  // === Finanční info ===
+  const financials = [
+    ...(property.priceNote ? [{ label: "Poznámka k ceně", value: property.priceNote }] : []),
+    ...(property.priceUnit ? [{ label: "Cena je", value: property.priceUnit === "za_mesic" ? "za měsíc" : property.priceUnit === "za_rok" ? "za rok" : property.priceUnit }] : []),
+    ...(property.priceNegotiation ? [{ label: "Cena", value: "K jednání" }] : []),
+    ...(property.annuity ? [{ label: "Anuita", value: `${property.annuity.toLocaleString("cs")} Kč` }] : []),
+    ...(property.costOfLiving ? [{ label: "Náklady na bydlení", value: property.costOfLiving }] : []),
+    ...(property.commission ? [{ label: "Provize", value: `${property.commission.toLocaleString("cs")} Kč` }] : []),
+    ...(property.refundableDeposit ? [{ label: "Vratná kauce", value: `${property.refundableDeposit.toLocaleString("cs")} Kč` }] : []),
+    ...(property.mortgagePercent ? [{ label: "Hypotéka %", value: `${property.mortgagePercent} %` }] : []),
+    ...(property.sporPercent ? [{ label: "SPOR %", value: `${property.sporPercent} %` }] : []),
+  ];
+
+  // === Pronájem specifické ===
+  const rentalInfo = [
+    ...(property.leaseType ? [{ label: "Typ nájmu", value: property.leaseType }] : []),
+    ...(property.readyDate ? [{ label: "Datum nastěhování", value: property.readyDate }] : []),
+    ...(property.tenantNotPayCommission ? [{ label: "Nájemce neplatí provizi", value: "Ano" }] : []),
+  ];
+
+  // === Dražba specifické ===
+  const auctionInfo = [
+    ...(property.auctionKind ? [{ label: "Druh dražby", value: property.auctionKind }] : []),
+    ...(property.auctionDate ? [{ label: "Datum dražby", value: property.auctionDate }] : []),
+    ...(property.auctionPlace ? [{ label: "Místo dražby", value: property.auctionPlace }] : []),
+    ...(property.priceAuctionPrincipal ? [{ label: "Jistota", value: `${property.priceAuctionPrincipal.toLocaleString("cs")} Kč` }] : []),
+    ...(property.priceExpertReport ? [{ label: "Znalecký posudek", value: `${property.priceExpertReport.toLocaleString("cs")} Kč` }] : []),
+    ...(property.priceMinimumBid ? [{ label: "Minimální příhoz", value: `${property.priceMinimumBid.toLocaleString("cs")} Kč` }] : []),
+  ];
+
+  // === Termíny ===
+  const dates = [
+    ...(property.beginningDate ? [{ label: "Zahájení výstavby", value: property.beginningDate }] : []),
+    ...(property.finishDate ? [{ label: "Dokončení", value: property.finishDate }] : []),
+    ...(property.saleDate ? [{ label: "Datum prodeje", value: property.saleDate }] : []),
+    ...(property.firstTourDate ? [{ label: "První prohlídka", value: property.firstTourDate }] : []),
+  ];
 
   return (
     <div className="page-shell">
@@ -131,7 +223,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 {buildAddress([property.street, property.district, property.city, property.country && property.country !== "cz" ? COUNTRY_LABELS[property.country] || property.country.toUpperCase() : undefined])}
               </div>
             </div>
-            <div className="detail-price">{formatPrice(property.price, property.priceCurrency)}</div>
+            <div className="detail-price">
+              {formatPrice(property.price, property.priceCurrency)}
+              {property.priceUnit && (
+                <span style={{ fontSize: "0.5em", fontWeight: 400, color: "var(--text-muted)", marginLeft: 4 }}>
+                  {property.priceUnit === "za_mesic" ? "/ měsíc" : property.priceUnit === "za_rok" ? "/ rok" : `/ ${property.priceUnit}`}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="detail-grid">
@@ -191,6 +290,129 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                         }}
                       >
                         {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {networks.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+                    </svg>
+                    Inženýrské sítě
+                  </h2>
+                  <div className="detail-params-grid">
+                    {networks.map((param) => (
+                      <div key={param.label} className="detail-param">
+                        <span className="detail-param-label">{param.label}</span>
+                        <span className="detail-param-value">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {financials.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    Finanční informace
+                  </h2>
+                  <div className="detail-params-grid">
+                    {financials.map((param) => (
+                      <div key={param.label} className="detail-param">
+                        <span className="detail-param-label">{param.label}</span>
+                        <span className="detail-param-value">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {rentalInfo.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    Pronájem
+                  </h2>
+                  <div className="detail-params-grid">
+                    {rentalInfo.map((param) => (
+                      <div key={param.label} className="detail-param">
+                        <span className="detail-param-label">{param.label}</span>
+                        <span className="detail-param-value">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {auctionInfo.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Dražba
+                  </h2>
+                  <div className="detail-params-grid">
+                    {auctionInfo.map((param) => (
+                      <div key={param.label} className="detail-param">
+                        <span className="detail-param-label">{param.label}</span>
+                        <span className="detail-param-value">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dates.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    Termíny
+                  </h2>
+                  <div className="detail-params-grid">
+                    {dates.map((param) => (
+                      <div key={param.label} className="detail-param">
+                        <span className="detail-param-label">{param.label}</span>
+                        <span className="detail-param-value">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {property.keywords && property.keywords.length > 0 && (
+                <div className="detail-section">
+                  <h2 className="detail-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+                    </svg>
+                    Klíčová slova
+                  </h2>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {property.keywords.map((kw) => (
+                      <span
+                        key={kw}
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 6,
+                          fontSize: "0.8rem",
+                          background: "var(--bg-filter)",
+                          color: "var(--text-muted)",
+                          border: "1px solid var(--border-light)",
+                        }}
+                      >
+                        {kw}
                       </span>
                     ))}
                   </div>
