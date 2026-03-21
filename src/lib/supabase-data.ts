@@ -189,6 +189,7 @@ function dbBrokerToApp(row: DbBroker): Broker {
     languages: row.languages ?? undefined,
     certifications: row.certifications ?? undefined,
     yearStarted: row.year_started ?? undefined,
+    isPromoted: (row as any).is_promoted ?? false,
   };
 }
 

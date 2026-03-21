@@ -782,6 +782,7 @@ export type Broker = {
   languages?: string[];
   certifications?: string[];
   yearStarted?: number;
+  isPromoted?: boolean;
 };
 
 /** Realitní kancelář */

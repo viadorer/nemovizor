@@ -7,12 +7,13 @@ import dynamic from "next/dynamic";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyRow } from "@/components/property-row";
 import { SiteHeader } from "@/components/site-header";
-import type { Property } from "@/lib/types";
+import type { Property, Broker } from "@/lib/types";
 import type { MapBounds } from "@/components/property-map";
 import {
   ListingType, PropertyCategory,
   ApartmentSubtypes, HouseSubtypes, LandSubtypes, CommercialSubtypes, OtherSubtypes,
 } from "@/lib/types";
+import { BrokerGridCard } from "@/components/broker-grid-card";
 import { brand } from "@/brands";
 import { LocationSearch } from "@/components/location-search";
 import type { DbCity } from "@/components/location-search";
@@ -510,6 +511,8 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const [loading, setLoading] = useState(true);
   const [mapLoading, setMapLoading] = useState(true);
   const [mapTruncated, setMapTruncated] = useState(false);
+  const [promobroker, setPromoBroker] = useState<Broker | null>(null);
+  const promoSeedRef = useRef(Math.floor(Math.random() * 100));
 
   // Track TIP impressions (fire once per set of tip IDs)
   const trackedTipIdsRef = useRef<string>("");
@@ -632,6 +635,18 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const [locationLabel, setLocationLabel] = useState<string | null>(
     hasUrlParams ? null : persisted?.locationLabel ?? null
   );
+
+  // Fetch promoted broker for current city (page 1 only)
+  useEffect(() => {
+    if (page !== 1) return;
+    const city = locationLabel?.split(",")[0]?.trim() ?? "";
+    const params = new URLSearchParams({ seed: String(promoSeedRef.current) });
+    if (city) params.set("city", city);
+    fetch(`/api/broker-promo?${params}`)
+      .then((r) => r.json())
+      .then((data) => setPromoBroker(data ?? null))
+      .catch(() => setPromoBroker(null));
+  }, [locationLabel, page]);
 
   // Persist filters to localStorage whenever they change
   useEffect(() => {
@@ -1066,21 +1081,34 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                             try { sessionStorage.setItem("listing-slugs", JSON.stringify(properties.map(p => p.slug))); } catch {}
                           }
                         }}>
-                          {normalProperties.map((property) => (
-                            <div
-                              key={property.id}
-                              onMouseEnter={() => setSelectedPropertyId(property.id)}
-                              onMouseLeave={() => setSelectedPropertyId(null)}
-                            >
-                              {isMobile ? (
-                                <PropertyRow property={property} />
-                              ) : viewMode === "list" ? (
-                                <PropertyRow property={property} />
-                              ) : (
-                                <PropertyCard property={property} />
-                              )}
-                            </div>
-                          ))}
+                          {(() => {
+                            // Insert broker promo card after position 4 (with TIP) or 5 (without TIP)
+                            const brokerInsertAt = tipProperties.length > 0 ? 4 : 5;
+                            const items: React.ReactNode[] = [];
+                            normalProperties.forEach((property, idx) => {
+                              if (idx === brokerInsertAt && promobroker && page === 1 && viewMode !== "list" && !isMobile) {
+                                items.push(
+                                  <BrokerGridCard key="broker-promo" broker={promobroker} />
+                                );
+                              }
+                              items.push(
+                                <div
+                                  key={property.id}
+                                  onMouseEnter={() => setSelectedPropertyId(property.id)}
+                                  onMouseLeave={() => setSelectedPropertyId(null)}
+                                >
+                                  {isMobile ? (
+                                    <PropertyRow property={property} />
+                                  ) : viewMode === "list" ? (
+                                    <PropertyRow property={property} />
+                                  ) : (
+                                    <PropertyCard property={property} />
+                                  )}
+                                </div>
+                              );
+                            });
+                            return items;
+                          })()}
                           {normalProperties.length === 0 && tipProperties.length === 0 && !loading && (
                             <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
                               {t.results.noResults}
