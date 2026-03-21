@@ -1,11 +1,12 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Property, Broker, Agency, Branch, Review, PropertyFilters } from "./types";
 import type { Database } from "./supabase-types";
 
 // ===== Helpers =====
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-async function fetchAllFromTable(sb: any, table: string, select: string, orderBy = "name"): Promise<any[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic table name means Supabase returns unknown row type
+async function fetchAllFromTable(sb: SupabaseClient<Database>, table: string, select: string, orderBy = "name"): Promise<any[]> {
   const all: any[] = [];
   let from = 0;
   const PAGE = 1000;
@@ -22,7 +23,6 @@ async function fetchAllFromTable(sb: any, table: string, select: string, orderBy
   }
   return all;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ===== Supabase → App konverze =====
 
@@ -667,8 +667,8 @@ export type DetailPropertyFilters = {
   areaMax?: number | null;
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function applyDetailFilters(query: any, filters?: DetailPropertyFilters) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase query builder chained generics
+function applyDetailFilters<T extends { eq: (...a: any[]) => T; gte: (...a: any[]) => T; lte: (...a: any[]) => T }>(query: T, filters?: DetailPropertyFilters): T {
   if (!filters) return query;
   if (filters.listingType) query = query.eq("listing_type", filters.listingType);
   if (filters.category) query = query.eq("category", filters.category);

@@ -21,25 +21,31 @@ function createMarkerIcon(_isFeatured: boolean) {
   });
 }
 
+// ===== HTML escape pro bezpečné vložení do popup =====
+function esc(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ===== Cenový popup =====
 function createPopupContent(p: Property, t: Translation): string {
   const badgeColors: Record<string, string> = { sale: "#22c55e", rent: "#3b82f6", auction: "#dc2626", project: "#7c3aed", shares: "#0891b2" };
   const bg = badgeColors[p.listingType] || "#666";
   const label = t.enumLabels.listingTypes[p.listingType] || p.listingType;
-  const badge = `<span style="background:${bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;text-transform:uppercase;">${label}</span>`;
+  const badge = `<span style="background:${bg};color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;text-transform:uppercase;">${esc(label)}</span>`;
 
   return `
     <div class="popup-card">
-      <img src="${p.imageSrc}" alt="${p.imageAlt}" class="popup-card-img" />
+      <img src="${esc(p.imageSrc)}" alt="${esc(p.imageAlt)}" class="popup-card-img" />
       <div class="popup-card-body">
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
           ${badge}
-          ${p.featured ? `<span style="background:#ffb800;color:#1a1a2e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">${t.badges.premium}</span>` : ""}
+          ${p.featured ? `<span style="background:#ffb800;color:#1a1a2e;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">${esc(t.badges.premium)}</span>` : ""}
         </div>
         <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">${formatPrice(p.price, p.priceCurrency)}</div>
-        <div style="font-size:0.85rem;color:#888;margin-bottom:2px;">${p.subtype} • ${p.roomsLabel} • ${p.area} m²</div>
-        <div style="font-size:0.82rem;color:#999;">${p.district}</div>
-        <a href="/nemovitost/${p.slug}" style="display:block;margin-top:8px;text-align:center;padding:6px;background:#ffb800;color:#1a1a2e;border-radius:6px;font-weight:600;font-size:0.8rem;text-decoration:none;">${t.map.detailLink}</a>
+        <div style="font-size:0.85rem;color:#888;margin-bottom:2px;">${esc(p.subtype)} • ${esc(p.roomsLabel)} • ${p.area} m²</div>
+        <div style="font-size:0.82rem;color:#999;">${esc(p.district)}</div>
+        <a href="/nemovitost/${encodeURIComponent(p.slug)}" style="display:block;margin-top:8px;text-align:center;padding:6px;background:#ffb800;color:#1a1a2e;border-radius:6px;font-weight:600;font-size:0.8rem;text-decoration:none;">${esc(t.map.detailLink)}</a>
       </div>
     </div>
   `;

@@ -21,6 +21,7 @@ import { AiSearch } from "@/components/ai-search";
 import { saveCurrentSearch } from "@/lib/saved-searches";
 import type { SavedSearch } from "@/lib/types";
 import { useT } from "@/i18n/provider";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -601,7 +602,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
         setTotalResults(data.total || 0);
         setLoading(false);
       })
-      .catch((e) => { if (e.name !== "AbortError") { setLoading(false); } });
+      .catch((e) => { if (e.name !== "AbortError") { console.error("Failed to fetch properties:", e); setLoading(false); } });
 
     return () => controller.abort();
   }, [filters, page, debouncedBounds, sortBy]);
@@ -646,7 +647,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     fetch(`/api/filter-options?${params}`)
       .then((r) => r.json())
       .then((data: FilterOptionsResponse) => setFilterOptions(data))
-      .catch(() => {});
+      .catch((e) => { console.error("Failed to fetch filter options:", e); });
   }, [listingType, categories]);
 
   // Location label for display
@@ -1190,16 +1191,18 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
           </div>
 
           <div className={`search-map-panel ${isMobile ? (mobileView === "map" ? "search-map-panel--mobile-full" : "search-map-panel--mobile-hidden") : ""}`}>
-            <PropertyMap
-              properties={mapPoints}
-              selectedPropertyId={selectedPropertyId}
-              onPropertySelect={setSelectedPropertyId}
-              onBoundsChange={handleBoundsChange}
-              mode="prices"
-              truncated={mapTruncated}
-              flyTo={mapFlyTo}
-              onFlyToDone={() => setMapFlyTo(null)}
-            />
+            <ErrorBoundary>
+              <PropertyMap
+                properties={mapPoints}
+                selectedPropertyId={selectedPropertyId}
+                onPropertySelect={setSelectedPropertyId}
+                onBoundsChange={handleBoundsChange}
+                mode="prices"
+                truncated={mapTruncated}
+                flyTo={mapFlyTo}
+                onFlyToDone={() => setMapFlyTo(null)}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </main>

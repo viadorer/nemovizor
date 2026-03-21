@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Default password (users will need to reset)
-  const DEFAULT_PASSWORD = "Nemovizor2026!";
+  const DEFAULT_PASSWORD = process.env.DEFAULT_ACCOUNT_PASSWORD || "Nemovizor2026!";
 
   // ===== AGENCIES =====
   if (target === "all" || target === "agencies") {

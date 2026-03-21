@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { Property } from "@/lib/types";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -67,12 +68,14 @@ export function DetailMap({
   } satisfies Property;
 
   return (
-    <PropertyMap
-      properties={[mapProperty]}
-      mode="markers"
-      singleProperty
-      height={height}
-    />
+    <ErrorBoundary>
+      <PropertyMap
+        properties={[mapProperty]}
+        mode="markers"
+        singleProperty
+        height={height}
+      />
+    </ErrorBoundary>
   );
 }
 
@@ -87,11 +90,13 @@ export function WideDetailMap({
   height?: string;
 }) {
   return (
-    <PropertyMap
-      properties={properties}
-      selectedPropertyId={selectedPropertyId}
-      mode="prices"
-      height={height}
-    />
+    <ErrorBoundary>
+      <PropertyMap
+        properties={properties}
+        selectedPropertyId={selectedPropertyId}
+        mode="prices"
+        height={height}
+      />
+    </ErrorBoundary>
   );
 }

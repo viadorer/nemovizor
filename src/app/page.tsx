@@ -53,7 +53,7 @@ function useHomepageData() {
         setStats((s) => ({ ...s, total: d.total || 0 }));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e) => { console.error("Failed to fetch latest properties:", e); setLoading(false); });
 
     // Fetch stats
     fetch("/api/filter-options")
@@ -61,7 +61,7 @@ function useHomepageData() {
       .then((d) => {
         setStats((s) => ({ ...s, cities: d.cities?.length || 0 }));
       })
-      .catch(() => {});
+      .catch((e) => { console.error("Failed to fetch filter options:", e); });
   }, []);
 
   return { latest, stats, loading };

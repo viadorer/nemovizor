@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraper state & logs
+scripts/.scrape-state*.json
+scripts/*.log
