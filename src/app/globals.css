@@ -151,6 +151,71 @@ nav ul li a.active {
   border-color: var(--accent);
 }
 
+/* ===== LANGUAGE SWITCHER ===== */
+.lang-switcher {
+  position: relative;
+}
+
+.lang-switcher-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  gap: 4px;
+}
+
+.lang-switcher-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.lang-switcher-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+  z-index: 1001;
+  min-width: 60px;
+}
+
+.lang-switcher-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.lang-switcher-option:hover {
+  background: var(--bg-hover, rgba(0,0,0,0.05));
+}
+
+.lang-switcher-option--active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* ===== HERO ===== */
 .hero {
   position: relative;

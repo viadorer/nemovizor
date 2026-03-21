@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useT } from "@/i18n/provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/brands";
 
 const allNavItems = [
@@ -116,6 +117,7 @@ export function SiteHeader() {
             </ul>
           </nav>
           <div className="navbar-right">
+            <LanguageSwitcher />
             <ThemeToggle />
             {!loading && user ? (
               <div className="user-menu-wrapper" ref={userMenuRef}>
@@ -232,6 +234,7 @@ export function SiteHeader() {
 
         <div className="mobile-menu-footer">
           <div className="mobile-menu-theme">
+            <LanguageSwitcher />
             <ThemeToggle />
             <span>{t.common.toggleTheme}</span>
           </div>
