@@ -22,6 +22,7 @@ import { saveCurrentSearch } from "@/lib/saved-searches";
 import type { SavedSearch } from "@/lib/types";
 import { useT } from "@/i18n/provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { COUNTRY_BBOXES } from "@/config/geo";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -41,29 +42,6 @@ const subtypesByCategory: Record<PropertyCategory, Record<string, string>> = {
   commercial: CommercialSubtypes, other: OtherSubtypes,
 };
 
-// Country bounding boxes [west, south, east, north]
-const COUNTRY_BBOXES: Record<string, [number, number, number, number]> = {
-  cz: [12.09, 48.55, 18.86, 51.06],
-  sk: [16.84, 47.73, 22.57, 49.61],
-  de: [5.87, 47.27, 15.04, 55.06],
-  at: [9.53, 46.37, 17.16, 49.02],
-  fr: [-5.14, 41.36, 9.56, 51.09],
-  it: [6.63, 36.62, 18.52, 47.09],
-  es: [-9.39, 27.64, 4.33, 43.79],
-  pt: [-9.53, 36.84, -6.19, 42.15],
-  gb: [-8.18, 49.91, 1.77, 58.64],
-  hr: [13.49, 42.39, 19.43, 46.55],
-  gr: [19.37, 34.80, 29.65, 41.75],
-  al: [19.26, 39.64, 21.06, 42.66],
-  cy: [32.27, 34.57, 34.60, 35.70],
-  me: [18.43, 41.85, 20.36, 43.56],
-  bg: [22.36, 41.24, 28.61, 44.22],
-  tr: [25.66, 35.82, 44.83, 42.11],
-  hu: [16.11, 45.74, 22.90, 48.59],
-  mc: [7.41, 43.72, 7.44, 43.75],
-  ch: [5.96, 45.82, 10.49, 47.81],
-  be: [2.54, 49.50, 6.41, 51.50],
-};
 
 // ===== DROPDOWN COMPONENT (single-select) =====
 type DropdownProps<T extends string> = {

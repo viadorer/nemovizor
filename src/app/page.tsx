@@ -10,6 +10,7 @@ import { filtersToSearchParams } from "@/lib/saved-searches";
 import { Property } from "@/lib/types";
 import { useT } from "@/i18n/provider";
 import { brand } from "@/brands";
+import { POPULAR_CITIES } from "@/config/geo";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -67,16 +68,6 @@ function useHomepageData() {
   return { latest, stats, loading };
 }
 
-const POPULAR_CITIES = [
-  { name: "Praha", count: "500+" },
-  { name: "Brno", count: "200+" },
-  { name: "Ostrava", count: "150+" },
-  { name: "Plzeň", count: "80+" },
-  { name: "Olomouc", count: "60+" },
-  { name: "Liberec", count: "50+" },
-  { name: "České Budějovice", count: "45+" },
-  { name: "Hradec Králové", count: "40+" },
-];
 
 export default function Home() {
   const router = useRouter();
