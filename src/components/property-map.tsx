@@ -148,10 +148,10 @@ export default function PropertyMap({
   onFlyToDoneRef.current = onFlyToDone;
   const flyToActiveRef = useRef(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    if (typeof window === "undefined") return "dark";
+    if (typeof window === "undefined") return "classic";
     try {
-      return (sessionStorage.getItem("nemovizor-map-style") as MapStyle) || "dark";
-    } catch { return "dark"; }
+      return (sessionStorage.getItem("nemovizor-map-style") as MapStyle) || "classic";
+    } catch { return "classic"; }
   });
 
   // ===== SessionStorage klíč pro uložení stavu mapy =====
