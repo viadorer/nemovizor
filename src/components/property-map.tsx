@@ -111,6 +111,7 @@ export type MapBounds = {
   south: number;
   east: number;
   west: number;
+  zoom: number;
 };
 
 // ===== PROPS =====
@@ -142,6 +143,7 @@ export default function PropertyMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const serverClusterLayerRef = useRef<L.LayerGroup | null>(null);
   const markerMapRef = useRef<Map<string, L.Marker>>(new Map());
   const initialFitDoneRef = useRef(false);
   const truncatedRef = useRef(truncated);
@@ -223,6 +225,9 @@ export default function PropertyMap({
       },
     }).addTo(map);
 
+    // Separate layer for server-side cluster markers (not inside markerClusterGroup)
+    serverClusterLayerRef.current = L.layerGroup().addTo(map);
+
     // Uložit stav mapy při každém pohybu/zoomu + emitovat bounds
     const saveMapState = () => {
       try {
@@ -243,6 +248,7 @@ export default function PropertyMap({
           south: b.getSouth(),
           east: b.getEast(),
           west: b.getWest(),
+          zoom: map.getZoom(),
         });
       } catch { /* map not ready */ }
     };
@@ -263,6 +269,7 @@ export default function PropertyMap({
       map.remove();
       mapInstanceRef.current = null;
       markersRef.current = null;
+      serverClusterLayerRef.current = null;
     };
   }, []);
 
@@ -273,11 +280,33 @@ export default function PropertyMap({
     if (!map || !markersGroup) return;
 
     markersGroup.clearLayers();
+    serverClusterLayerRef.current?.clearLayers();
     markerMapRef.current.clear();
 
     if (validProperties.length === 0) return;
 
     validProperties.forEach((p) => {
+      // ── Server-side cluster point ────────────────────────────────────────
+      if (p.clusterCount && p.clusterCount > 1) {
+        const count = p.clusterCount;
+        const label = count >= 1000 ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k` : String(count);
+        const size = count >= 10000 ? 52 : count >= 1000 ? 44 : 36;
+        const clusterIcon = L.divIcon({
+          html: `<div class="map-cluster-icon" style="width:${size}px;height:${size}px;line-height:${size}px;font-size:${size > 44 ? 13 : 12}px;">${label}</div>`,
+          className: "map-cluster-wrapper",
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
+        });
+        const marker = L.marker([p.latitude, p.longitude], { icon: clusterIcon });
+        marker.on("click", () => {
+          const map = mapInstanceRef.current;
+          if (map) map.setView([p.latitude, p.longitude], map.getZoom() + 2, { animate: true });
+        });
+        serverClusterLayerRef.current?.addLayer(marker);
+        return;
+      }
+
+      // ── Regular property pin ─────────────────────────────────────────────
       const icon = mode === "prices"
         ? createPriceLabel(p)
         : createMarkerIcon(p.featured);

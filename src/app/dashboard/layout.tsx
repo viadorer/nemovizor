@@ -35,6 +35,12 @@ const ICONS = {
       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
   ),
+  recentlyViewed: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
   history: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="10" />
@@ -154,6 +160,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const userItems: SidebarItem[] = useMemo(() => [
     { href: "/dashboard", label: t.dashboard.overview, icon: ICONS.overview },
     { href: "/dashboard/oblibene", label: t.dashboard.favorites, icon: ICONS.favorites },
+    { href: "/dashboard/prohlizene", label: t.dashboard.recentlyViewed, icon: ICONS.recentlyViewed },
     { href: "/dashboard/hledani", label: t.dashboard.savedSearches, icon: ICONS.savedSearches },
     { href: "/dashboard/historie", label: t.dashboard.history, icon: ICONS.history },
     { href: "/dashboard/upozorneni", label: t.dashboard.notifications, icon: ICONS.notifications },

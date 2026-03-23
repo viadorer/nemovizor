@@ -299,6 +299,9 @@ type MapPoint = {
   subtype: string | null;
   area: number | null;
   district: string | null;
+  // Server-side cluster fields
+  is_cluster?: boolean;
+  cluster_count?: number;
 };
 
 type PropertiesResponse = {
@@ -393,10 +396,10 @@ function rowToProperty(row: Record<string, unknown>): Property {
 function mapPointToMapProperty(pt: MapPoint) {
   return {
     id: pt.id,
-    slug: pt.slug,
-    title: pt.title,
-    listingType: pt.listing_type as ListingType,
-    category: pt.category as PropertyCategory,
+    slug: pt.slug || "",
+    title: pt.title || "",
+    listingType: (pt.listing_type || "sale") as ListingType,
+    category: (pt.category || "apartment") as PropertyCategory,
     subtype: pt.subtype || "",
     roomsLabel: pt.rooms_label || "",
     price: pt.price,
@@ -420,6 +423,7 @@ function mapPointToMapProperty(pt: MapPoint) {
     parking: "",
     brokerName: "",
     brokerPhone: "",
+    clusterCount: pt.is_cluster ? (pt.cluster_count ?? 1) : undefined,
     brokerEmail: "",
     agencyName: "",
     balcony: false, terrace: false, garden: false, elevator: false,
@@ -530,6 +534,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(null);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [debouncedBounds, setDebouncedBounds] = useState<MapBounds | null>(null);
+  const [mapZoom, setMapZoom] = useState(7);
   const boundsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -596,14 +601,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     const params = buildFilterParams(filters);
     if (brokerId) params.set("broker_id", brokerId);
     if (agencyId) params.set("agency_id", agencyId);
-    // Map points always use bounds if available
+    // Map points always use bounds + zoom
+    params.set("zoom", String(mapZoom));
     if (debouncedBounds) {
       params.set("sw_lat", String(debouncedBounds.south));
       params.set("sw_lon", String(debouncedBounds.west));
       params.set("ne_lat", String(debouncedBounds.north));
       params.set("ne_lon", String(debouncedBounds.east));
     }
-    params.set("limit", "5000");
 
     fetch(`/api/map-points?${params}`, { signal: controller.signal })
       .then((r) => r.json())
@@ -615,7 +620,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
       .catch((e) => { if (e.name !== "AbortError") { setMapLoading(false); } });
 
     return () => controller.abort();
-  }, [filters, debouncedBounds]);
+  }, [filters, debouncedBounds, mapZoom]);
 
   // Fetch filter options
   useEffect(() => {
@@ -669,6 +674,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     if (latSpan < 0.0001 || lonSpan < 0.0001) return;
 
     setMapBounds(bounds);
+    setMapZoom(bounds.zoom ?? 7);
     if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
     boundsTimerRef.current = setTimeout(() => {
       setDebouncedBounds(bounds);
@@ -824,6 +830,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
             const bounds: MapBounds = {
               south: geo.bbox[1], west: geo.bbox[0],
               north: geo.bbox[3], east: geo.bbox[2],
+              zoom: mapZoom,
             };
             setDebouncedBounds(bounds);
             setMapBounds(bounds);
@@ -855,6 +862,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
           const bounds: MapBounds = {
             south: geo.bbox[1], west: geo.bbox[0],
             north: geo.bbox[3], east: geo.bbox[2],
+            zoom: mapZoom,
           };
           setDebouncedBounds(bounds);
           setMapBounds(bounds);
@@ -893,6 +901,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
             west: geo.bbox[0],
             north: geo.bbox[3],
             east: geo.bbox[2],
+            zoom: mapZoom,
           };
           setDebouncedBounds(bounds);
           setMapBounds(bounds);
@@ -946,6 +955,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                     const bounds: MapBounds = {
                       south: item.bbox[1], west: item.bbox[0],
                       north: item.bbox[3], east: item.bbox[2],
+                      zoom: mapZoom,
                     };
                     setDebouncedBounds(bounds);
                     setMapBounds(bounds);

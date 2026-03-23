@@ -11,6 +11,7 @@ import { DetailSplitLayout } from "./detail-split-layout";
 import { MediaGallery } from "./media-gallery";
 import { PointsOfInterest } from "./points-of-interest";
 import { AutoSaveSearch } from "./auto-save-search";
+import { TrackView } from "./track-view";
 import { MortgageCalculator } from "./mortgage-calculator";
 
 function buildAddress(parts: (string | undefined)[]): string {
@@ -169,6 +170,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
     <div className="page-shell">
       <SiteHeader />
       <AutoSaveSearch />
+      <TrackView propertyId={property.id} />
       <main className="detail-page">
         <DetailSplitLayout
           properties={[property, ...similarProperties]}

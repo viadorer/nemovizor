@@ -677,6 +677,10 @@ const en: Translation = {
     useSearch: "Use",
     turnOffNotifications: "Turn off notifications",
     turnOnNotifications: "Turn on notifications",
+    // Recently viewed page
+    recentlyViewed: "Recently viewed",
+    recentlyViewedTitle: "Recently viewed properties",
+    recentlyViewedEmpty: "You haven't viewed any properties yet",
     // History page
     historyTitle: "Search history",
     historyEmpty: "You don't have any search history yet",

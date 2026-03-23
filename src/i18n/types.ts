@@ -683,6 +683,10 @@ export interface Translation {
     useSearch: string;
     turnOffNotifications: string;
     turnOnNotifications: string;
+    // Recently viewed page
+    recentlyViewed: string;
+    recentlyViewedTitle: string;
+    recentlyViewedEmpty: string;
     // History page
     historyTitle: string;
     historyEmpty: string;

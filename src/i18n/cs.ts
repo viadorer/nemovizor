@@ -677,6 +677,10 @@ const cs: Translation = {
     useSearch: "Použít",
     turnOffNotifications: "Vypnout upozornění",
     turnOnNotifications: "Zapnout upozornění",
+    // Recently viewed page
+    recentlyViewed: "Prohlížené",
+    recentlyViewedTitle: "Naposledy prohlížené nemovitosti",
+    recentlyViewedEmpty: "Zatím jste neprohlíželi žádné nemovitosti",
     // History page
     historyTitle: "Historie hledání",
     historyEmpty: "Zatím nemáte žádnou historii hledání",

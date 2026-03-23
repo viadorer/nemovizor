@@ -721,6 +721,9 @@ export type Property = {
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
+
+  // Server-side map cluster (clusterCount > 1 means this is an aggregated point, not a real property)
+  clusterCount?: number;
 };
 
 /** Filtry vyhledávání */
