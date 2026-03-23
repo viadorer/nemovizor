@@ -55,36 +55,36 @@ export async function GET(req: NextRequest) {
           { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
         );
       }
-    } catch {
-      // RPC not yet deployed — fall through to raw pin fallback
+    } catch (e) {
+      console.error("[map-points] get_map_clusters RPC error:", e);
     }
   }
 
-  // ── Pin mode (zoom ≥ 13) or cluster RPC unavailable: try get_map_points ───
-  if (!useCluster) {
-    try {
-      const { data: rpcData, error: rpcError } = await (client as unknown as RpcClient).rpc("get_map_points", {
-        p_listing_type: sp.get("listing_type") || null,
-        p_category: sp.get("category") || null,
-        p_city: sp.get("city") || null,
-        p_price_min: sp.get("price_min") ? Number(sp.get("price_min")) : null,
-        p_price_max: sp.get("price_max") ? Number(sp.get("price_max")) : null,
-        p_bounds_sw_lat: sp.get("sw_lat") ? Number(sp.get("sw_lat")) : null,
-        p_bounds_sw_lon: sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null,
-        p_bounds_ne_lat: sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null,
-        p_bounds_ne_lon: sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null,
-        p_limit: 500,
-      });
+  // ── Pin mode (zoom ≥ 13) or cluster RPC unavailable — try get_map_points RPC ──
+  // Note: runs for both pin mode AND as fallback when cluster RPC fails
+  try {
+    const { data: rpcData, error: rpcError } = await (client as unknown as RpcClient).rpc("get_map_points", {
+      p_listing_type: sp.get("listing_type") || null,
+      p_category: sp.get("category") || null,
+      p_city: sp.get("city") || null,
+      p_price_min: sp.get("price_min") ? Number(sp.get("price_min")) : null,
+      p_price_max: sp.get("price_max") ? Number(sp.get("price_max")) : null,
+      p_bounds_sw_lat: sp.get("sw_lat") ? Number(sp.get("sw_lat")) : null,
+      p_bounds_sw_lon: sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null,
+      p_bounds_ne_lat: sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null,
+      p_bounds_ne_lon: sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null,
+      p_limit: useCluster ? 2000 : 500,
+    });
 
-      if (!rpcError && rpcData) {
-        return NextResponse.json(
-          { points: rpcData, count: (rpcData as unknown[]).length, mode: "pins" },
-          { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
-        );
-      }
-    } catch {
-      // RPC not available, use fallback below
+    if (!rpcError && rpcData) {
+      return NextResponse.json(
+        { points: rpcData, count: (rpcData as unknown[]).length, mode: useCluster ? "cluster-fallback" : "pins" },
+        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+      );
     }
+    if (rpcError) console.error("[map-points] get_map_points RPC error:", rpcError);
+  } catch (e) {
+    console.error("[map-points] get_map_points RPC exception:", e);
   }
 
   // Fallback: simple select (no PostGIS)
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
     return q;
   }
 
-  const maxPoints = useCluster ? 500 : Math.min(Number(sp.get("limit") || "500"), 500);
+  const maxPoints = useCluster ? 2000 : Math.min(Number(sp.get("limit") || "500"), 500);
 
   // Supabase caps at 1000 rows per request — fetch pages in parallel
   type MapRow = { id: string; latitude: number; longitude: number; price: number; price_currency: string | null; category: string; listing_type: string; title: string; slug: string; rooms_label: string; image_src: string | null; subtype: string | null; area: number | null; district: string | null };
