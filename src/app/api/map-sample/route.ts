@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       const scaleFactor = points.length > 0 ? total / points.length : 1;
       return NextResponse.json(
         { points, total, scaleFactor },
-        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+        { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600" } }
       );
     }
 
@@ -111,6 +111,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { points, total, scaleFactor },
-    { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+    { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600" } }
   );
 }

@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         }));
         return NextResponse.json(
           { points, count: points.length, mode: "cluster" },
-          { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+          { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
         );
       }
     } catch (e) {
