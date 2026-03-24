@@ -218,7 +218,13 @@ export default function PropertyMap({
     mapInstanceRef.current = map;
     // @ts-ignore markerClusterGroup is added by leaflet.markercluster plugin
     markersRef.current = L.markerClusterGroup({
-      maxClusterRadius: 50,
+      maxClusterRadius: (zoom: number) => {
+        // Smaller radius at low zoom = cities stay separate; larger at high zoom = natural grouping
+        if (zoom <= 6) return 60;
+        if (zoom <= 8) return 45;
+        if (zoom <= 10) return 35;
+        return 25;
+      },
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
