@@ -117,6 +117,8 @@ export type MapBounds = {
 // ===== PROPS =====
 type PropertyMapProps = {
   properties: Property[];
+  sample?: { lat: number; lon: number }[]; // lightweight sample for Leaflet visual clustering
+  scaleFactor?: number; // multiply Leaflet childCount to get real count
   selectedPropertyId?: string | null;
   onPropertySelect?: (id: string) => void;
   onBoundsChange?: (bounds: MapBounds) => void;
@@ -130,6 +132,8 @@ type PropertyMapProps = {
 
 export default function PropertyMap({
   properties: props,
+  sample,
+  scaleFactor = 1,
   selectedPropertyId,
   onPropertySelect,
   onBoundsChange,
@@ -148,6 +152,10 @@ export default function PropertyMap({
   const initialFitDoneRef = useRef(false);
   const truncatedRef = useRef(truncated);
   truncatedRef.current = truncated;
+  const scaleFactorRef = useRef(scaleFactor);
+  scaleFactorRef.current = scaleFactor;
+  const isSampleModeRef = useRef(!!sample?.length);
+  isSampleModeRef.current = !!sample?.length;
   const restoredFromSessionRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const poiLayerRef = useRef<L.LayerGroup | null>(null);
@@ -215,12 +223,21 @@ export default function PropertyMap({
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
       iconCreateFunction: (cluster: { getChildCount: () => number }) => {
-        const count = cluster.getChildCount();
-        const plus = truncatedRef.current ? "+" : "";
+        const rawCount = cluster.getChildCount();
+        const count = isSampleModeRef.current
+          ? Math.round(rawCount * scaleFactorRef.current)
+          : rawCount;
+        const plus = !isSampleModeRef.current && truncatedRef.current ? "+" : "";
+        const label = count >= 1000000
+          ? `${(count / 1000000).toFixed(count >= 10000000 ? 0 : 1)}M${plus}`
+          : count >= 1000
+          ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k${plus}`
+          : `${count}${plus}`;
+        const size = count >= 100000 ? 56 : count >= 10000 ? 52 : count >= 1000 ? 44 : 36;
         return L.divIcon({
-          html: `<div class="map-cluster-icon">${count}${plus}</div>`,
+          html: `<div class="map-cluster-icon" style="width:${size}px;height:${size}px;line-height:${size}px;font-size:${size > 44 ? 13 : 12}px;">${label}</div>`,
           className: "map-cluster-wrapper",
-          iconSize: [34, 34],
+          iconSize: [size, size],
         });
       },
     }).addTo(map);
@@ -273,8 +290,39 @@ export default function PropertyMap({
     };
   }, []);
 
+  // ── Sample mode: render lightweight sample points for Leaflet visual clustering ──
+  useEffect(() => {
+    const markersGroup = markersRef.current;
+    if (!markersGroup) return;
+    if (!sample?.length) return;
+
+    markersGroup.clearLayers();
+    serverClusterLayerRef.current?.clearLayers();
+    markerMapRef.current.clear();
+
+    const invisibleIcon = L.divIcon({ html: "", className: "", iconSize: [0, 0], iconAnchor: [0, 0] });
+    sample.forEach(({ lat, lon }) => {
+      if (!lat || !lon) return;
+      const marker = L.marker([lat, lon], { icon: invisibleIcon });
+      markersGroup.addLayer(marker);
+    });
+  }, [sample]);
+
+  // ── Clear markers when switching from sample mode to pins mode ──
+  useEffect(() => {
+    if (sample?.length) return; // sample effect handles clearing
+    const markersGroup = markersRef.current;
+    if (!markersGroup) return;
+    // Only clear if there were sample markers (detect by checking if all markers are invisible)
+    markersGroup.clearLayers();
+    serverClusterLayerRef.current?.clearLayers();
+    markerMapRef.current.clear();
+  }, [sample]);
+
+  // ── Real pins mode: render property markers ──
   // Update markers when properties change (NOT when selectedPropertyId changes)
   useEffect(() => {
+    if (sample?.length) return; // sample mode handles markers
     const map = mapInstanceRef.current;
     const markersGroup = markersRef.current;
     if (!map || !markersGroup) return;
@@ -286,26 +334,6 @@ export default function PropertyMap({
     if (validProperties.length === 0) return;
 
     validProperties.forEach((p) => {
-      // ── Server-side cluster point ────────────────────────────────────────
-      if (p.clusterCount && p.clusterCount > 1) {
-        const count = p.clusterCount;
-        const label = count >= 1000 ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k` : String(count);
-        const size = count >= 10000 ? 52 : count >= 1000 ? 44 : 36;
-        const clusterIcon = L.divIcon({
-          html: `<div class="map-cluster-icon" style="width:${size}px;height:${size}px;line-height:${size}px;font-size:${size > 44 ? 13 : 12}px;">${label}</div>`,
-          className: "map-cluster-wrapper",
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        });
-        const marker = L.marker([p.latitude, p.longitude], { icon: clusterIcon });
-        marker.on("click", () => {
-          const map = mapInstanceRef.current;
-          if (map) map.setView([p.latitude, p.longitude], map.getZoom() + 2, { animate: true });
-        });
-        serverClusterLayerRef.current?.addLayer(marker);
-        return;
-      }
-
       // ── Regular property pin ─────────────────────────────────────────────
       const icon = mode === "prices"
         ? createPriceLabel(p)
@@ -339,7 +367,7 @@ export default function PropertyMap({
     }
     // After first fit, never auto-zoom again (user controls the viewport)
     initialFitDoneRef.current = true;
-  }, [validProperties, mode, singleProperty, onPropertySelect]);
+  }, [validProperties, mode, singleProperty, onPropertySelect, sample]);
 
   // Highlight marker when selectedPropertyId changes (hover from grid)
   const prevSelectedRef = useRef<string | null>(null);

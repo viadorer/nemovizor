@@ -511,6 +511,8 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   // Data
   const [properties, setProperties] = useState<Property[]>([]);
   const [mapPoints, setMapPoints] = useState<Property[]>([]);
+  const [mapSample, setMapSample] = useState<{ lat: number; lon: number }[]>([]);
+  const [mapScaleFactor, setMapScaleFactor] = useState(1);
   const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapLoading, setMapLoading] = useState(true);
@@ -593,15 +595,37 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     return () => controller.abort();
   }, [filters, page, debouncedBounds, sortBy]);
 
-  // Fetch map points (all matching in viewport, lightweight)
+  // Fetch map sample (global, filters only — no bbox/zoom) for Leaflet visual clustering
   useEffect(() => {
+    const controller = new AbortController();
+    const params = buildFilterParams(filters);
+    if (brokerId) params.set("broker_id", brokerId);
+    if (agencyId) params.set("agency_id", agencyId);
+
+    fetch(`/api/map-sample?${params}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data: { points: { lat: number; lon: number }[]; total: number; scaleFactor: number }) => {
+        setMapSample(data.points || []);
+        setMapScaleFactor(data.scaleFactor ?? 1);
+      })
+      .catch((e) => { if (e.name !== "AbortError") console.error("[map-sample]", e); });
+
+    return () => controller.abort();
+  }, [filters, brokerId, agencyId]);
+
+  // Fetch real pins only at zoom ≥ 13 (street level — sample mode handles zoom < 13)
+  useEffect(() => {
+    if (mapZoom < 13) {
+      setMapPoints([]);
+      setMapLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setMapLoading(true);
 
     const params = buildFilterParams(filters);
     if (brokerId) params.set("broker_id", brokerId);
     if (agencyId) params.set("agency_id", agencyId);
-    // Map points always use bounds + zoom
     params.set("zoom", String(mapZoom));
     if (debouncedBounds) {
       params.set("sw_lat", String(debouncedBounds.south));
@@ -620,7 +644,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
       .catch((e) => { if (e.name !== "AbortError") { setMapLoading(false); } });
 
     return () => controller.abort();
-  }, [filters, debouncedBounds, mapZoom]);
+  }, [filters, debouncedBounds, mapZoom, brokerId, agencyId]);
 
   // Fetch filter options
   useEffect(() => {
@@ -1209,7 +1233,9 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
           <div className={`search-map-panel ${isMobile ? (mobileView === "map" ? "search-map-panel--mobile-full" : "search-map-panel--mobile-hidden") : ""}`}>
             <ErrorBoundary>
               <PropertyMap
-                properties={mapPoints}
+                properties={mapZoom >= 13 ? mapPoints : []}
+                sample={mapZoom < 13 ? mapSample : undefined}
+                scaleFactor={mapZoom < 13 ? mapScaleFactor : undefined}
                 selectedPropertyId={selectedPropertyId}
                 onPropertySelect={setSelectedPropertyId}
                 onBoundsChange={handleBoundsChange}
