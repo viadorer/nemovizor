@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 
 /**
- * GET /api/map-sample — lightweight sample of lat/lon points for Leaflet visual clustering
- * Returns a representative sample (max 3000) + total count for scaleFactor calculation.
- * No bbox — global sample so Leaflet can cluster naturally without re-fetching on pan.
+ * GET /api/map-sample — random sample of lat/lon points for Leaflet visual clustering
+ * Uses get_map_sample RPC (ORDER BY RANDOM()) so sample is geographically representative.
+ * Returns max 3000 points + total count for scaleFactor calculation.
+ * No bbox — global sample so Leaflet clusters naturally without re-fetching on pan.
  */
 export async function GET(req: NextRequest) {
   const client = getSupabase();
@@ -13,58 +14,103 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
-  const listingType = sp.get("listing_type");
-  const category = sp.get("category");
-  const city = sp.get("city");
-  const country = sp.get("country");
+  const listingType = sp.get("listing_type") || null;
+  const category = sp.get("category") || null;
   const priceMin = sp.get("price_min") ? Number(sp.get("price_min")) : null;
   const priceMax = sp.get("price_max") ? Number(sp.get("price_max")) : null;
-  const areaMin = sp.get("area_min") ? Number(sp.get("area_min")) : null;
-  const areaMax = sp.get("area_max") ? Number(sp.get("area_max")) : null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type RpcClient = { rpc: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown[] | null; error: unknown }> };
+
+  try {
+    const [countResult, sampleResult] = await Promise.all([
+      // Count total matching properties
+      (() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = client.from("properties")
+          .select("id", { count: "exact", head: true })
+          .eq("active", true)
+          .not("latitude", "is", null)
+          .neq("latitude", 0);
+        if (listingType) q = q.eq("listing_type", listingType);
+        if (category) {
+          const cats = category.split(",");
+          q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+        }
+        if (priceMin) q = q.gte("price", priceMin);
+        if (priceMax) q = q.lte("price", priceMax);
+        return q;
+      })(),
+      // Random sample via RPC
+      (client as unknown as RpcClient).rpc("get_map_sample", {
+        p_limit: 3000,
+        p_listing_type: listingType,
+        p_category: category,
+        p_price_min: priceMin,
+        p_price_max: priceMax,
+      }),
+    ]);
+
+    const total: number = (countResult as { count: number | null }).count ?? 0;
+
+    if (!sampleResult.error && sampleResult.data) {
+      const points = (sampleResult.data as { lat: number; lon: number }[]).filter(
+        (r) => r.lat && r.lon
+      );
+      const scaleFactor = points.length > 0 ? total / points.length : 1;
+      return NextResponse.json(
+        { points, total, scaleFactor },
+        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+      );
+    }
+
+    if (sampleResult.error) {
+      console.error("[map-sample] RPC error:", sampleResult.error);
+    }
+  } catch (e) {
+    console.error("[map-sample] error:", e);
+  }
+
+  // Fallback: stratified sample using 3 offset ranges for geographic spread
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function applyFilters(q: any): any {
-    q = q.eq("active", true)
-      .not("latitude", "is", null)
-      .not("longitude", "is", null)
-      .neq("latitude", 0)
-      .neq("longitude", 0);
+    q = q.eq("active", true).not("latitude", "is", null).neq("latitude", 0);
     if (listingType) q = q.eq("listing_type", listingType);
     if (category) {
       const cats = category.split(",");
       q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
     }
-    if (city) q = q.eq("city", city);
-    if (country) {
-      const countries = country.split(",");
-      q = countries.length === 1 ? q.eq("country", countries[0]) : q.in("country", countries);
-    }
     if (priceMin) q = q.gte("price", priceMin);
     if (priceMax) q = q.lte("price", priceMax);
-    if (areaMin) q = q.gte("area", areaMin);
-    if (areaMax) q = q.lte("area", areaMax);
     return q;
   }
 
-  const SAMPLE_LIMIT = 3000;
-  const [countResult, sampleResult] = await Promise.all([
-    applyFilters(client.from("properties").select("id", { count: "exact", head: true })),
-    applyFilters(client.from("properties").select("latitude,longitude")).limit(SAMPLE_LIMIT),
+  const countRes = await applyFilters(
+    client.from("properties").select("id", { count: "exact", head: true })
+  );
+  const total = countRes.count ?? 0;
+  const step = Math.floor(total / 3);
+
+  const [b1, b2, b3] = await Promise.all([
+    applyFilters(client.from("properties").select("latitude,longitude")).range(0, 999),
+    step > 1000
+      ? applyFilters(client.from("properties").select("latitude,longitude")).range(step, step + 999)
+      : Promise.resolve({ data: [], error: null }),
+    step * 2 > 2000
+      ? applyFilters(client.from("properties").select("latitude,longitude")).range(step * 2, step * 2 + 999)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (sampleResult.error) {
-    return NextResponse.json({ error: sampleResult.error.message }, { status: 500 });
-  }
-
-  const total: number = countResult.count ?? 0;
-  const points = ((sampleResult.data || []) as { latitude: number; longitude: number }[]).map((r) => ({
-    lat: r.latitude,
-    lon: r.longitude,
-  }));
+  const rows = [
+    ...((b1.data || []) as { latitude: number; longitude: number }[]),
+    ...((b2.data || []) as { latitude: number; longitude: number }[]),
+    ...((b3.data || []) as { latitude: number; longitude: number }[]),
+  ];
+  const points = rows.filter((r) => r.latitude && r.longitude).map((r) => ({ lat: r.latitude, lon: r.longitude }));
   const scaleFactor = points.length > 0 ? total / points.length : 1;
 
   return NextResponse.json(
     { points, total, scaleFactor },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+    { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
   );
 }

@@ -36,7 +36,11 @@ export async function GET(req: NextRequest) {
         p_area_max:     sp.get("area_max")  ? Number(sp.get("area_max"))  : null,
       });
 
+      if (clusterError) {
+        console.error("[map-points] get_map_clusters error:", JSON.stringify(clusterError));
+      }
       if (!clusterError && clusterData) {
+        console.log(`[map-points] cluster OK: ${(clusterData as unknown[]).length} clusters (zoom=${zoom})`);
         type ClusterRow = { lat: number; lon: number; cluster_count: number; avg_price: number };
         const points = (clusterData as ClusterRow[]).map((c) => ({
           id: `cluster_${c.lat}_${c.lon}`,
