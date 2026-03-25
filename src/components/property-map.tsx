@@ -317,14 +317,12 @@ export default function PropertyMap({
             if (m) m.setView([p.latitude, p.longitude], m.getZoom() + 2, { animate: true });
           });
         } else {
-          // Singleton — malá tečka
-          const dotIcon = L.divIcon({
-            html: `<div class="map-dot-icon"></div>`,
-            className: "",
-            iconSize: [8, 8],
-            iconAnchor: [4, 4],
+          // Singleton — cenový štítek (zoom-in na klik)
+          marker = L.marker([p.latitude, p.longitude], { icon: createPriceLabel(p) });
+          marker.on("click", () => {
+            const m = mapInstanceRef.current;
+            if (m) m.setView([p.latitude, p.longitude], m.getZoom() + 2, { animate: true });
           });
-          marker = L.marker([p.latitude, p.longitude], { icon: dotIcon });
         }
         serverClusterLayerRef.current?.addLayer(marker);
         return;
