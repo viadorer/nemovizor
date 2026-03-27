@@ -534,6 +534,10 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
 
   // UI
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const handleMapPinClick = useCallback((id: string) => {
+    setSelectedPropertyId(id);
+    track("map_pin_click", { property_id: id });
+  }, []);
   const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(null);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [debouncedBounds, setDebouncedBounds] = useState<MapBounds | null>(null);
@@ -1243,10 +1247,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               <PropertyMap
                 properties={mapPoints}
                 selectedPropertyId={selectedPropertyId}
-                onPropertySelect={(id) => {
-                  setSelectedPropertyId(id);
-                  track("map_pin_click", { property_id: id });
-                }}
+                onPropertySelect={handleMapPinClick}
                 onBoundsChange={handleBoundsChange}
                 mode="prices"
                 truncated={mapTruncated}
