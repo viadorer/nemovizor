@@ -282,6 +282,7 @@ type FilterOptionsResponse = {
   subtypes: FilterOption[];
   listingTypes: FilterOption[];
   countries: FilterOption[];
+  currencies?: FilterOption[];
   priceRange: { min: number; max: number };
   areaRange: { min: number; max: number };
 };
@@ -941,8 +942,28 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
 
   const hasFilters = listingType || categories.length > 0 || subtypes.length > 0 || countries.length > 0 || priceMin || priceMax || areaMin || areaMax || sortBy !== "featured";
 
-  const pricePresets = [1000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000];
-  const areaPresets = [30, 50, 80, 100, 150, 200, 300];
+  // Dynamic presets based on actual data range from filter-options API
+  const pricePresets = useMemo(() => {
+    const allPresets = [100000, 200000, 500000, 750000, 1000000, 1500000, 2000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000, 50000000, 100000000];
+    if (!filterOptions?.priceRange) return allPresets.slice(2, 9); // fallback
+    const { min, max } = filterOptions.priceRange;
+    if (!max) return allPresets.slice(2, 9);
+    const lo = min * 0.3;
+    const hi = max * 1.2;
+    const filtered = allPresets.filter((p) => p >= lo && p <= hi);
+    return filtered.length > 0 ? filtered : allPresets.slice(2, 9);
+  }, [filterOptions]);
+
+  const areaPresets = useMemo(() => {
+    const allPresets = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 500, 1000, 2000, 5000, 10000];
+    if (!filterOptions?.areaRange) return allPresets.slice(2, 9); // fallback
+    const { min, max } = filterOptions.areaRange;
+    if (!max) return allPresets.slice(2, 9);
+    const lo = Math.max(0, min * 0.3);
+    const hi = max * 1.2;
+    const filtered = allPresets.filter((p) => p >= lo && p <= hi);
+    return filtered.length > 0 ? filtered : allPresets.slice(2, 9);
+  }, [filterOptions]);
 
   return (
     <div className={embedded ? "profile-listings" : "page-shell"}>

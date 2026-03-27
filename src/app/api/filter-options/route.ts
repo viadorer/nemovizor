@@ -53,7 +53,7 @@ async function fallbackFilterOptions(
   function buildQuery() {
     let q = client!
       .from("properties")
-      .select("listing_type, category, subtype, city, country, price, area")
+      .select("listing_type, category, subtype, city, country, price, area, price_currency")
       .eq("active", true);
     if (listingType) q = q.eq("listing_type", listingType as string);
     if (category) {
@@ -76,7 +76,7 @@ async function fallbackFilterOptions(
     if (page.length < pageSize) break;
   }
 
-  type FilterRow = { listing_type: string | null; category: string | null; subtype: string | null; city: string | null; country: string | null; price: number | null; area: number | null };
+  type FilterRow = { listing_type: string | null; category: string | null; subtype: string | null; city: string | null; country: string | null; price: number | null; area: number | null; price_currency: string | null };
   const rows = allData as FilterRow[];
 
   // Aggregate
@@ -85,6 +85,7 @@ async function fallbackFilterOptions(
   const subtypeMap = new Map<string, number>();
   const ltMap = new Map<string, number>();
   const countryMap = new Map<string, number>();
+  const currencyMap = new Map<string, number>();
   let priceMin = Infinity, priceMax = 0, areaMin = Infinity, areaMax = 0;
 
   for (const r of rows) {
@@ -93,6 +94,8 @@ async function fallbackFilterOptions(
     if (r.subtype) subtypeMap.set(r.subtype, (subtypeMap.get(r.subtype) || 0) + 1);
     if (r.listing_type) ltMap.set(r.listing_type, (ltMap.get(r.listing_type) || 0) + 1);
     if (r.country) countryMap.set(r.country, (countryMap.get(r.country) || 0) + 1);
+    const cur = (r.price_currency || "czk").toLowerCase();
+    currencyMap.set(cur, (currencyMap.get(cur) || 0) + 1);
     if (r.price && r.price > 0) { priceMin = Math.min(priceMin, r.price); priceMax = Math.max(priceMax, r.price); }
     if (r.area && r.area > 0) { areaMin = Math.min(areaMin, r.area); areaMax = Math.max(areaMax, r.area); }
   }
@@ -107,6 +110,7 @@ async function fallbackFilterOptions(
       subtypes: toArr(subtypeMap),
       listingTypes: toArr(ltMap),
       countries: toArr(countryMap),
+      currencies: toArr(currencyMap),
       priceRange: { min: priceMin === Infinity ? 0 : priceMin, max: priceMax },
       areaRange: { min: areaMin === Infinity ? 0 : areaMin, max: areaMax },
     },
