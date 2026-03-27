@@ -1005,8 +1005,8 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               )}
               <RangeDropdown label={t.filters.price} minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit={t.enumLabels.priceCurrencies[brand.currency] || brand.currency} />
               <RangeDropdown label={t.filters.area} minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m2" />
-              {countryOptions.length > 1 && (
-                <MultiFilterDropdown label={t.filters.country} values={countries} options={countryOptions} onChange={(vals) => {
+              {(countryOptions.length > 1 || countries.length > 0) && (
+                <MultiFilterDropdown label={t.filters.country} values={countries} options={countryOptions.length > 0 ? countryOptions : countries.map((c) => ({ value: c, label: t.enumLabels.countries[c] || c.toUpperCase(), count: 0 }))} onChange={(vals) => {
                   setCountries(vals);
                   if (vals.length === 1) {
                     const bbox = COUNTRY_BBOXES[vals[0]];
