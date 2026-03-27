@@ -11,7 +11,7 @@ type BehaviorStats = {
   eventBreakdown: { type: string; count: number }[];
   deviceCounts: Record<string, number>;
   topPages: { path: string; views: number }[];
-  topProperties: { id: string; count: number; slug: string; city: string }[];
+  topProperties: { id: string; count: number; slug: string; city: string; title?: string; price?: number; price_currency?: string; image_src?: string; listing_type?: string; category?: string; area?: number; rooms_label?: string }[];
   topSearches: { query: string; count: number }[];
   referrerSources: { source: string; count: number }[];
   utmCampaigns: { campaign: string; count: number }[];
@@ -203,7 +203,29 @@ export default function AdminAnalyticsPage() {
 
             <Card title="Top nemovitosti (detaily)">
               {b.topProperties.length === 0 ? <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Zatím žádné detaily</p> : b.topProperties.map((p) => (
-                <Row key={p.id} label={p.slug ? p.slug.slice(0, 40) : p.id.slice(0, 8)} value={`${p.count}×`} sub={p.city || undefined} />
+                <a key={p.id} href={`/nemovitost/${p.slug}`} target="_blank" rel="noopener" style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)", textDecoration: "none", color: "inherit", alignItems: "center" }}>
+                  <div style={{ width: 56, height: 42, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--bg-filter)" }}>
+                    {p.image_src && !p.image_src.includes("placeholder") ? (
+                      <img src={p.image_src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title || p.slug}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      {p.city}{p.rooms_label ? ` • ${p.rooms_label}` : ""}{p.area ? ` • ${p.area} m²` : ""}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-accent, #ffb800)" }}>
+                      {p.price ? `${(p.price).toLocaleString("cs")} ${(p.price_currency || "CZK").toUpperCase()}` : "—"}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{p.count}× zobrazení</div>
+                  </div>
+                </a>
               ))}
             </Card>
           </div>

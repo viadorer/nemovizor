@@ -93,10 +93,39 @@ export async function GET() {
     if (!propCounts[pid]) propCounts[pid] = { count: 0, slug: String(e.properties?.slug || ""), city: String(e.properties?.city || "") };
     propCounts[pid].count++;
   }
-  const topProperties = Object.entries(propCounts)
+  const topPropertiesRaw = Object.entries(propCounts)
     .map(([id, d]) => ({ id, ...d }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+
+  // Enrich top properties with real data from properties table
+  let topProperties: { id: string; count: number; slug: string; city: string; title?: string; price?: number; price_currency?: string; image_src?: string; listing_type?: string; category?: string; area?: number; rooms_label?: string }[] = topPropertiesRaw;
+  if (topPropertiesRaw.length > 0) {
+    const ids = topPropertiesRaw.map((p) => p.id);
+    const { data: propsData } = await client
+      .from("properties")
+      .select("id, slug, title, city, price, price_currency, image_src, listing_type, category, area, rooms_label")
+      .in("id", ids);
+    if (propsData && propsData.length > 0) {
+      const propsMap = new Map((propsData as { id: string }[]).map((p) => [p.id, p]));
+      topProperties = topPropertiesRaw.map((tp) => {
+        const real = propsMap.get(tp.id) as Record<string, unknown> | undefined;
+        return {
+          ...tp,
+          title: String(real?.title || ""),
+          price: Number(real?.price || 0),
+          price_currency: String(real?.price_currency || ""),
+          image_src: String(real?.image_src || ""),
+          listing_type: String(real?.listing_type || ""),
+          category: String(real?.category || ""),
+          area: Number(real?.area || 0),
+          rooms_label: String(real?.rooms_label || ""),
+          slug: String(real?.slug || tp.slug),
+          city: String(real?.city || tp.city),
+        };
+      });
+    }
+  }
 
   // ── Top AI searches ───────────────────────────────────────────────────
   const aiQueries: Record<string, number> = {};
