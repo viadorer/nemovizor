@@ -16,26 +16,49 @@ export async function GET(req: NextRequest) {
   const agencyId = req.nextUrl.searchParams.get("agency_id");
   if (!brokerId && !agencyId) return NextResponse.json({ error: "broker_id or agency_id required" }, { status: 400 });
 
-  // ── Get property IDs owned by this broker / agency ──────────────────
+  // ── Get property count + IDs owned by this broker / agency ──────────
+  let totalProperties = 0;
   let propIds: string[] = [];
   if (brokerId) {
-    const { data } = await client.from("properties").select("id").eq("broker_id", brokerId);
-    propIds = (data || []).map((p: { id: string }) => p.id);
+    // Exact count (no 1000 limit)
+    const { count } = await client.from("properties").select("id", { count: "exact", head: true }).eq("broker_id", brokerId);
+    totalProperties = count ?? 0;
+    // Fetch IDs in pages for event matching (need all IDs for slug matching)
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data } = await client.from("properties").select("id").eq("broker_id", brokerId).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (!data || data.length === 0) break;
+      propIds.push(...data.map((p: { id: string }) => p.id));
+      if (data.length < PAGE_SIZE) break;
+      page++;
+    }
   } else if (agencyId) {
-    // Get all broker IDs in this agency, then their properties
     const { data: brokers } = await client.from("brokers").select("id").eq("agency_id", agencyId);
     const brokerIds = (brokers || []).map((b: { id: string }) => b.id);
     if (brokerIds.length > 0) {
-      const { data } = await client.from("properties").select("id").in("broker_id", brokerIds);
-      propIds = (data || []).map((p: { id: string }) => p.id);
+      const { count } = await client.from("properties").select("id", { count: "exact", head: true }).in("broker_id", brokerIds);
+      totalProperties = count ?? 0;
+      let page = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data } = await client.from("properties").select("id").in("broker_id", brokerIds).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        if (!data || data.length === 0) break;
+        propIds.push(...data.map((p: { id: string }) => p.id));
+        if (data.length < PAGE_SIZE) break;
+        page++;
+      }
     }
   }
 
   // Also get slugs for URL matching
   let propSlugs: string[] = [];
   if (propIds.length > 0) {
-    const { data: slugData } = await client.from("properties").select("slug").in("id", propIds);
-    propSlugs = (slugData || []).map((p: { slug: string }) => p.slug);
+    for (let i = 0; i < propIds.length; i += 1000) {
+      const batch = propIds.slice(i, i + 1000);
+      const { data: slugData } = await client.from("properties").select("slug").in("id", batch);
+      if (slugData) propSlugs.push(...slugData.map((p: { slug: string }) => p.slug));
+    }
   }
 
   const { error: tableCheck } = await client.from("analytics_events").select("id").limit(1);
@@ -210,7 +233,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    totalProperties: propIds.length,
+    totalProperties,
     total7d: events7d.length,
     uniqueSessions,
     propViews7d,

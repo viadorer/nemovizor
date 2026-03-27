@@ -1,156 +1,288 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
-import { DataTable, type Column } from "@/components/admin/data-table";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
 import { useT } from "@/i18n/provider";
 
 type PropertyRow = {
-  id: string;
-  title: string;
-  city: string;
-  price: number;
-  listing_type: string;
-  category: string;
-  active: boolean;
-  created_at: string;
+  id: string; slug: string; title: string; city: string; price: number; price_currency: string;
+  listing_type: string; category: string; active: boolean; created_at: string;
+  image_src: string; area: number; rooms_label: string;
 };
+
+// ── Reusable filter dropdown (same style as listings page) ──────────
+function FilterDropdown({ label, value, options, onChange }: {
+  label: string; value: string | null;
+  options: { value: string; label: string }[];
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const sel = value ? options.find((o) => o.value === value)?.label : null;
+  return (
+    <div className="filter-dropdown" ref={ref}>
+      <button className={`filter-dropdown-trigger ${value ? "filter-dropdown-trigger--active" : ""}`} onClick={() => setOpen(!open)}>
+        <span>{sel ?? label}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`filter-dropdown-chevron ${open ? "filter-dropdown-chevron--open" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="filter-dropdown-menu">
+          <button className={`filter-dropdown-item ${!value ? "filter-dropdown-item--active" : ""}`} onClick={() => { onChange(null); setOpen(false); }}>Vše</button>
+          {options.map((o) => (
+            <button key={o.value} className={`filter-dropdown-item ${value === o.value ? "filter-dropdown-item--active" : ""}`} onClick={() => { onChange(value === o.value ? null : o.value); setOpen(false); }}>{o.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RangeDropdown({ label, minValue, maxValue, onMinChange, onMaxChange, presets, unit }: {
+  label: string; minValue: number | null; maxValue: number | null;
+  onMinChange: (v: number | null) => void; onMaxChange: (v: number | null) => void;
+  presets: number[]; unit: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const hasValue = minValue !== null || maxValue !== null;
+  const fmt = (n: number) => n >= 1000000 ? `${(n / 1000000).toFixed(1).replace(".0", "")} M` : n >= 1000 ? `${n / 1000} tis.` : String(n);
+  const displayLabel = hasValue ? `${minValue ? fmt(minValue) : "0"} – ${maxValue ? fmt(maxValue) : "∞"} ${unit}` : label;
+  return (
+    <div className="filter-dropdown" ref={ref}>
+      <button className={`filter-dropdown-trigger ${hasValue ? "filter-dropdown-trigger--active" : ""}`} onClick={() => setOpen(!open)}>
+        <span>{displayLabel}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`filter-dropdown-chevron ${open ? "filter-dropdown-chevron--open" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="filter-dropdown-menu" style={{ minWidth: 220, padding: 12 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Od</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+            <button className={`filter-dropdown-item ${minValue === null ? "filter-dropdown-item--active" : ""}`} style={{ padding: "4px 10px", fontSize: "0.78rem" }} onClick={() => onMinChange(null)}>Min</button>
+            {presets.map((v) => <button key={`min-${v}`} className={`filter-dropdown-item ${minValue === v ? "filter-dropdown-item--active" : ""}`} style={{ padding: "4px 10px", fontSize: "0.78rem" }} onClick={() => onMinChange(minValue === v ? null : v)}>{fmt(v)}</button>)}
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase" }}>Do</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            <button className={`filter-dropdown-item ${maxValue === null ? "filter-dropdown-item--active" : ""}`} style={{ padding: "4px 10px", fontSize: "0.78rem" }} onClick={() => onMaxChange(null)}>Max</button>
+            {presets.map((v) => <button key={`max-${v}`} className={`filter-dropdown-item ${maxValue === v ? "filter-dropdown-item--active" : ""}`} style={{ padding: "4px 10px", fontSize: "0.78rem" }} onClick={() => onMaxChange(maxValue === v ? null : v)}>{fmt(v)}</button>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CATEGORY_OPTIONS = [
+  { value: "apartment", label: "Byt" },
+  { value: "house", label: "Dům" },
+  { value: "land", label: "Pozemek" },
+  { value: "commercial", label: "Komerční" },
+  { value: "other", label: "Ostatní" },
+];
+const TYPE_OPTIONS = [
+  { value: "sale", label: "Prodej" },
+  { value: "rent", label: "Pronájem" },
+];
+const STATUS_OPTIONS = [
+  { value: "active", label: "Aktivní" },
+  { value: "inactive", label: "Neaktivní" },
+];
+const SORT_OPTIONS = [
+  { value: "created_at-desc", label: "Nejnovější" },
+  { value: "created_at-asc", label: "Nejstarší" },
+  { value: "price-desc", label: "Cena ↓" },
+  { value: "price-asc", label: "Cena ↑" },
+];
+const PRICE_PRESETS = [500000, 1000000, 2000000, 5000000, 10000000, 20000000];
+const AREA_PRESETS = [20, 40, 60, 80, 100, 150, 200, 500];
+const PAGE_SIZE = 24;
 
 export default function BrokerListingsPage() {
   const { user } = useAuth();
   const t = useT();
   const router = useRouter();
-  const [tableKey, setTableKey] = useState(0);
 
-  const columns: Column<PropertyRow>[] = [
-    {
-      key: "title",
-      label: t.dashboard.listingNameLabel,
-      render: (row) => (
-        <div>
-          <div style={{ fontWeight: 600, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {row.title || t.dashboard.listingNoTitle}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.city}</div>
-        </div>
-      ),
-    },
-    {
-      key: "price",
-      label: t.dashboard.listingPriceLabel,
-      render: (row) => row.price ? `${row.price.toLocaleString("cs")} Kč` : "-",
-    },
-    {
-      key: "listing_type",
-      label: t.dashboard.listingTypeLabel,
-      render: (row) => {
-        return t.enumLabels.listingTypes[row.listing_type] || row.listing_type;
-      },
-    },
-    {
-      key: "active",
-      label: t.dashboard.listingStateLabel,
-      render: (row) => (
-        <span className={`admin-badge ${row.active ? "admin-badge--active" : "admin-badge--inactive"}`}>
-          {row.active ? t.dashboard.listingStateActive : t.dashboard.listingStateInactive}
-        </span>
-      ),
-    },
-    {
-      key: "created_at",
-      label: t.dashboard.listingCreatedLabel,
-      render: (row) => new Date(row.created_at).toLocaleDateString("cs"),
-    },
-  ];
+  const [properties, setProperties] = useState<PropertyRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async (params: { page: number; limit: number; search: string; sort: string; order: "asc" | "desc" }) => {
+  // Filters
+  const [search, setSearch] = useState("");
+  const [listingType, setListingType] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [sort, setSort] = useState("created_at-desc");
+  const [priceMin, setPriceMin] = useState<number | null>(null);
+  const [priceMax, setPriceMax] = useState<number | null>(null);
+  const [areaMin, setAreaMin] = useState<number | null>(null);
+  const [areaMax, setAreaMax] = useState<number | null>(null);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const searchTimeout = useRef<any>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(searchTimeout.current);
+  }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [debouncedSearch, listingType, category, status, sort, priceMin, priceMax, areaMin, areaMax]);
+
+  const fetchData = useCallback(async () => {
     const supabase = getBrowserSupabase();
-    if (!supabase || !user) return { data: [], total: 0 };
+    if (!supabase || !user) return;
+    setLoading(true);
 
-    // Collect broker IDs the user can manage:
-    // 1) User is a broker → own record + agency team
-    // 2) User owns an agency → all brokers in that agency
+    // Get broker/agency scope
     const brokerIds: string[] = [];
-
-    const { data: myBroker } = await supabase
-      .from("brokers")
-      .select("id, agency_id")
-      .eq("user_id", user.id)
-      .single();
-
-    const { data: myAgency } = await supabase
-      .from("agencies")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
+    const { data: myBroker } = await supabase.from("brokers").select("id, agency_id").eq("user_id", user.id).single();
+    const { data: myAgency } = await supabase.from("agencies").select("id").eq("user_id", user.id).single();
     const agencyId = myAgency?.id || myBroker?.agency_id || null;
 
     if (agencyId) {
-      // Load all brokers in the agency
-      const { data: teamBrokers } = await supabase
-        .from("brokers")
-        .select("id")
-        .eq("agency_id", agencyId);
-      if (teamBrokers) {
-        for (const b of teamBrokers) brokerIds.push(b.id);
-      }
+      const { data: team } = await supabase.from("brokers").select("id").eq("agency_id", agencyId);
+      if (team) for (const b of team) brokerIds.push(b.id);
     } else if (myBroker) {
       brokerIds.push(myBroker.id);
     }
 
-    if (brokerIds.length === 0 && !user) return { data: [], total: 0 };
+    if (brokerIds.length === 0 && !user) { setLoading(false); return; }
 
-    const offset = (params.page - 1) * params.limit;
-
-    // Build filter: broker's properties OR properties created by this user
+    const offset = (page - 1) * PAGE_SIZE;
     const filters: string[] = [];
-    if (brokerIds.length > 0) {
-      filters.push(`broker_id.in.(${brokerIds.join(",")})`);
-    }
+    if (brokerIds.length > 0) filters.push(`broker_id.in.(${brokerIds.join(",")})`);
     filters.push(`created_by.eq.${user.id}`);
 
     let query = supabase
       .from("properties")
-      .select("id, title, city, price, listing_type, category, active, created_at", { count: "exact" })
+      .select("id, slug, title, city, price, price_currency, listing_type, category, active, created_at, image_src, area, rooms_label", { count: "exact" })
       .or(filters.join(","));
 
-    if (params.search) {
-      query = query.or(`title.ilike.%${params.search}%,city.ilike.%${params.search}%`);
-    }
+    if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,city.ilike.%${debouncedSearch}%`);
+    if (listingType) query = query.eq("listing_type", listingType);
+    if (category) query = query.eq("category", category);
+    if (status === "active") query = query.eq("active", true);
+    if (status === "inactive") query = query.eq("active", false);
+    if (priceMin) query = query.gte("price", priceMin);
+    if (priceMax) query = query.lte("price", priceMax);
+    if (areaMin) query = query.gte("area", areaMin);
+    if (areaMax) query = query.lte("area", areaMax);
 
-    const sortCol = params.sort || "created_at";
-    query = query.order(sortCol, { ascending: params.order === "asc" }).range(offset, offset + params.limit - 1);
+    const [sortCol, sortDir] = sort.split("-");
+    query = query.order(sortCol, { ascending: sortDir === "asc" }).range(offset, offset + PAGE_SIZE - 1);
 
     const { data, count } = await query;
-    return { data: data ?? [], total: count ?? 0 };
-  }, [user]);
+    setProperties((data as PropertyRow[]) ?? []);
+    setTotal(count ?? 0);
+    setLoading(false);
+  }, [user, page, debouncedSearch, listingType, category, status, sort, priceMin, priceMax, areaMin, areaMax]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const activeFilters = [listingType, category, status, priceMin, priceMax, areaMin, areaMax].filter(Boolean).length;
+
+  const formatPrice = (p: number, cur: string) => {
+    if (!p) return "—";
+    const c = (cur || "czk").toUpperCase();
+    return `${p.toLocaleString("cs")} ${c === "CZK" ? "Kč" : c === "EUR" ? "€" : c === "CHF" ? "CHF" : c}`;
+  };
 
   return (
     <div className="dashboard-page">
-      <DataTable<PropertyRow>
-        key={tableKey}
-        title={t.dashboard.myListingsTitle}
-        columns={columns}
-        fetchData={fetchData}
-        rowKey={(row) => row.id}
-        searchPlaceholder={t.dashboard.myListingsSearchPlaceholder}
-        onRowClick={(row) => router.push(`/dashboard/moje-inzeraty/${row.id}/upravit`)}
-        actions={
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h1 className="dashboard-page-title" style={{ marginBottom: 0 }}>
+          {t.dashboard.myListingsTitle}
+          <span style={{ fontWeight: 400, fontSize: "0.75em", color: "var(--text-muted)", marginLeft: 8 }}>
+            ({total.toLocaleString("cs")})
+          </span>
+        </h1>
+        <button className="admin-btn admin-btn--primary" onClick={() => router.push("/dashboard/moje-inzeraty/novy")}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          {t.dashboard.newProperty}
+        </button>
+      </div>
+
+      {/* ── Filters ──────────────────────────────────────────────── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 200px", maxWidth: 300 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder={t.dashboard.myListingsSearchPlaceholder}
+            style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.85rem" }}
+          />
+        </div>
+        <FilterDropdown label="Typ" value={listingType} options={TYPE_OPTIONS} onChange={setListingType} />
+        <FilterDropdown label="Kategorie" value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
+        <FilterDropdown label="Stav" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
+        <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={PRICE_PRESETS} unit="Kč" />
+        <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={AREA_PRESETS} unit="m²" />
+        <FilterDropdown label="Řazení" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v || "created_at-desc")} />
+        {activeFilters > 0 && (
           <button
-            className="admin-btn admin-btn--primary"
-            onClick={() => router.push("/dashboard/moje-inzeraty/novy")}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            {t.dashboard.newProperty}
-          </button>
-        }
-      />
+            onClick={() => { setListingType(null); setCategory(null); setStatus(null); setPriceMin(null); setPriceMax(null); setAreaMin(null); setAreaMax(null); setSearch(""); }}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.82rem", cursor: "pointer", color: "var(--text-muted)" }}
+          >Resetovat ({activeFilters})</button>
+        )}
+      </div>
+
+      {/* ── Grid ─────────────────────────────────────────────────── */}
+      {loading ? (
+        <p style={{ color: "var(--text-muted)", padding: 20 }}>{t.common.loading}</p>
+      ) : properties.length === 0 ? (
+        <p style={{ color: "var(--text-muted)", padding: 20 }}>Žádné nabídky neodpovídají filtrům.</p>
+      ) : (
+        <div className="dashboard-favorites-grid">
+          {properties.map((p) => (
+            <div key={p.id} className="dashboard-fav-card" style={{ cursor: "pointer", position: "relative" }} onClick={() => router.push(`/dashboard/moje-inzeraty/${p.id}/upravit`)}>
+              <div className="dashboard-fav-image">
+                <img src={p.image_src && !p.image_src.includes("placeholder") ? p.image_src : "/branding/placeholder.png"} alt={p.title || ""} />
+                <span className={`property-badge property-badge--${p.listing_type}`}>
+                  {p.listing_type === "sale" ? "Prodej" : p.listing_type === "rent" ? "Pronájem" : p.listing_type}
+                </span>
+                <span style={{ position: "absolute", top: 6, right: 6, background: p.active ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)", color: "#fff", borderRadius: 6, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 600 }}>
+                  {p.active ? "Aktivní" : "Neaktivní"}
+                </span>
+              </div>
+              <div className="dashboard-fav-info">
+                <span className="dashboard-fav-price">{formatPrice(p.price, p.price_currency)}</span>
+                <span className="dashboard-fav-meta">
+                  {CATEGORY_OPTIONS.find((c) => c.value === p.category)?.label || p.category}
+                  {p.rooms_label ? ` · ${p.rooms_label}` : ""}
+                  {p.area ? ` · ${p.area} m²` : ""}
+                </span>
+                <span className="dashboard-fav-location">{p.city || "—"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Pagination ───────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24, alignItems: "center" }}>
+          <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: page > 1 ? "pointer" : "default", opacity: page <= 1 ? 0.4 : 1 }}>←</button>
+          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{page} / {totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: page < totalPages ? "pointer" : "default", opacity: page >= totalPages ? 0.4 : 1 }}>→</button>
+        </div>
+      )}
     </div>
   );
 }
