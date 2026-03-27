@@ -172,6 +172,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard/moje-struktura", label: t.dashboard.myStructure, icon: ICONS.structure },
     { href: "/dashboard/poptavky", label: t.dashboard.inquiries, icon: ICONS.messages },
     { href: "/dashboard/moje-analytika", label: t.dashboard.analytics, icon: ICONS.analytics },
+    { href: "/dashboard/penezenka", label: "Peněženka", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>) },
   ], [t]);
 
   const adminItems: SidebarItem[] = useMemo(() => [
@@ -182,6 +183,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard/sprava/uzivatele", label: t.dashboard.adminUsers, icon: ICONS.users },
     { href: "/dashboard/sprava/analytika", label: t.dashboard.analytics, icon: ICONS.analytics },
     { href: "/dashboard/sprava/scraper", label: t.dashboard.scraper, icon: ICONS.scraper },
+    { href: "/dashboard/sprava/penezenky", label: "Peněženky", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>) },
+    { href: "/dashboard/sprava/cenik", label: "Ceník služeb", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) },
   ], [t]);
 
   const items = [
