@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
 
   if (rows.length === 0) return NextResponse.json({ ok: true });
 
-  const { error } = await client.from("analytics_events").insert(rows);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (client as any).from("analytics_events").insert(rows);
   if (error) console.error("[analytics/track]", error.message);
 
   return NextResponse.json({ ok: true }, {

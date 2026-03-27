@@ -7,7 +7,8 @@ import { getSupabase } from "@/lib/supabase";
  * Admin-only (checked via Supabase RLS — service role bypasses it server-side).
  */
 export async function GET() {
-  const client = getSupabase();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = getSupabase() as any;
   if (!client) return NextResponse.json({ error: "No DB" }, { status: 503 });
 
   // Check if analytics_events table exists
