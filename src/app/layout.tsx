@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { FavoritesProvider } from "@/components/favorites-provider";
 import { TranslationProvider } from "@/i18n/provider";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 import { brand } from "@/brands";
 import "./globals.css";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <FavoritesProvider>
-              <TranslationProvider>{children}</TranslationProvider>
+              <TranslationProvider>
+              <AnalyticsProvider>{children}</AnalyticsProvider>
+            </TranslationProvider>
             </FavoritesProvider>
           </AuthProvider>
         </ThemeProvider>

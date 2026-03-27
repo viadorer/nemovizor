@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { useFavorites } from "@/components/favorites-provider";
+import { track } from "@/lib/analytics";
 
 type FavoriteButtonProps = {
   propertyId: string;
@@ -21,7 +22,9 @@ export function FavoriteButton({ propertyId }: FavoriteButtonProps) {
       return;
     }
 
+    const wasOn = favorited;
     await toggle(propertyId);
+    track("favorite_toggle", { property_id: propertyId, action: wasOn ? "remove" : "add" });
   }
 
   return (

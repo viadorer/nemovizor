@@ -6,6 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { PropertyCard } from "@/components/property-card";
 import { PropertyRow } from "@/components/property-row";
+import { TrackImpression } from "@/components/track-impression";
 import { SiteHeader } from "@/components/site-header";
 import type { Property, Broker } from "@/lib/types";
 import type { MapBounds } from "@/components/property-map";
@@ -24,6 +25,7 @@ import type { SavedSearch } from "@/lib/types";
 import { useT } from "@/i18n/provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { COUNTRY_BBOXES } from "@/config/geo";
+import { track } from "@/lib/analytics";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -558,6 +560,22 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   // Reset page when filters or sort change
   useEffect(() => { setPage(1); }, [filters, sortBy]);
 
+  // Track filter changes (skip initial render via ref)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    track("filter_change", {
+      listing_type: filters.listingType ?? "",
+      categories: filters.categories.join(","),
+      subtypes: filters.subtypes.join(","),
+      countries: filters.countries.join(","),
+      price_min: filters.priceMin ?? 0,
+      price_max: filters.priceMax ?? 0,
+      area_min: filters.areaMin ?? 0,
+      area_max: filters.areaMax ?? 0,
+    });
+  }, [filters]);
+
   // Reset page when bounds change
   useEffect(() => { setPage(1); }, [debouncedBounds]);
 
@@ -876,7 +894,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   }, [geocodeCity, setMapFlyTo, setDebouncedBounds, setMapBounds]);
 
   // Handle AI search results
-  const handleAiFilters = useCallback(async (aiFilters: Record<string, unknown>) => {
+  const handleAiFilters = useCallback(async (aiFilters: Record<string, unknown>, rawQuery?: string) => {
+    track("ai_search", {
+      query: rawQuery ?? "",
+      listing_type: String(aiFilters.listingType ?? ""),
+      category: String(aiFilters.category ?? ""),
+      city: String(aiFilters.city ?? ""),
+      country: String(aiFilters.country ?? ""),
+    });
     if (aiFilters.listingType) setListingType(aiFilters.listingType as ListingType);
     if (aiFilters.category) setCategories([aiFilters.category as string]);
     if (aiFilters.subtypes) setSubtypes(aiFilters.subtypes as string[]);
@@ -1102,19 +1127,26 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
                                 );
                               }
                               items.push(
-                                <div
+                                <TrackImpression
                                   key={property.id}
-                                  onMouseEnter={() => setSelectedPropertyId(property.id)}
-                                  onMouseLeave={() => setSelectedPropertyId(null)}
+                                  propertyId={property.id}
+                                  listingType={property.listingType}
+                                  category={property.category}
+                                  price={property.price}
                                 >
-                                  {isMobile ? (
-                                    <PropertyRow property={property} />
-                                  ) : viewMode === "list" ? (
-                                    <PropertyRow property={property} />
-                                  ) : (
-                                    <PropertyCard property={property} />
-                                  )}
-                                </div>
+                                  <div
+                                    onMouseEnter={() => setSelectedPropertyId(property.id)}
+                                    onMouseLeave={() => setSelectedPropertyId(null)}
+                                  >
+                                    {isMobile ? (
+                                      <PropertyRow property={property} />
+                                    ) : viewMode === "list" ? (
+                                      <PropertyRow property={property} />
+                                    ) : (
+                                      <PropertyCard property={property} />
+                                    )}
+                                  </div>
+                                </TrackImpression>
                               );
                             });
                             return items;
@@ -1211,7 +1243,10 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
               <PropertyMap
                 properties={mapPoints}
                 selectedPropertyId={selectedPropertyId}
-                onPropertySelect={setSelectedPropertyId}
+                onPropertySelect={(id) => {
+                  setSelectedPropertyId(id);
+                  track("map_pin_click", { property_id: id });
+                }}
                 onBoundsChange={handleBoundsChange}
                 mode="prices"
                 truncated={mapTruncated}
