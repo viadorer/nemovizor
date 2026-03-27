@@ -129,6 +129,15 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase.from("properties").insert(body).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Bill first day of listing (non-blocking — don't fail the creation if billing fails)
+  if (data?.id && data?.active !== false) {
+    fetch(new URL("/api/billing/charge-day", request.url).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ property_id: data.id }),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ data });
 }
 
@@ -171,6 +180,15 @@ export async function PATCH(request: NextRequest) {
 
   const { error } = await supabase.from("properties").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // If property was just activated, bill the day (dedup in DB prevents double billing)
+  if (updates.active === true && id) {
+    fetch(new URL("/api/billing/charge-day", request.url).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ property_id: id }),
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ success: true });
 }

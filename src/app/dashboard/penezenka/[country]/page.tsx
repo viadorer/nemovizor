@@ -46,6 +46,13 @@ function fmt(n: number, cur: string) {
   return `${n.toLocaleString("cs", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${CURRENCY_SYMBOLS[cur] || cur.toUpperCase()}`;
 }
 
+const TOPUP_PRESETS: Record<string, number[]> = {
+  czk: [500, 1000, 2000, 5000, 10000],
+  eur: [20, 50, 100, 200, 500],
+  chf: [20, 50, 100, 200, 500],
+  gbp: [20, 50, 100, 200, 500],
+};
+
 export default function WalletDetailPage() {
   const { country } = useParams() as { country: string };
   const { user } = useAuth();
@@ -55,6 +62,10 @@ export default function WalletDetailPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showTopup, setShowTopup] = useState(false);
+  const [topupAmount, setTopupAmount] = useState(0);
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupMsg, setTopupMsg] = useState("");
   const PAGE_SIZE = 20;
 
   // Load wallet
@@ -121,6 +132,90 @@ export default function WalletDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Top-up button */}
+      {!wallet.frozen && (
+        <div style={{ marginBottom: 24 }}>
+          {!showTopup ? (
+            <button
+              onClick={() => { setShowTopup(true); setTopupAmount(TOPUP_PRESETS[cur]?.[2] || 100); setTopupMsg(""); }}
+              style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "var(--color-accent, #ffb800)", color: "#000", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}
+            >
+              Dobít peněženku
+            </button>
+          ) : (
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, maxWidth: 480 }}>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}>Dobít peněženku</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                {(TOPUP_PRESETS[cur] || [100, 500, 1000]).map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => setTopupAmount(amt)}
+                    style={{
+                      padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)",
+                      background: topupAmount === amt ? "var(--color-accent, #ffb800)" : "var(--bg-card)",
+                      color: topupAmount === amt ? "#000" : "inherit",
+                      fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
+                    }}
+                  >
+                    {amt.toLocaleString("cs")} {CURRENCY_SYMBOLS[cur] || cur.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: "0.85rem" }}>Nebo vlastní:</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(Number(e.target.value))}
+                  style={{ width: 120, padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.9rem" }}
+                />
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{CURRENCY_SYMBOLS[cur] || cur.toUpperCase()}</span>
+              </div>
+              {topupMsg && <div style={{ fontSize: "0.82rem", color: topupMsg.includes("Chyba") ? "#ef4444" : "#22c55e", marginBottom: 8 }}>{topupMsg}</div>}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  disabled={topupLoading || topupAmount <= 0}
+                  onClick={async () => {
+                    setTopupLoading(true);
+                    setTopupMsg("");
+                    try {
+                      const res = await fetch("/api/wallet/topup", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ wallet_id: wallet.id, amount: topupAmount }),
+                      });
+                      const data = await res.json();
+                      if (data.ok) {
+                        setTopupMsg(`Dobito ${topupAmount} ${CURRENCY_SYMBOLS[cur]}. Nový zůstatek: ${data.new_balance.toLocaleString("cs")} ${CURRENCY_SYMBOLS[cur]}`);
+                        setWallet({ ...wallet, balance_display: data.new_balance, balance: data.new_balance * 100 });
+                        setShowTopup(false);
+                        loadTransactions();
+                      } else {
+                        setTopupMsg(`Chyba: ${data.error}`);
+                      }
+                    } catch {
+                      setTopupMsg("Chyba při dobíjení");
+                    }
+                    setTopupLoading(false);
+                  }}
+                  style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#22c55e", color: "#fff", fontWeight: 600, cursor: topupLoading ? "wait" : "pointer", opacity: topupLoading ? 0.6 : 1 }}
+                >
+                  {topupLoading ? "Dobíjím..." : `Dobít ${topupAmount.toLocaleString("cs")} ${CURRENCY_SYMBOLS[cur] || ""}`}
+                </button>
+                <button
+                  onClick={() => { setShowTopup(false); setTopupMsg(""); }}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer" }}
+                >
+                  Zrušit
+                </button>
+              </div>
+            </div>
+          )}
+          {topupMsg && !showTopup && <div style={{ fontSize: "0.82rem", color: "#22c55e", marginTop: 8 }}>{topupMsg}</div>}
+        </div>
+      )}
 
       {/* Transaction history */}
       <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12 }}>Historie transakcí</h2>
