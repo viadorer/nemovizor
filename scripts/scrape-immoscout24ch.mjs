@@ -19,7 +19,9 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFileSync, existsSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { chromium } from "playwright";
+import { chromium } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+chromium.use(StealthPlugin());
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -392,11 +394,15 @@ async function extractListings(page) {
 }
 
 // ===== Extract detail from listing page =====
-async function extractDetail(page, listingId) {
-  const url = `https://www.homegate.ch/kaufen/${listingId}`;
+async function extractDetail(page, listingId, listingType = "sale") {
+  const type = listingType === "rent" ? "mieten" : "kaufen";
+  const url = `https://www.homegate.ch/${type}/${listingId}`;
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await sleep(2000);
+    await sleep(2500);
+    // Scroll to trigger lazy-loaded images
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+    await sleep(1000);
 
     const detail = {
       images: [], description: "", area: 0, rooms: 0,
@@ -566,6 +572,29 @@ async function extractDetail(page, listingId) {
   }
 }
 
+// ===== Geocode fallback =====
+const geoCache = new Map();
+async function geocode(address, city) {
+  const key = `${address}-${city}`;
+  if (geoCache.has(key)) return geoCache.get(key);
+  try {
+    const q = encodeURIComponent(`${address || ""} ${city} Switzerland`.trim());
+    const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=ch`, {
+      headers: { "User-Agent": "Nemovizor/1.0 (educational)" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) { geoCache.set(key, null); return null; }
+    const data = await resp.json();
+    if (data[0]?.lat) {
+      const result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      geoCache.set(key, result);
+      return result;
+    }
+  } catch {}
+  geoCache.set(key, null);
+  return null;
+}
+
 // ===== Insert property =====
 async function insertProperty(prop, search, r2Images) {
   const hgId = String(prop.id);
@@ -576,6 +605,15 @@ async function insertProperty(prop, search, r2Images) {
 
   const city = prop.city || search.city;
   const rooms = prop.rooms || 0;
+
+  // Geocode if missing coordinates
+  let lat = prop.latitude || 0;
+  let lon = prop.longitude || 0;
+  if (!lat || !lon) {
+    const geo = await geocode(prop.address || "", city);
+    if (geo) { lat = geo.lat; lon = geo.lon; }
+  }
+  if (!lat || !lon) return { skipped: true }; // skip without coords
 
   const property = {
     slug,
@@ -590,8 +628,8 @@ async function insertProperty(prop, search, r2Images) {
     city,
     district: prop.district || "",
     location_label: [prop.address, city].filter(Boolean).join(", ") || city,
-    latitude: prop.latitude || 0,
-    longitude: prop.longitude || 0,
+    latitude: lat,
+    longitude: lon,
     area: prop.area || 0,
     floor: prop.floor || undefined,
     total_floors: prop.totalFloors || undefined,
@@ -709,7 +747,7 @@ async function main() {
 
         try {
           // Detail page
-          const detail = await extractDetail(page, hgId);
+          const detail = await extractDetail(page, hgId, search.type);
           if (detail) {
             if (detail.images.length > 0) prop.images = detail.images;
             if (detail.latitude) prop.latitude = detail.latitude;
@@ -729,9 +767,10 @@ async function main() {
 
           await sleep(DELAY_MS);
 
-          // Upload images
+          // Upload images — fallback to list-page image if detail extraction empty
+          const imageList = (prop.images?.length ? prop.images : [prop.image]).filter(Boolean);
           const r2Urls = [];
-          for (const imgUrl of (prop.images || []).slice(0, MAX_IMAGES)) {
+          for (const imgUrl of imageList.slice(0, MAX_IMAGES)) {
             if (!imgUrl || imgUrl.startsWith("data:") || imgUrl.includes("placeholder")) continue;
             const url = await uploadToR2(imgUrl, slugify(prop.title || hgId));
             if (url) { r2Urls.push(url); state.stats.images++; }

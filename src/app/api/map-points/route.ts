@@ -3,8 +3,9 @@ import { getSupabase } from "@/lib/supabase";
 
 /**
  * GET /api/map-points — lightweight endpoint for map markers
- * Uses PostGIS RPC function for fast spatial queries
- * Returns: { points: [{ id, lat, lon, price, category, listing_type, title, slug, rooms_label }] }
+ * Returns real property pins for Leaflet markerClusterGroup
+ * At low zoom: up to 2000 pins from bbox (or global if no bbox)
+ * At high zoom (≥13): up to 500 pins from bbox
  */
 export async function GET(req: NextRequest) {
   const client = getSupabase();
@@ -13,60 +14,16 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
-
   const zoom = Math.min(20, Math.max(1, parseInt(sp.get("zoom") || "7", 10)));
-  const useCluster = zoom < 13;
+  const isPinMode = zoom >= 13;
+  const maxPoints = isPinMode ? 500 : 2000;
 
   type RpcClient = { rpc: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown[] | null; error: unknown }> };
 
-  // ── Cluster mode (zoom < 13): server-side SQL aggregation ──────────────────
-  if (useCluster) {
-    try {
-      const { data: clusterData, error: clusterError } = await (client as unknown as RpcClient).rpc("get_map_clusters", {
-        p_zoom:         zoom,
-        p_sw_lat:       sp.get("sw_lat")    ? Number(sp.get("sw_lat"))    : null,
-        p_ne_lat:       sp.get("ne_lat")    ? Number(sp.get("ne_lat"))    : null,
-        p_sw_lon:       sp.get("sw_lon")    ? Number(sp.get("sw_lon"))    : null,
-        p_ne_lon:       sp.get("ne_lon")    ? Number(sp.get("ne_lon"))    : null,
-        p_listing_type: sp.get("listing_type") || null,
-        p_category:     sp.get("category")  || null,
-        p_price_min:    sp.get("price_min") ? Number(sp.get("price_min")) : null,
-        p_price_max:    sp.get("price_max") ? Number(sp.get("price_max")) : null,
-        p_area_min:     sp.get("area_min")  ? Number(sp.get("area_min"))  : null,
-        p_area_max:     sp.get("area_max")  ? Number(sp.get("area_max"))  : null,
-      });
-
-      if (clusterError) {
-        console.error("[map-points] get_map_clusters error:", JSON.stringify(clusterError));
-      }
-      if (!clusterError && clusterData) {
-        console.log(`[map-points] cluster OK: ${(clusterData as unknown[]).length} clusters (zoom=${zoom})`);
-        type ClusterRow = { lat: number; lon: number; cluster_count: number; avg_price: number };
-        const points = (clusterData as ClusterRow[]).map((c) => ({
-          id: `cluster_${c.lat}_${c.lon}`,
-          lat: c.lat,
-          lon: c.lon,
-          price: Math.round(c.avg_price),
-          cluster_count: c.cluster_count,
-          is_cluster: true,
-          // stub fields required by frontend MapPoint type
-          price_currency: null, category: "", listing_type: "",
-          title: "", slug: "", rooms_label: "", image_src: null,
-          subtype: null, area: null, district: null,
-        }));
-        return NextResponse.json(
-          { points, count: points.length, mode: "cluster" },
-          { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
-        );
-      }
-    } catch (e) {
-      console.error("[map-points] get_map_clusters RPC error:", e);
-    }
-  }
-
-  // ── Pin mode (zoom ≥ 13) or cluster RPC unavailable — try get_map_points RPC ──
-  // Note: runs for both pin mode AND as fallback when cluster RPC fails
+  // ── Try get_map_points RPC first (skip if country filter active — RPC lacks p_country) ──
+  const skipRpc = !!sp.get("country");
   try {
+    if (skipRpc) throw new Error("country filter — use fallback");
     const { data: rpcData, error: rpcError } = await (client as unknown as RpcClient).rpc("get_map_points", {
       p_listing_type: sp.get("listing_type") || null,
       p_category: sp.get("category") || null,
@@ -77,21 +34,22 @@ export async function GET(req: NextRequest) {
       p_bounds_sw_lon: sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null,
       p_bounds_ne_lat: sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null,
       p_bounds_ne_lon: sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null,
-      p_limit: useCluster ? 2000 : 500,
+      p_limit: maxPoints,
     });
 
-    if (!rpcError && rpcData) {
+    if (!rpcError && rpcData && (rpcData as unknown[]).length > 0) {
+      const points = rpcData as unknown[];
       return NextResponse.json(
-        { points: rpcData, count: (rpcData as unknown[]).length, mode: useCluster ? "cluster-fallback" : "pins" },
-        { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+        { points, count: points.length, total: points.length, truncated: points.length >= maxPoints },
+        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
       );
     }
-    if (rpcError) console.error("[map-points] get_map_points RPC error:", rpcError);
+    if (rpcError) console.error("[map-points] RPC error:", rpcError);
   } catch (e) {
-    console.error("[map-points] get_map_points RPC exception:", e);
+    console.error("[map-points] RPC exception:", e);
   }
 
-  // Fallback: simple select (no PostGIS)
+  // ── Fallback: direct SELECT ───────────────────────────────────────────────
   const listingType = sp.get("listing_type");
   const category = sp.get("category");
   const subtype = sp.get("subtype");
@@ -122,7 +80,9 @@ export async function GET(req: NextRequest) {
       .select("id, latitude, longitude, price, price_currency, category, listing_type, title, slug, rooms_label, image_src, subtype, area, district")
       .eq("active", true)
       .not("latitude", "is", null)
-      .not("longitude", "is", null);
+      .not("longitude", "is", null)
+      .neq("latitude", 0)
+      .neq("longitude", 0);
 
     if (listingType) q = q.eq("listing_type", listingType);
     if (category) {
@@ -143,7 +103,6 @@ export async function GET(req: NextRequest) {
     if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
     if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
     if (sp.get("area_max")) q = q.lte("area", Number(sp.get("area_max")));
-
     if (sp.get("sw_lat")) {
       q = q.gte("latitude", Number(sp.get("sw_lat")));
       q = q.lte("latitude", Number(sp.get("ne_lat")));
@@ -153,62 +112,18 @@ export async function GET(req: NextRequest) {
     return q;
   }
 
-  const maxPoints = useCluster ? 2000 : Math.min(Number(sp.get("limit") || "500"), 500);
-
-  // Supabase caps at 1000 rows per request — fetch pages in parallel
   type MapRow = { id: string; latitude: number; longitude: number; price: number; price_currency: string | null; category: string; listing_type: string; title: string; slug: string; rooms_label: string; image_src: string | null; subtype: string | null; area: number | null; district: string | null };
+
   const pageSize = 1000;
   const numPages = Math.ceil(maxPoints / pageSize);
-
-  // Count query — separate builder without heavy select
-  function buildCountQuery() {
-    let q = client!
-      .from("properties")
-      .select("id", { count: "exact", head: true })
-      .eq("active", true)
-      .not("latitude", "is", null)
-      .not("longitude", "is", null);
-
-    if (listingType) q = q.eq("listing_type", listingType);
-    if (category) {
-      const cats = category.split(",");
-      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
-    }
-    if (subtype) {
-      const subs = subtype.split(",");
-      q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
-    }
-    if (city) q = q.eq("city", city);
-    if (countryParam) {
-      const countries = countryParam.split(",");
-      q = countries.length === 1 ? q.eq("country", countries[0]) : q.in("country", countries);
-    }
-    if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
-    if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
-    if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
-    if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
-    if (sp.get("area_max")) q = q.lte("area", Number(sp.get("area_max")));
-    if (sp.get("sw_lat")) {
-      q = q.gte("latitude", Number(sp.get("sw_lat")));
-      q = q.lte("latitude", Number(sp.get("ne_lat")));
-      q = q.gte("longitude", Number(sp.get("sw_lon")));
-      q = q.lte("longitude", Number(sp.get("ne_lon")));
-    }
-    return q;
-  }
-
-  // Fetch count + data pages in parallel
   const pagePromises = Array.from({ length: numPages }, (_, i) =>
-    buildQuery().range(i * pageSize, (i + 1) * pageSize - 1)
+    buildQuery().order("featured", { ascending: false }).order("price", { ascending: false }).range(i * pageSize, Math.min((i + 1) * pageSize - 1, maxPoints - 1))
   );
-  const [countResult, ...pageResults] = await Promise.all([buildCountQuery(), ...pagePromises]);
-  const totalCount = countResult.count ?? 0;
 
+  const pageResults = await Promise.all(pagePromises);
   const allRows: MapRow[] = [];
   for (const { data: pageData, error: pageError } of pageResults) {
-    if (pageError) {
-      return NextResponse.json({ error: pageError.message }, { status: 500 });
-    }
+    if (pageError) return NextResponse.json({ error: pageError.message }, { status: 500 });
     const rows = (pageData || []) as MapRow[];
     allRows.push(...rows);
     if (rows.length < pageSize) break;
@@ -232,7 +147,7 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json(
-    { points, count: points.length, total: totalCount, truncated: points.length < totalCount, mode: useCluster ? "cluster" : "pins" },
-    { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } }
+    { points, count: points.length, total: points.length, truncated: points.length >= maxPoints },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
   );
 }

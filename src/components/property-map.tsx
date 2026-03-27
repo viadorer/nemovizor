@@ -298,37 +298,7 @@ export default function PropertyMap({
     if (validProperties.length === 0) return;
 
     validProperties.forEach((p) => {
-      // ── Server-side cluster point ────────────────────────────────────────
-      if (p.clusterCount !== undefined) {
-        let marker: L.Marker;
-        if (p.clusterCount > 1) {
-          const count = p.clusterCount;
-          const label = count >= 1000 ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k` : String(count);
-          const size = count >= 10000 ? 52 : count >= 1000 ? 44 : count >= 100 ? 38 : 32;
-          const clusterIcon = L.divIcon({
-            html: `<div class="map-cluster-icon" style="width:${size}px;height:${size}px;line-height:${size}px;font-size:${size > 44 ? 13 : 11}px;">${label}</div>`,
-            className: "map-cluster-wrapper",
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
-          });
-          marker = L.marker([p.latitude, p.longitude], { icon: clusterIcon });
-          marker.on("click", () => {
-            const m = mapInstanceRef.current;
-            if (m) m.setView([p.latitude, p.longitude], m.getZoom() + 2, { animate: true });
-          });
-        } else {
-          // Singleton — cenový štítek (zoom-in na klik)
-          marker = L.marker([p.latitude, p.longitude], { icon: createPriceLabel(p) });
-          marker.on("click", () => {
-            const m = mapInstanceRef.current;
-            if (m) m.setView([p.latitude, p.longitude], m.getZoom() + 2, { animate: true });
-          });
-        }
-        serverClusterLayerRef.current?.addLayer(marker);
-        return;
-      }
-
-      // ── Regular property pin ─────────────────────────────────────────────
+      // ── Property pin ─────────────────────────────────────────────────────
       const icon = mode === "prices"
         ? createPriceLabel(p)
         : createMarkerIcon(p.featured);
