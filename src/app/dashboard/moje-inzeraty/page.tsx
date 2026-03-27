@@ -132,6 +132,60 @@ export default function BrokerListingsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const searchTimeout = useRef<any>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<{ city: string; count: number }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load unique cities from broker's properties for autocomplete
+  useEffect(() => {
+    if (!user) return;
+    const supabase = getBrowserSupabase();
+    if (!supabase) return;
+    (async () => {
+      const brokerIds: string[] = [];
+      const { data: myBroker } = await supabase.from("brokers").select("id, agency_id").eq("user_id", user.id).single();
+      const { data: myAgency } = await supabase.from("agencies").select("id").eq("user_id", user.id).single();
+      const agencyId = myAgency?.id || myBroker?.agency_id || null;
+      if (agencyId) {
+        const { data: team } = await supabase.from("brokers").select("id").eq("agency_id", agencyId);
+        if (team) for (const b of team) brokerIds.push(b.id);
+      } else if (myBroker) {
+        brokerIds.push(myBroker.id);
+      }
+      if (brokerIds.length === 0) return;
+      // Fetch all cities (distinct via RPC or manual dedup)
+      const { data: cityData } = await supabase
+        .from("properties")
+        .select("city")
+        .or(`broker_id.in.(${brokerIds.join(",")}),created_by.eq.${user.id}`)
+        .not("city", "is", null)
+        .not("city", "eq", "");
+      if (cityData) {
+        const cityCount: Record<string, number> = {};
+        for (const r of cityData as { city: string }[]) {
+          if (r.city) cityCount[r.city] = (cityCount[r.city] || 0) + 1;
+        }
+        setSuggestions(
+          Object.entries(cityCount)
+            .map(([city, count]) => ({ city, count }))
+            .sort((a, b) => b.count - a.count)
+        );
+      }
+    })();
+  }, [user]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const filteredSuggestions = search.length > 0
+    ? suggestions.filter((s) => s.city.toLowerCase().includes(search.toLowerCase())).slice(0, 10)
+    : suggestions.slice(0, 15);
 
   useEffect(() => {
     clearTimeout(searchTimeout.current);
@@ -219,15 +273,37 @@ export default function BrokerListingsPage() {
 
       {/* ── Filters ──────────────────────────────────────────────── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 200px", maxWidth: 300 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>
+        <div ref={searchContainerRef} style={{ position: "relative", flex: "1 1 200px", maxWidth: 300 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4, pointerEvents: "none" }}>
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
-            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            type="text" value={search}
+            onChange={(e) => { setSearch(e.target.value); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
             placeholder={t.dashboard.myListingsSearchPlaceholder}
             style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.85rem" }}
           />
+          {search && (
+            <button onClick={() => { setSearch(""); setShowSuggestions(false); }} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16, lineHeight: 1 }}>×</button>
+          )}
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <div className="filter-dropdown-menu" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, maxHeight: 280, overflowY: "auto", marginTop: 4 }}>
+              {filteredSuggestions.map((s) => (
+                <button
+                  key={s.city}
+                  className={`filter-dropdown-item ${search === s.city ? "filter-dropdown-item--active" : ""}`}
+                  onClick={() => { setSearch(s.city); setShowSuggestions(false); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4, marginRight: 6, flexShrink: 0 }}>
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                  {s.city}
+                  <span style={{ marginLeft: "auto", opacity: 0.5, fontSize: "0.8em" }}>{s.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <FilterDropdown label="Typ" value={listingType} options={TYPE_OPTIONS} onChange={setListingType} />
         <FilterDropdown label="Kategorie" value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
