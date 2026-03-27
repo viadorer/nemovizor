@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { SavedSearch } from "@/lib/types";
 import {
   getSavedSearches,
-  addSavedSearch,
-  removeSavedSearch,
+  getSavedSearchesAsync,
+  addSavedSearchAsync,
+  removeSavedSearchAsync,
   updateLastUsed,
   type SearchFilters,
 } from "@/lib/saved-searches";
@@ -22,12 +23,21 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
   const t = useT();
   const [open, setOpen] = useState(false);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
+  const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const loadSearches = useCallback(async () => {
+    // Start with localStorage for instant display
+    setSearches(getSavedSearches());
+    // Then try async (Supabase for logged-in users)
+    const async_searches = await getSavedSearchesAsync();
+    setSearches(async_searches);
+  }, []);
 
   // Load on mount + when opening
   useEffect(() => {
-    if (open) setSearches(getSavedSearches());
-  }, [open]);
+    if (open) { loadSearches(); }
+  }, [open, loadSearches]);
 
   // Close on click outside
   useEffect(() => {
@@ -38,17 +48,18 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const handleSave = () => {
-    const saved = addSavedSearch(currentFilters, locationLabel);
-    setSearches(getSavedSearches());
+  const handleSave = async () => {
+    setSaving(true);
+    await addSavedSearchAsync(currentFilters, locationLabel);
+    await loadSearches();
+    setSaving(false);
     track("save_search", { location: locationLabel ?? "", listing_type: currentFilters.listingType ?? "" });
-    void saved;
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    removeSavedSearch(id);
-    setSearches(getSavedSearches());
+    await removeSavedSearchAsync(id);
+    await loadSearches();
   };
 
   const handleRestore = (search: SavedSearch) => {
@@ -77,11 +88,11 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
         <div className="saved-searches-dropdown">
           <div className="saved-searches-header">
             <span className="saved-searches-title">{t.savedSearchPanel.title}</span>
-            <button className="saved-searches-save-btn" onClick={handleSave}>
+            <button className="saved-searches-save-btn" onClick={handleSave} disabled={saving}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              {t.savedSearchPanel.saveCurrent}
+              {saving ? "..." : t.savedSearchPanel.saveCurrent}
             </button>
           </div>
 

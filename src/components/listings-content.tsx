@@ -26,6 +26,8 @@ import { useT } from "@/i18n/provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { COUNTRY_BBOXES } from "@/config/geo";
 import { track } from "@/lib/analytics";
+import { recordSearch } from "@/lib/search-history";
+import { useAuth } from "@/components/auth-provider";
 
 const PropertyMap = dynamic(() => import("@/components/property-map"), {
   ssr: false,
@@ -475,6 +477,7 @@ export type ListingsContentProps = {
 
 export function ListingsContent({ brokerId, agencyId, embedded }: ListingsContentProps = {}) {
   const t = useT();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const initialCategory = embedded ? null : searchParams.get("category") as PropertyCategory | null;
   const initialListingType = embedded ? null : searchParams.get("listingType") as ListingType | null;
@@ -611,6 +614,10 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
         setTotalPages(data.pages || 1);
         setTotalResults(data.total || 0);
         setLoading(false);
+        // Record search history for logged-in users
+        if (user?.id && page === 1) {
+          recordSearch(user.id, filters, locationLabel || null, data.total || 0);
+        }
       })
       .catch((e) => { if (e.name !== "AbortError") { console.error("Failed to fetch properties:", e); setLoading(false); } });
 
