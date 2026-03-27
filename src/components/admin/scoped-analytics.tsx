@@ -143,9 +143,9 @@ export default function ScopedAnalytics({ brokerId, agencyId }: { brokerId?: str
 
         <Card title="Konverzní trychtýř">
           {b.funnel.map((f) => (
-            <div key={f.step} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3 }}>
-                <span>{f.step}</span><span style={{ fontWeight: 700 }}>{f.sessions}</span>
+            <div key={f.step} style={{ marginBottom: 10, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3, gap: 8 }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{f.step}</span><span style={{ fontWeight: 700, flexShrink: 0 }}>{f.sessions}</span>
               </div>
               <div style={{ height: 8, borderRadius: 4, background: "var(--bg-filter)" }}>
                 <div style={{ height: "100%", borderRadius: 4, background: "var(--color-accent, #ffb800)", width: `${(f.sessions / maxFunnel) * 100}%`, minWidth: f.sessions ? 4 : 0 }} />

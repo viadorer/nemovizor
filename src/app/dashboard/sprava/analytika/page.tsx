@@ -152,10 +152,10 @@ export default function AdminAnalyticsPage() {
                 const prevSessions = i > 0 ? b.funnel[i - 1].sessions : f.sessions;
                 const dropoff = prevSessions > 0 ? Math.round(((prevSessions - f.sessions) / prevSessions) * 100) : 0;
                 return (
-                  <div key={f.step} style={{ marginBottom: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: 2 }}>
-                      <span>{f.step}</span>
-                      <span style={{ fontWeight: 600 }}>{f.sessions}{i > 0 && dropoff > 0 ? <span style={{ color: "#ef4444", marginLeft: 4, fontWeight: 400, fontSize: "0.7rem" }}>-{dropoff}%</span> : null}</span>
+                  <div key={f.step} style={{ marginBottom: 10, overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: 2, gap: 8 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{f.step}</span>
+                      <span style={{ fontWeight: 600, flexShrink: 0 }}>{f.sessions}{i > 0 && dropoff > 0 ? <span style={{ color: "#ef4444", marginLeft: 4, fontWeight: 400, fontSize: "0.7rem" }}>-{dropoff}%</span> : null}</span>
                     </div>
                     <div style={{ height: 8, background: "var(--bg-filter)", borderRadius: 4 }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: i === b.funnel.length - 1 ? "#22c55e" : "var(--color-accent, #ffb800)", borderRadius: 4, transition: "width 0.3s" }} />
@@ -191,8 +191,8 @@ export default function AdminAnalyticsPage() {
             </Card>
           </div>
 
-          {/* ── Row 3: Event types + Top pages + Top properties ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
+          {/* ── Row 3: Event types + Top pages ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
             <Card title="Typy událostí">
               {b.eventBreakdown.map(({ type, count }) => <Row key={type} label={EVENT_LABELS[type] || type} value={count} />)}
             </Card>
@@ -200,35 +200,39 @@ export default function AdminAnalyticsPage() {
             <Card title="Nejnavštěvovanější stránky">
               {b.topPages.map(({ path, views }) => <Row key={path} label={path} value={views} />)}
             </Card>
-
-            <Card title="Top nemovitosti (detaily)">
-              {b.topProperties.length === 0 ? <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Zatím žádné detaily</p> : b.topProperties.map((p) => (
-                <a key={p.id} href={`/nemovitost/${p.slug}`} target="_blank" rel="noopener" style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)", textDecoration: "none", color: "inherit", alignItems: "center" }}>
-                  <div style={{ width: 56, height: 42, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--bg-filter)" }}>
-                    {p.image_src && !p.image_src.includes("placeholder") ? (
-                      <img src={p.image_src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title || p.slug}</div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                      {p.city}{p.rooms_label ? ` • ${p.rooms_label}` : ""}{p.area ? ` • ${p.area} m²` : ""}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-accent, #ffb800)" }}>
-                      {p.price ? `${(p.price).toLocaleString("cs")} ${(p.price_currency || "CZK").toUpperCase()}` : "—"}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{p.count}× zobrazení</div>
-                  </div>
-                </a>
-              ))}
-            </Card>
           </div>
+
+          {/* ── Row 3b: Top properties (fav-card style) ── */}
+          <Card title="Top nemovitosti (detaily)">
+            {b.topProperties.length === 0 ? <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Zatím žádné detaily</p> : (
+              <div className="dashboard-favorites-grid">
+                {b.topProperties.map((p) => (
+                  <div key={p.id} className="dashboard-fav-card">
+                    <a href={`/nemovitost/${p.slug}`} target="_blank" rel="noopener" className="dashboard-fav-image">
+                      <img src={p.image_src && !p.image_src.includes("placeholder") ? p.image_src : "/branding/placeholder.png"} alt={p.title || ""} />
+                      {p.listing_type && (
+                        <span className={`property-badge property-badge--${p.listing_type}`}>
+                          {p.listing_type === "sale" ? "Prodej" : p.listing_type === "rent" ? "Pronájem" : p.listing_type}
+                        </span>
+                      )}
+                    </a>
+                    <div className="dashboard-fav-info">
+                      <span className="dashboard-fav-price">
+                        {p.price ? `${p.price.toLocaleString("cs")} ${(p.price_currency || "CZK").toUpperCase()}` : "—"}
+                      </span>
+                      <span className="dashboard-fav-meta">
+                        {p.rooms_label || ""}{p.rooms_label && p.area ? " · " : ""}{p.area ? `${p.area} m²` : ""}
+                      </span>
+                      <span className="dashboard-fav-location">{p.city || "—"}</span>
+                    </div>
+                    <div style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.6)", color: "#fff", borderRadius: 8, padding: "2px 8px", fontSize: "0.72rem", fontWeight: 700 }}>
+                      {p.count}× zobrazení
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
 
           {/* ── Row 4: Filters + UTM + AI searches ───────────── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
