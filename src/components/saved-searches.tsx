@@ -10,6 +10,7 @@ import {
   type SearchFilters,
 } from "@/lib/saved-searches";
 import { useT } from "@/i18n/provider";
+import { track } from "@/lib/analytics";
 
 type SavedSearchesProps = {
   currentFilters: SearchFilters;
@@ -40,7 +41,7 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
   const handleSave = () => {
     const saved = addSavedSearch(currentFilters, locationLabel);
     setSearches(getSavedSearches());
-    // Brief visual feedback -- the item will appear in the list
+    track("save_search", { location: locationLabel ?? "", listing_type: currentFilters.listingType ?? "" });
     void saved;
   };
 
@@ -53,6 +54,7 @@ export function SavedSearches({ currentFilters, locationLabel, onRestore }: Save
   const handleRestore = (search: SavedSearch) => {
     updateLastUsed(search.id);
     onRestore(search);
+    track("restore_search", { search_id: search.id, location: search.locationLabel ?? "" });
     setOpen(false);
   };
 

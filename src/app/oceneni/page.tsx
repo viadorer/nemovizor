@@ -8,6 +8,7 @@ import { LocationSearch } from "@/components/location-search";
 import { useEffect } from "react";
 import { getUniqueCities } from "@/lib/api";
 import { useT } from "@/i18n/provider";
+import { track } from "@/lib/analytics";
 import { brand } from "@/brands";
 
 const ALL_STEPS = [
@@ -243,6 +244,12 @@ export default function ValuationPage() {
 
   function handleSubmit() {
     if (!canProceed()) return;
+    track("valuation_submit", {
+      property_type: form.propertyType ?? "",
+      city: form.city,
+      disposition: form.disposition,
+      area: form.area ?? 0,
+    });
     setSubmitted(true);
   }
 

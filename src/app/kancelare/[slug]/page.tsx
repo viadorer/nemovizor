@@ -6,6 +6,7 @@ import { AgencyAboutCard, AgencyStatsCard, AgencyReviewsCard, AgencyBrokersGrid,
 import { DetailTabs } from "@/components/detail-tabs";
 import type { DetailTab } from "@/components/detail-tabs";
 import { DetailPropertiesGrid } from "@/components/detail-properties-grid";
+import { TrackPage } from "@/components/track-page";
 import {
   getAgencyBySlug,
   getAgencyBrokers,
@@ -82,6 +83,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
   return (
     <div className="page-shell">
       <SiteHeader />
+      <TrackPage event="agency_profile_view" props={{ agency_id: agency.id, agency_slug: agency.slug, agency_name: agency.name }} />
       <main className="detail-page">
         <div className="profile-cards-grid">
           <AgencyAboutCard agency={agency} parentAgency={parentAgency} hqBranch={hqBranch} />

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useT } from "@/i18n/provider";
+import { track } from "@/lib/analytics";
 
 type MortgageCalculatorProps = {
   propertyPrice: number;
@@ -20,6 +21,14 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
   const [downPaymentPct, setDownPaymentPct] = useState(20);
   const [rate, setRate] = useState(4.0);
   const [years, setYears] = useState(30);
+  const calcTracked = useRef(false);
+
+  // Track first interaction with calculator
+  function trackCalcUse() {
+    if (calcTracked.current) return;
+    calcTracked.current = true;
+    track("mortgage_calc_use", { price: propertyPrice, currency: priceCurrency ?? "czk" });
+  }
 
   const result = useMemo(() => {
     const downPayment = propertyPrice * (downPaymentPct / 100);
@@ -74,7 +83,7 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
           max={90}
           step={5}
           value={downPaymentPct}
-          onChange={(e) => setDownPaymentPct(Number(e.target.value))}
+          onChange={(e) => { setDownPaymentPct(Number(e.target.value)); trackCalcUse(); }}
           className="mortgage-slider"
         />
         <div className="mortgage-slider-range">
@@ -94,7 +103,7 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
           max={7}
           step={0.1}
           value={rate}
-          onChange={(e) => setRate(Number(e.target.value))}
+          onChange={(e) => { setRate(Number(e.target.value)); trackCalcUse(); }}
           className="mortgage-slider"
         />
         <div className="mortgage-slider-range">
@@ -114,7 +123,7 @@ export function MortgageCalculator({ propertyPrice, priceCurrency }: MortgageCal
           max={40}
           step={1}
           value={years}
-          onChange={(e) => setYears(Number(e.target.value))}
+          onChange={(e) => { setYears(Number(e.target.value)); trackCalcUse(); }}
           className="mortgage-slider"
         />
         <div className="mortgage-slider-range">

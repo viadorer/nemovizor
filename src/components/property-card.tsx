@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/api";
 import { Property } from "@/lib/types";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useT } from "@/i18n/provider";
+import { track } from "@/lib/analytics";
 
 type PropertyCardProps = {
   property: Property;
@@ -42,7 +43,7 @@ export const PropertyCard = memo(function PropertyCard({ property, isTip }: Prop
   const currentAlt = idx === 0 ? property.imageAlt : `${property.imageAlt} ${idx + 1}`;
 
   return (
-    <Link href={`/nemovitost/${property.slug}`} className="property-card">
+    <Link href={`/nemovitost/${property.slug}`} className="property-card" onClick={() => track("property_card_click", { property_id: property.id, slug: property.slug, listing_type: property.listingType, price: property.price })}>
       <div className="property-image-wrapper">
         <Image
           src={currentSrc}

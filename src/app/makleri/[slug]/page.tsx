@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { BrokerAboutCard, BrokerStatsCard, BrokerReviewsCard } from "@/components/broker-profile-cards";
 import { DetailTabs } from "@/components/detail-tabs";
 import { DetailPropertiesGrid } from "@/components/detail-properties-grid";
+import { TrackPage } from "@/components/track-page";
 import {
   getBrokerBySlug,
   getBrokerReviews,
@@ -57,6 +58,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
   return (
     <div className="page-shell">
       <SiteHeader />
+      <TrackPage event="broker_profile_view" props={{ broker_id: broker.id, broker_slug: broker.slug, broker_name: broker.name }} />
       <main className="detail-page">
         <div className="profile-cards-grid">
           <BrokerAboutCard broker={broker} agency={agency} agencyAddress={agencyAddress} />

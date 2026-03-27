@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/i18n/provider";
+import { track } from "@/lib/analytics";
 
 type MediaTab = "photos" | "video" | "3d";
 
@@ -33,6 +34,7 @@ export function MediaGallery({
   const t = useT();
   const [activeTab, setActiveTab] = useState<MediaTab>("photos");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const galleryTracked = useRef(false);
 
   const hasTabs = Boolean(videoUrl || matterportUrl);
 
@@ -84,7 +86,7 @@ export function MediaGallery({
               <button
                 key={i}
                 className={`mg-cell${i === 0 ? " mg-cell--main" : ""}`}
-                onClick={() => setLightboxIndex(i)}
+                onClick={() => { setLightboxIndex(i); if (!galleryTracked.current) { galleryTracked.current = true; track("gallery_open", { image_count: images.length }); } }}
                 aria-label={`${t.gallery.showPhoto} ${i + 1} / ${images.length}`}
               >
                 <img src={src} alt={`${alt} - foto ${i + 1}`} loading={i === 0 ? "eager" : "lazy"} />
