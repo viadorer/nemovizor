@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
   const category = sp.get("category") || null;
   const brokerId = sp.get("broker_id") || null;
   const agencyId = sp.get("agency_id") || null;
+  const swLat = sp.get("sw_lat") ? Number(sp.get("sw_lat")) : null;
+  const swLon = sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null;
+  const neLat = sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null;
+  const neLon = sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null;
+  const hasBounds = swLat !== null && swLon !== null && neLat !== null && neLon !== null;
 
   // Resolve broker IDs for agency filter
   let brokerIds: string[] | null = null;
@@ -37,7 +42,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Use fallback approach (standard Supabase queries, no custom RPC needed)
-  return await fallbackFilterOptions(client, listingType, category, brokerIds);
+  const bounds = hasBounds ? { swLat: swLat!, swLon: swLon!, neLat: neLat!, neLon: neLon! } : null;
+  return await fallbackFilterOptions(client, listingType, category, brokerIds, bounds);
 }
 
 /** Fallback using standard Supabase queries (no custom RPC needed) */
@@ -46,6 +52,7 @@ async function fallbackFilterOptions(
   listingType: string | null,
   category: string | null,
   brokerIds: string[] | null = null,
+  bounds: { swLat: number; swLon: number; neLat: number; neLon: number } | null = null,
 ) {
   if (!client) return NextResponse.json({ error: "No client" }, { status: 503 });
 
@@ -62,6 +69,10 @@ async function fallbackFilterOptions(
     }
     if (brokerIds) {
       q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
+    }
+    if (bounds) {
+      q = q.gte("latitude", bounds.swLat).lte("latitude", bounds.neLat)
+           .gte("longitude", bounds.swLon).lte("longitude", bounds.neLon);
     }
     return q;
   }

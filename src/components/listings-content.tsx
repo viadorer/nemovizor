@@ -645,19 +645,25 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     return () => controller.abort();
   }, [filters, debouncedBounds, mapZoom, brokerId, agencyId]);
 
-  // Fetch filter options
+  // Fetch filter options — re-fetch when filters OR map bounds change
   useEffect(() => {
     const params = new URLSearchParams();
     if (listingType) params.set("listing_type", listingType);
     if (categories.length) params.set("category", categories.join(","));
     if (brokerId) params.set("broker_id", brokerId);
     if (agencyId) params.set("agency_id", agencyId);
+    if (debouncedBounds) {
+      params.set("sw_lat", String(debouncedBounds.south));
+      params.set("sw_lon", String(debouncedBounds.west));
+      params.set("ne_lat", String(debouncedBounds.north));
+      params.set("ne_lon", String(debouncedBounds.east));
+    }
 
     fetch(`/api/filter-options?${params}`)
       .then((r) => r.json())
       .then((data: FilterOptionsResponse) => setFilterOptions(data))
       .catch((e) => { console.error("Failed to fetch filter options:", e); });
-  }, [listingType, categories]);
+  }, [listingType, categories, debouncedBounds]);
 
   // Location label for display
   const [locationLabel, setLocationLabel] = useState<string | null>(
