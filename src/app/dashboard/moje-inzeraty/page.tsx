@@ -83,30 +83,51 @@ function RangeDropdown({ label, minValue, maxValue, onMinChange, onMaxChange, pr
   );
 }
 
-const CATEGORY_OPTIONS = [
-  { value: "apartment", label: "Byt" },
-  { value: "house", label: "Dům" },
-  { value: "land", label: "Pozemek" },
-  { value: "commercial", label: "Komerční" },
-  { value: "other", label: "Ostatní" },
-];
-const TYPE_OPTIONS = [
-  { value: "sale", label: "Prodej" },
-  { value: "rent", label: "Pronájem" },
-];
-const STATUS_OPTIONS = [
-  { value: "active", label: "Aktivní" },
-  { value: "inactive", label: "Neaktivní" },
-];
+const ALL_CATEGORIES: Record<string, string> = { apartment: "Byt", house: "Dům", land: "Pozemek", commercial: "Komerční", other: "Ostatní" };
+const ALL_TYPES: Record<string, string> = { sale: "Prodej", rent: "Pronájem" };
+const ALL_CURRENCIES: Record<string, string> = { czk: "CZK", eur: "EUR", chf: "CHF", gbp: "GBP", usd: "USD" };
 const SORT_OPTIONS = [
   { value: "created_at-desc", label: "Nejnovější" },
   { value: "created_at-asc", label: "Nejstarší" },
   { value: "price-desc", label: "Cena ↓" },
   { value: "price-asc", label: "Cena ↑" },
 ];
-const PRICE_PRESETS = [500000, 1000000, 2000000, 5000000, 10000000, 20000000];
-const AREA_PRESETS = [20, 40, 60, 80, 100, 150, 200, 500];
 const PAGE_SIZE = 24;
+
+// Generate smart price presets based on actual data range and currency
+function generatePricePresets(min: number, max: number, currency: string): number[] {
+  if (!max) return [];
+  // Default presets per currency
+  const defaults: Record<string, number[]> = {
+    czk: [500000, 1000000, 2000000, 3000000, 5000000, 8000000, 10000000, 15000000, 20000000, 50000000],
+    eur: [20000, 50000, 100000, 150000, 200000, 300000, 500000, 750000, 1000000, 2000000],
+    chf: [50000, 100000, 200000, 300000, 500000, 750000, 1000000, 1500000, 2000000, 5000000],
+    gbp: [20000, 50000, 100000, 200000, 300000, 500000, 750000, 1000000, 2000000],
+    usd: [20000, 50000, 100000, 200000, 300000, 500000, 750000, 1000000, 2000000],
+  };
+  const presets = defaults[currency] || defaults.czk;
+  // Filter to relevant range: keep presets between 50% of min and 150% of max
+  const lo = min * 0.5;
+  const hi = max * 1.5;
+  return presets.filter((p) => p >= lo && p <= hi);
+}
+
+function generateAreaPresets(min: number, max: number): number[] {
+  const all = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 500, 1000, 2000, 5000];
+  if (!max) return all.slice(0, 8);
+  const lo = Math.max(0, min * 0.5);
+  const hi = max * 1.5;
+  return all.filter((p) => p >= lo && p <= hi);
+}
+
+type FilterStats = {
+  categories: { value: string; label: string; count: number }[];
+  types: { value: string; label: string; count: number }[];
+  currencies: { value: string; label: string; count: number }[];
+  statuses: { value: string; label: string; count: number }[];
+  priceRange: { min: number; max: number };
+  areaRange: { min: number; max: number };
+};
 
 export default function BrokerListingsPage() {
   const { user } = useAuth();
@@ -122,12 +143,14 @@ export default function BrokerListingsPage() {
   const [search, setSearch] = useState("");
   const [listingType, setListingType] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [sort, setSort] = useState("created_at-desc");
   const [priceMin, setPriceMin] = useState<number | null>(null);
   const [priceMax, setPriceMax] = useState<number | null>(null);
   const [areaMin, setAreaMin] = useState<number | null>(null);
   const [areaMax, setAreaMax] = useState<number | null>(null);
+  const [filterStats, setFilterStats] = useState<FilterStats | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const searchTimeout = useRef<any>(null);
@@ -136,7 +159,7 @@ export default function BrokerListingsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load unique cities from broker's properties for autocomplete
+  // Load filter stats + cities from broker's properties
   useEffect(() => {
     if (!user) return;
     const supabase = getBrowserSupabase();
@@ -153,24 +176,70 @@ export default function BrokerListingsPage() {
         brokerIds.push(myBroker.id);
       }
       if (brokerIds.length === 0) return;
-      // Fetch all cities (distinct via RPC or manual dedup)
-      const { data: cityData } = await supabase
-        .from("properties")
-        .select("city")
-        .or(`broker_id.in.(${brokerIds.join(",")}),created_by.eq.${user.id}`)
-        .not("city", "is", null)
-        .not("city", "eq", "");
-      if (cityData) {
-        const cityCount: Record<string, number> = {};
-        for (const r of cityData as { city: string }[]) {
-          if (r.city) cityCount[r.city] = (cityCount[r.city] || 0) + 1;
-        }
-        setSuggestions(
-          Object.entries(cityCount)
-            .map(([city, count]) => ({ city, count }))
-            .sort((a, b) => b.count - a.count)
-        );
+
+      const orFilter = `broker_id.in.(${brokerIds.join(",")}),created_by.eq.${user.id}`;
+
+      // Fetch lightweight aggregation data (category, type, currency, price, area, city, active)
+      let allRows: { city: string; category: string; listing_type: string; price_currency: string; price: number; area: number; active: boolean }[] = [];
+      let pg = 0;
+      while (true) {
+        const { data } = await supabase
+          .from("properties")
+          .select("city, category, listing_type, price_currency, price, area, active")
+          .or(orFilter)
+          .range(pg * 1000, (pg + 1) * 1000 - 1);
+        if (!data || data.length === 0) break;
+        allRows = allRows.concat(data as typeof allRows);
+        if (data.length < 1000) break;
+        pg++;
       }
+
+      // Cities
+      const cityCount: Record<string, number> = {};
+      for (const r of allRows) { if (r.city) cityCount[r.city] = (cityCount[r.city] || 0) + 1; }
+      setSuggestions(Object.entries(cityCount).map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count));
+
+      // Categories
+      const catCount: Record<string, number> = {};
+      for (const r of allRows) { if (r.category) catCount[r.category] = (catCount[r.category] || 0) + 1; }
+      const categories = Object.entries(catCount)
+        .map(([value, count]) => ({ value, label: ALL_CATEGORIES[value] || value, count }))
+        .sort((a, b) => b.count - a.count);
+
+      // Types
+      const typeCount: Record<string, number> = {};
+      for (const r of allRows) { if (r.listing_type) typeCount[r.listing_type] = (typeCount[r.listing_type] || 0) + 1; }
+      const types = Object.entries(typeCount)
+        .map(([value, count]) => ({ value, label: ALL_TYPES[value] || value, count }))
+        .sort((a, b) => b.count - a.count);
+
+      // Currencies
+      const curCount: Record<string, number> = {};
+      for (const r of allRows) {
+        const c = (r.price_currency || "czk").toLowerCase();
+        curCount[c] = (curCount[c] || 0) + 1;
+      }
+      const currencies = Object.entries(curCount)
+        .map(([value, count]) => ({ value, label: ALL_CURRENCIES[value] || value.toUpperCase(), count }))
+        .sort((a, b) => b.count - a.count);
+
+      // Statuses
+      let activeCount = 0, inactiveCount = 0;
+      for (const r of allRows) { if (r.active) activeCount++; else inactiveCount++; }
+      const statuses = [
+        ...(activeCount > 0 ? [{ value: "active", label: "Aktivní", count: activeCount }] : []),
+        ...(inactiveCount > 0 ? [{ value: "inactive", label: "Neaktivní", count: inactiveCount }] : []),
+      ];
+
+      // Price range
+      const prices = allRows.map((r) => r.price).filter((p) => p > 0);
+      const priceRange = { min: prices.length ? Math.min(...prices) : 0, max: prices.length ? Math.max(...prices) : 0 };
+
+      // Area range
+      const areas = allRows.map((r) => r.area).filter((a) => a > 0);
+      const areaRange = { min: areas.length ? Math.min(...areas) : 0, max: areas.length ? Math.max(...areas) : 0 };
+
+      setFilterStats({ categories, types, currencies, statuses, priceRange, areaRange });
     })();
   }, [user]);
 
@@ -194,7 +263,7 @@ export default function BrokerListingsPage() {
   }, [search]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [debouncedSearch, listingType, category, status, sort, priceMin, priceMax, areaMin, areaMax]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, listingType, category, currency, status, sort, priceMin, priceMax, areaMin, areaMax]);
 
   const fetchData = useCallback(async () => {
     const supabase = getBrowserSupabase();
@@ -229,6 +298,7 @@ export default function BrokerListingsPage() {
     if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,city.ilike.%${debouncedSearch}%`);
     if (listingType) query = query.eq("listing_type", listingType);
     if (category) query = query.eq("category", category);
+    if (currency) query = query.eq("price_currency", currency);
     if (status === "active") query = query.eq("active", true);
     if (status === "inactive") query = query.eq("active", false);
     if (priceMin) query = query.gte("price", priceMin);
@@ -243,12 +313,19 @@ export default function BrokerListingsPage() {
     setProperties((data as PropertyRow[]) ?? []);
     setTotal(count ?? 0);
     setLoading(false);
-  }, [user, page, debouncedSearch, listingType, category, status, sort, priceMin, priceMax, areaMin, areaMax]);
+  }, [user, page, debouncedSearch, listingType, category, currency, status, sort, priceMin, priceMax, areaMin, areaMax]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const activeFilters = [listingType, category, status, priceMin, priceMax, areaMin, areaMax].filter(Boolean).length;
+  const activeFilters = [listingType, category, currency, status, priceMin, priceMax, areaMin, areaMax].filter(Boolean).length;
+
+  // Derive dynamic options from filterStats
+  const fs = filterStats;
+  const activeCurrency = currency || (fs?.currencies.length === 1 ? fs.currencies[0].value : "czk");
+  const pricePresets = fs ? generatePricePresets(fs.priceRange.min, fs.priceRange.max, activeCurrency) : [];
+  const areaPresets = fs ? generateAreaPresets(fs.areaRange.min, fs.areaRange.max) : [];
+  const currencyUnit = activeCurrency === "eur" ? "€" : activeCurrency === "chf" ? "CHF" : activeCurrency === "gbp" ? "£" : activeCurrency === "usd" ? "$" : "Kč";
 
   const formatPrice = (p: number, cur: string) => {
     if (!p) return "—";
@@ -305,15 +382,16 @@ export default function BrokerListingsPage() {
             </div>
           )}
         </div>
-        <FilterDropdown label="Typ" value={listingType} options={TYPE_OPTIONS} onChange={setListingType} />
-        <FilterDropdown label="Kategorie" value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
-        <FilterDropdown label="Stav" value={status} options={STATUS_OPTIONS} onChange={setStatus} />
-        <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={PRICE_PRESETS} unit="Kč" />
-        <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={AREA_PRESETS} unit="m²" />
+        {fs && fs.types.length > 1 && <FilterDropdown label="Typ" value={listingType} options={fs.types.map((t) => ({ value: t.value, label: `${t.label} (${t.count})` }))} onChange={setListingType} />}
+        {fs && fs.categories.length > 1 && <FilterDropdown label="Kategorie" value={category} options={fs.categories.map((c) => ({ value: c.value, label: `${c.label} (${c.count})` }))} onChange={setCategory} />}
+        {fs && fs.currencies.length > 1 && <FilterDropdown label="Měna" value={currency} options={fs.currencies.map((c) => ({ value: c.value, label: `${c.label} (${c.count})` }))} onChange={(v) => { setCurrency(v); setPriceMin(null); setPriceMax(null); }} />}
+        {fs && fs.statuses.length > 1 && <FilterDropdown label="Stav" value={status} options={fs.statuses.map((s) => ({ value: s.value, label: `${s.label} (${s.count})` }))} onChange={setStatus} />}
+        {pricePresets.length > 0 && <RangeDropdown label="Cena" minValue={priceMin} maxValue={priceMax} onMinChange={setPriceMin} onMaxChange={setPriceMax} presets={pricePresets} unit={currencyUnit} />}
+        {areaPresets.length > 0 && <RangeDropdown label="Plocha" minValue={areaMin} maxValue={areaMax} onMinChange={setAreaMin} onMaxChange={setAreaMax} presets={areaPresets} unit="m²" />}
         <FilterDropdown label="Řazení" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v || "created_at-desc")} />
         {activeFilters > 0 && (
           <button
-            onClick={() => { setListingType(null); setCategory(null); setStatus(null); setPriceMin(null); setPriceMax(null); setAreaMin(null); setAreaMax(null); setSearch(""); }}
+            onClick={() => { setListingType(null); setCategory(null); setCurrency(null); setStatus(null); setPriceMin(null); setPriceMax(null); setAreaMin(null); setAreaMax(null); setSearch(""); }}
             style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.82rem", cursor: "pointer", color: "var(--text-muted)" }}
           >Resetovat ({activeFilters})</button>
         )}
@@ -340,7 +418,7 @@ export default function BrokerListingsPage() {
               <div className="dashboard-fav-info">
                 <span className="dashboard-fav-price">{formatPrice(p.price, p.price_currency)}</span>
                 <span className="dashboard-fav-meta">
-                  {CATEGORY_OPTIONS.find((c) => c.value === p.category)?.label || p.category}
+                  {ALL_CATEGORIES[p.category] || p.category}
                   {p.rooms_label ? ` · ${p.rooms_label}` : ""}
                   {p.area ? ` · ${p.area} m²` : ""}
                 </span>
