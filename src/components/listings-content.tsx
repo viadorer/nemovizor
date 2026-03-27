@@ -487,10 +487,15 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const initialPriceMax = embedded ? null : searchParams.get("priceMax");
   const initialAreaMin = embedded ? null : searchParams.get("areaMin");
   const initialAreaMax = embedded ? null : searchParams.get("areaMax");
+  const initialCountries = embedded ? null : searchParams.get("countries");
+  const initialLat = embedded ? null : searchParams.get("lat");
+  const initialLon = embedded ? null : searchParams.get("lon");
+  const initialZoom = embedded ? null : searchParams.get("zoom");
+  const initialSortBy = embedded ? null : searchParams.get("sortBy");
 
   // Load persisted filters (URL params override persisted values) — skip when embedded
   const persisted = useMemo(() => embedded ? null : loadPersistedFilters(), [embedded]);
-  const hasUrlParams = initialCategory !== null || initialListingType !== null || initialCity !== null;
+  const hasUrlParams = initialCategory !== null || initialListingType !== null || initialCity !== null || initialCountries !== null || initialLat !== null;
 
   // Filter state — URL params > persisted > defaults
   const [listingType, setListingType] = useState<ListingType | null>(
@@ -500,14 +505,14 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     initialCategory ? [initialCategory] : (hasUrlParams ? [] : persisted?.categories ?? [])
   );
   const [subtypes, setSubtypes] = useState<string[]>(initialSubtype ? [initialSubtype] : (hasUrlParams ? [] : persisted?.subtypes ?? []));
-  const [countries, setCountries] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>(initialCountries ? initialCountries.split(",") : []);
   const [priceMin, setPriceMin] = useState<number | null>(initialPriceMin ? Number(initialPriceMin) : (hasUrlParams ? null : persisted?.priceMin ?? null));
   const [priceMax, setPriceMax] = useState<number | null>(initialPriceMax ? Number(initialPriceMax) : (hasUrlParams ? null : persisted?.priceMax ?? null));
   const [areaMin, setAreaMin] = useState<number | null>(initialAreaMin ? Number(initialAreaMin) : (hasUrlParams ? null : persisted?.areaMin ?? null));
   const [areaMax, setAreaMax] = useState<number | null>(initialAreaMax ? Number(initialAreaMax) : (hasUrlParams ? null : persisted?.areaMax ?? null));
 
   // Sort
-  const [sortBy, setSortBy] = useState<string>(hasUrlParams ? "featured" : persisted?.sortBy ?? "featured");
+  const [sortBy, setSortBy] = useState<string>(initialSortBy ?? (hasUrlParams ? "featured" : persisted?.sortBy ?? "featured"));
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -542,10 +547,12 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
     setSelectedPropertyId(id);
     track("map_pin_click", { property_id: id });
   }, []);
-  const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(null);
+  const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lon: number; bbox?: [number, number, number, number] } | null>(
+    initialLat && initialLon ? { lat: Number(initialLat), lon: Number(initialLon) } : null
+  );
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [debouncedBounds, setDebouncedBounds] = useState<MapBounds | null>(null);
-  const [mapZoom, setMapZoom] = useState(7);
+  const [mapZoom, setMapZoom] = useState(initialZoom ? Number(initialZoom) : 7);
   const boundsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -614,9 +621,10 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
         setTotalPages(data.pages || 1);
         setTotalResults(data.total || 0);
         setLoading(false);
-        // Record search history for logged-in users
+        // Record search history for logged-in users (all filters + map position)
         if (user?.id && page === 1) {
-          recordSearch(user.id, filters, locationLabel || null, data.total || 0);
+          const boundsSnap = debouncedBounds ? { north: debouncedBounds.north, south: debouncedBounds.south, east: debouncedBounds.east, west: debouncedBounds.west, zoom: mapZoom } : null;
+          recordSearch(user.id, filters, locationLabel || null, data.total || 0, boundsSnap, sortBy);
         }
       })
       .catch((e) => { if (e.name !== "AbortError") { console.error("Failed to fetch properties:", e); setLoading(false); } });

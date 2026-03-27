@@ -59,9 +59,11 @@ export default function HistoryPage() {
       ) : (
         <div className="dashboard-history-list">
           {entries.map((entry) => {
-            const filters = entry.filters as SearchFilters;
+            const filters = entry.filters as SearchFilters & { mapBounds?: { north: number; south: number; east: number; west: number; zoom: number } | null; countries?: string[]; sortBy?: string | null };
             const name = generateSearchName(filters, entry.location_label);
             const params = filtersToSearchParams(filters);
+            const hasMap = !!filters.mapBounds;
+            const countries = filters.countries?.length ? filters.countries.join(", ").toUpperCase() : null;
             return (
               <div key={entry.id} className="dashboard-history-item">
                 <div className="dashboard-history-info">
@@ -74,7 +76,10 @@ export default function HistoryPage() {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                    {entry.result_count != null && ` \u00B7 ${entry.result_count} ${t.dashboard.resultsCount}`}
+                    {entry.result_count != null && ` · ${entry.result_count} ${t.dashboard.resultsCount}`}
+                    {countries && ` · ${countries}`}
+                    {hasMap && ` · zoom ${filters.mapBounds!.zoom}`}
+                    {filters.sortBy && ` · ${filters.sortBy}`}
                   </span>
                 </div>
                 <Link href={`/nabidky?${params.toString()}`} className="dashboard-use-btn">

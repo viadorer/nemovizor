@@ -1,9 +1,22 @@
 import { getBrowserSupabase } from "./supabase-browser";
 import type { SearchFilters } from "./saved-searches";
 
+export type MapBoundsSnapshot = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+  zoom: number;
+};
+
+export type FullSearchSnapshot = SearchFilters & {
+  mapBounds?: MapBoundsSnapshot | null;
+  sortBy?: string | null;
+};
+
 export type SearchHistoryEntry = {
   id: string;
-  filters: SearchFilters;
+  filters: FullSearchSnapshot;
   location_label: string | null;
   result_count: number | null;
   created_at: string;
@@ -17,12 +30,21 @@ export async function recordSearch(
   userId: string,
   filters: SearchFilters,
   locationLabel?: string | null,
-  resultCount?: number | null
+  resultCount?: number | null,
+  mapBounds?: MapBoundsSnapshot | null,
+  sortBy?: string | null
 ): Promise<void> {
   const supabase = getBrowserSupabase();
   if (!supabase) return;
 
-  const key = JSON.stringify(filters);
+  // Build full snapshot with all search context
+  const snapshot: FullSearchSnapshot = {
+    ...filters,
+    mapBounds: mapBounds ?? null,
+    sortBy: sortBy ?? null,
+  };
+
+  const key = JSON.stringify(snapshot);
   const now = Date.now();
   if (key === lastRecordedKey && now - lastRecordedAt < 60_000) return;
 
@@ -31,7 +53,7 @@ export async function recordSearch(
 
   await supabase.from("search_history").insert({
     user_id: userId,
-    filters: filters as Record<string, unknown>,
+    filters: snapshot as Record<string, unknown>,
     location_label: locationLabel ?? null,
     result_count: resultCount ?? null,
   });
