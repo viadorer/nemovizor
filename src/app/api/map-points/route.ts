@@ -18,38 +18,7 @@ export async function GET(req: NextRequest) {
   const isPinMode = zoom >= 13;
   const maxPoints = isPinMode ? 500 : 2000;
 
-  type RpcClient = { rpc: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown[] | null; error: unknown }> };
-
-  // ── Try get_map_points RPC first (skip if country filter active — RPC lacks p_country) ──
-  const skipRpc = !!sp.get("country");
-  try {
-    if (skipRpc) throw new Error("country filter — use fallback");
-    const { data: rpcData, error: rpcError } = await (client as unknown as RpcClient).rpc("get_map_points", {
-      p_listing_type: sp.get("listing_type") || null,
-      p_category: sp.get("category") || null,
-      p_city: sp.get("city") || null,
-      p_price_min: sp.get("price_min") ? Number(sp.get("price_min")) : null,
-      p_price_max: sp.get("price_max") ? Number(sp.get("price_max")) : null,
-      p_bounds_sw_lat: sp.get("sw_lat") ? Number(sp.get("sw_lat")) : null,
-      p_bounds_sw_lon: sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null,
-      p_bounds_ne_lat: sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null,
-      p_bounds_ne_lon: sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null,
-      p_limit: maxPoints,
-    });
-
-    if (!rpcError && rpcData && (rpcData as unknown[]).length > 0) {
-      const points = rpcData as unknown[];
-      return NextResponse.json(
-        { points, count: points.length, total: points.length, truncated: points.length >= maxPoints },
-        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-      );
-    }
-    if (rpcError) console.error("[map-points] RPC error:", rpcError);
-  } catch (e) {
-    console.error("[map-points] RPC exception:", e);
-  }
-
-  // ── Fallback: direct SELECT ───────────────────────────────────────────────
+  // ── Direct SELECT (RPC get_map_points disabled — price_currency enum/text mismatch) ──
   const listingType = sp.get("listing_type");
   const category = sp.get("category");
   const subtype = sp.get("subtype");
