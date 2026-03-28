@@ -56,11 +56,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   broker_promo: "Promo makléře", project_page: "Stránka projektu", refund: "Vrácení",
   bonus: "Bonus", admin_adjustment: "Úprava admin", agency_promo: "Promo kanceláře",
 };
-const CATEGORY_ICONS: Record<string, string> = {
-  deposit: "💰", tip_purchase: "⭐", listing_fee: "📋", daily_billing: "📅",
-  broker_promo: "👤", project_page: "🏗️", refund: "↩️", bonus: "🎁",
-  admin_adjustment: "⚙️", agency_promo: "🏢",
-};
+const CATEGORY_ICONS: Record<string, string> = {};
 
 function fmt(n: number, cur: string) {
   return `${n.toLocaleString("cs", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${CURRENCY_SYMBOLS[cur] || cur.toUpperCase()}`;
@@ -340,7 +336,7 @@ export default function WalletOverviewPage() {
                                               </span>
                                             </td>
                                             <td style={{ padding: "6px 8px", fontSize: "0.78rem" }}>
-                                              {CATEGORY_ICONS[tx.category] || "📌"} {CATEGORY_LABELS[tx.category] || tx.category}
+                                              {CATEGORY_LABELS[tx.category] || tx.category}
                                             </td>
                                             <td style={{ padding: "6px 8px", fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tx.description || ""}>
                                               {tx.description || "—"}
