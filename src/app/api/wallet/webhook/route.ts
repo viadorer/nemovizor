@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getSupabase } from "@/lib/supabase";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion,
-});
-
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  return new Stripe(key, { apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion });
+}
 
 /**
  * POST /api/wallet/webhook
@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    if (WEBHOOK_SECRET) {
-      event = stripe.webhooks.constructEvent(body, sig, WEBHOOK_SECRET);
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+    if (webhookSecret) {
+      event = getStripe().webhooks.constructEvent(body, sig, webhookSecret);
     } else {
       // Dev mode — no signature verification
       event = JSON.parse(body) as Stripe.Event;
