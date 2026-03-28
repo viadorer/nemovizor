@@ -7175,6 +7175,32 @@ table.admin-table tr:hover td {
   margin: 0;
 }
 
+/* ===== FORM SECTIONS ===== */
+.pf-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.pf-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pf-section-toggle:hover { background: var(--bg-filter); }
+.pf-section-title { display: flex; align-items: center; gap: 8px; }
+.pf-section-content { padding: 0 20px 20px; }
+
 /* ===== ACCORDION ===== */
 .pf-accordion {
   background: var(--bg-card);
