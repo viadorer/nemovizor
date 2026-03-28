@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-utils";
 
 /**
- * GET /api/wallet — returns all wallets for the authenticated user
+ * GET /api/wallet — returns the single unified wallet for the authenticated user
  */
 export async function GET() {
   const auth = await requireAuth();
@@ -10,54 +10,64 @@ export async function GET() {
 
   const { supabase, user } = auth;
 
+  // Single wallet per user
   const { data, error } = await supabase
     .from("wallets")
-    .select("id, country, currency, balance, credit_limit, frozen, created_at, updated_at")
+    .select("id, credits, balance, currency, discount_pct, promo_balance, frozen, created_at, updated_at")
     .eq("user_id", user.id)
-    .order("country");
+    .limit(1)
+    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error && error.code !== "PGRST116") {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  // Format balance for display (divide by 100)
-  const wallets = (data || []).map((w) => ({
-    ...w,
-    balance_display: w.balance / 100,
-    credit_limit_display: w.credit_limit / 100,
-  }));
+  if (!data) {
+    return NextResponse.json({ wallet: null });
+  }
 
-  return NextResponse.json({ wallets });
+  // Get exchange rates for display
+  const { data: rates } = await supabase
+    .from("credit_exchange_rates")
+    .select("currency, currency_label, credits_per_unit")
+    .eq("active", true)
+    .order("currency");
+
+  return NextResponse.json({
+    wallet: {
+      ...data,
+      credits: data.credits || 0,
+      discount_pct: data.discount_pct || 0,
+      promo_balance: data.promo_balance || 0,
+    },
+    exchangeRates: rates || [],
+  });
 }
 
 /**
- * POST /api/wallet — create a wallet for a country (if not exists)
+ * POST /api/wallet — create a wallet for the user (if not exists)
  */
-export async function POST(req: Request) {
+export async function POST() {
   const auth = await requireAuth();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { supabase, user } = auth;
-  const body = await req.json();
-  const { country, currency } = body;
-
-  if (!country || !currency) {
-    return NextResponse.json({ error: "country and currency required" }, { status: 400 });
-  }
 
   // Check if wallet already exists
   const { data: existing } = await supabase
     .from("wallets")
     .select("id")
     .eq("user_id", user.id)
-    .eq("country", country)
+    .limit(1)
     .single();
 
   if (existing) {
-    return NextResponse.json({ error: "Wallet already exists for this country", wallet_id: existing.id }, { status: 409 });
+    return NextResponse.json({ error: "Wallet already exists", wallet_id: existing.id }, { status: 409 });
   }
 
   const { data, error } = await supabase
     .from("wallets")
-    .insert({ user_id: user.id, country, currency })
+    .insert({ user_id: user.id, currency: "credits", credits: 0, balance: 0 })
     .select()
     .single();
 
