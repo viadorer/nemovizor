@@ -2294,10 +2294,10 @@ a.ph-contact:hover { color: var(--accent); }
   font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 500;
+  margin-right: auto;
 }
 
 .search-sort-select {
-  margin-left: auto;
   appearance: none;
   -webkit-appearance: none;
   background: transparent;
