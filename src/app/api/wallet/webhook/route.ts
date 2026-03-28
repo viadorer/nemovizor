@@ -79,9 +79,8 @@ export async function POST(req: NextRequest) {
       balance_before: wallet.credits || 0,
       balance_after: newBalance,
       category: "stripe_payment",
-      description: `Stripe dobití ${amount} ${currency.toUpperCase()} → ${credits} kr`,
+      description: `Stripe dobití ${amount} ${currency.toUpperCase()} → ${credits} kr (${session.id})`,
       reference_type: "stripe",
-      reference_id: session.id,
       created_by: userId,
     });
 
