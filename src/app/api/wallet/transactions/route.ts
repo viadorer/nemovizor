@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("wallet_transactions")
-      .select("id, wallet_id, type, amount, balance_before, balance_after, category, description, reference_type, reference_id, metadata, created_by, created_at", { count: "exact" })
+      .select("id, wallet_id, type, amount, credits, balance_before, balance_after, category, description, reference_type, reference_id, metadata, created_by, created_at", { count: "exact" })
       .in("wallet_id", walletIds);
 
     if (category) query = query.eq("category", category);
@@ -52,9 +52,9 @@ export async function GET(req: NextRequest) {
         ...t,
         country: (wInfo as { country: string })?.country || "",
         currency: (wInfo as { currency: string })?.currency || "",
-        amount_display: (t.amount as number) / 100,
-        balance_before_display: (t.balance_before as number) / 100,
-        balance_after_display: (t.balance_after as number) / 100,
+        credits: (t as { credits?: number }).credits || t.amount as number,
+        amount_display: (t as { credits?: number }).credits || t.amount as number,
+        balance_after_display: (t.balance_after as number),
       };
     });
 
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("wallet_transactions")
-    .select("id, type, amount, balance_before, balance_after, category, description, reference_type, reference_id, metadata, created_by, created_at", { count: "exact" })
+    .select("id, type, amount, credits, balance_before, balance_after, category, description, reference_type, reference_id, metadata, created_by, created_at", { count: "exact" })
     .eq("wallet_id", walletId);
 
   if (category) query = query.eq("category", category);
@@ -94,9 +94,9 @@ export async function GET(req: NextRequest) {
 
   const transactions = (data || []).map((t: Record<string, unknown>) => ({
     ...t,
-    amount_display: (t.amount as number) / 100,
-    balance_before_display: (t.balance_before as number) / 100,
-    balance_after_display: (t.balance_after as number) / 100,
+    credits: (t as { credits?: number }).credits || t.amount as number,
+    amount_display: (t as { credits?: number }).credits || t.amount as number,
+    balance_after_display: (t.balance_after as number),
   }));
 
   return NextResponse.json({
