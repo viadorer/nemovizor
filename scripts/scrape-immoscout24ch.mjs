@@ -283,8 +283,16 @@ async function extractListings(page) {
         }
       });
 
-      const imgEl = card.querySelector("img[src], img[data-src]");
-      const imgSrc = imgEl?.src || imgEl?.dataset?.src || "";
+      // Collect all real images from card (skip lazy-loaded GIF placeholders)
+      const cardImages = [];
+      card.querySelectorAll("img").forEach(img => {
+        const src = img.src || img.dataset?.src || "";
+        if (src && src.includes("media2.homegate.ch") && !src.includes("logo") && !src.includes("avatar") && img.naturalWidth > 50) {
+          // Prefer full-size URL (remove thumbnail transforms)
+          const fullSrc = src.replace(/\/f_auto\/t_[^/]+\//, "/");
+          if (!cardImages.includes(fullSrc)) cardImages.push(fullSrc);
+        }
+      });
 
       results.push({
         id,
@@ -293,7 +301,7 @@ async function extractListings(page) {
         address,
         area,
         rooms,
-        images: imgSrc && !imgSrc.includes("placeholder") && !imgSrc.includes("logo") ? [imgSrc] : [],
+        images: cardImages,
       });
     }
 
@@ -334,7 +342,14 @@ async function extractListings(page) {
         const jl = jsonLdListings[i];
         if (jl.title && !domListings[i].title) domListings[i].title = jl.title;
         if (jl.price && !domListings[i].price) domListings[i].price = jl.price;
-        if (jl.image && domListings[i].images.length === 0) domListings[i].images = [jl.image];
+        // Always add JSON-LD image if DOM didn't find any, or prepend it
+        if (jl.image) {
+          if (domListings[i].images.length === 0) {
+            domListings[i].images = [jl.image];
+          } else if (!domListings[i].images.includes(jl.image)) {
+            domListings[i].images.unshift(jl.image);
+          }
+        }
         if (jl.address && !domListings[i].address) domListings[i].address = jl.address;
       }
     }
