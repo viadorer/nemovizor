@@ -172,6 +172,8 @@ function dbPropertyToApp(row: DbProperty, broker?: DbBroker | null): Property {
 }
 
 function dbBrokerToApp(row: DbBroker): Broker {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = row as any;
   return {
     id: row.id,
     name: row.name,
@@ -189,11 +191,50 @@ function dbBrokerToApp(row: DbBroker): Broker {
     languages: row.languages ?? undefined,
     certifications: row.certifications ?? undefined,
     yearStarted: row.year_started ?? undefined,
-    isPromoted: (row as any).is_promoted ?? false,
+    isPromoted: r.is_promoted ?? false,
+    // Social
+    linkedin: r.linkedin || undefined,
+    instagram: r.instagram || undefined,
+    facebook: r.facebook || undefined,
+    twitter: r.twitter || undefined,
+    website: r.website || undefined,
+    whatsapp: r.whatsapp || undefined,
+    // Video
+    videoUrl: r.video_url || undefined,
+    videoType: r.video_type || undefined,
+    // Bio
+    bioShort: r.bio_short || undefined,
+    bioLong: r.bio_long || undefined,
+    motto: r.motto || undefined,
+    // Professional
+    title: r.title || undefined,
+    licenseNumber: r.license_number || undefined,
+    education: r.education || undefined,
+    awards: r.awards || undefined,
+    // Expertise
+    serviceAreas: r.service_areas || undefined,
+    specializations: r.specializations || undefined,
+    propertyTypes: r.property_types || undefined,
+    priceRangeMin: r.price_range_min || undefined,
+    priceRangeMax: r.price_range_max || undefined,
+    // Performance
+    totalSalesVolume: r.total_sales_volume || undefined,
+    avgResponseTimeHours: r.avg_response_time_hours ? Number(r.avg_response_time_hours) : undefined,
+    responseRatePct: r.response_rate_pct || undefined,
+    // Visuals
+    coverPhoto: r.cover_photo || undefined,
+    gallery: r.gallery || undefined,
+    // Booking
+    calendlyUrl: r.calendly_url || undefined,
+    // Personal
+    hobbies: r.hobbies || undefined,
+    funFact: r.fun_fact || undefined,
   };
 }
 
 function dbAgencyToApp(row: DbAgency): Agency {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = row as any;
   return {
     id: row.id,
     name: row.name,
@@ -213,10 +254,45 @@ function dbAgencyToApp(row: DbAgency): Agency {
     isIndependent: row.is_independent,
     seatCity: row.seat_city ?? undefined,
     seatAddress: row.seat_address ?? undefined,
+    // Social
+    linkedin: r.linkedin || undefined,
+    instagram: r.instagram || undefined,
+    facebook: r.facebook || undefined,
+    twitter: r.twitter || undefined,
+    whatsapp: r.whatsapp || undefined,
+    // Video
+    videoUrl: r.video_url || undefined,
+    videoType: r.video_type || undefined,
+    // Description
+    descriptionLong: r.description_long || undefined,
+    motto: r.motto || undefined,
+    mission: r.mission || undefined,
+    valuesText: r.values_text || undefined,
+    // Visuals
+    coverPhoto: r.cover_photo || undefined,
+    gallery: r.gallery || undefined,
+    // Performance
+    totalSalesVolume: r.total_sales_volume || undefined,
+    avgResponseTimeHours: r.avg_response_time_hours ? Number(r.avg_response_time_hours) : undefined,
+    propertiesSoldCount: r.properties_sold_count || undefined,
+    // Awards
+    awards: r.awards || undefined,
+    agencyCertifications: r.certifications || undefined,
+    // Service
+    serviceAreas: r.service_areas || undefined,
+    serviceCountries: r.service_countries || undefined,
+    // Contact
+    calendlyUrl: r.calendly_url || undefined,
+    // CTA
+    newsletterEnabled: r.newsletter_enabled || undefined,
+    ctaText: r.cta_text || undefined,
+    ctaUrl: r.cta_url || undefined,
   };
 }
 
 function dbBranchToApp(row: DbBranch): Branch {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = row as any;
   return {
     id: row.id,
     agencyId: row.agency_id,
@@ -229,6 +305,11 @@ function dbBranchToApp(row: DbBranch): Branch {
     latitude: row.latitude,
     longitude: row.longitude,
     isHeadquarters: row.is_headquarters,
+    photo: r.photo || undefined,
+    description: r.description || undefined,
+    openingHours: r.opening_hours || undefined,
+    specializations: r.specializations || undefined,
+    brokerCount: r.broker_count || undefined,
   };
 }
 
@@ -588,6 +669,38 @@ export async function fetchAgencyReviews(agencyId: string): Promise<Review[]> {
 
   if (error) return [];
   return (data ?? []).map(dbReviewToApp);
+}
+
+// ===== Recent Sales =====
+
+export async function fetchRecentSales(type: "broker" | "agency", id: string): Promise<import("./types").RecentSale[]> {
+  if (!isSupabaseConfigured || !getSupabase()) return [];
+
+  const col = type === "broker" ? "broker_id" : "agency_id";
+  const { data, error } = await getSupabase()!
+    .from("recent_sales")
+    .select("*")
+    .eq(col, id)
+    .order("sold_date", { ascending: false })
+    .limit(20);
+
+  if (error || !data) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data.map((r: any) => ({
+    id: r.id,
+    brokerId: r.broker_id || undefined,
+    agencyId: r.agency_id || undefined,
+    propertyId: r.property_id || undefined,
+    title: r.title || "",
+    city: r.city || "",
+    country: r.country || "cz",
+    price: Number(r.price) || 0,
+    priceCurrency: r.price_currency || "czk",
+    area: Number(r.area) || 0,
+    category: r.category || "apartment",
+    imageUrl: r.image_url || "",
+    soldDate: r.sold_date || "",
+  }));
 }
 
 // ===== Utility: Cities =====

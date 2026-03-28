@@ -126,6 +126,18 @@ export async function getAgencyReviews(agencyId: string): Promise<Review[]> {
   return mockData.getAgencyReviews(agencyId);
 }
 
+// ===== Recent Sales =====
+
+export async function getBrokerRecentSales(brokerId: string): Promise<import("./types").RecentSale[]> {
+  if (!isLive) return [];
+  return supabaseData.fetchRecentSales("broker", brokerId);
+}
+
+export async function getAgencyRecentSales(agencyId: string): Promise<import("./types").RecentSale[]> {
+  if (!isLive) return [];
+  return supabaseData.fetchRecentSales("agency", agencyId);
+}
+
 // ===== Branches =====
 
 export async function getAllBranches(): Promise<Branch[]> {

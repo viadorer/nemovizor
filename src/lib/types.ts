@@ -786,6 +786,43 @@ export type Broker = {
   certifications?: string[];
   yearStarted?: number;
   isPromoted?: boolean;
+  // Social
+  linkedin?: string;
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  website?: string;
+  whatsapp?: string;
+  // Video
+  videoUrl?: string;
+  videoType?: string;
+  // Bio
+  bioShort?: string;
+  bioLong?: string;
+  motto?: string;
+  // Professional
+  title?: string;
+  licenseNumber?: string;
+  education?: string;
+  awards?: { name: string; year?: number }[];
+  // Expertise
+  serviceAreas?: { city: string; district?: string; country?: string }[];
+  specializations?: string[];
+  propertyTypes?: string[];
+  priceRangeMin?: number;
+  priceRangeMax?: number;
+  // Performance
+  totalSalesVolume?: number;
+  avgResponseTimeHours?: number;
+  responseRatePct?: number;
+  // Visuals
+  coverPhoto?: string;
+  gallery?: string[];
+  // Booking
+  calendlyUrl?: string;
+  // Personal
+  hobbies?: string;
+  funFact?: string;
 };
 
 /** Realitní kancelář */
@@ -808,6 +845,39 @@ export type Agency = {
   isIndependent: boolean;
   seatCity?: string;
   seatAddress?: string;
+  // Social
+  linkedin?: string;
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  whatsapp?: string;
+  // Video
+  videoUrl?: string;
+  videoType?: string;
+  // Description
+  descriptionLong?: string;
+  motto?: string;
+  mission?: string;
+  valuesText?: string;
+  // Visuals
+  coverPhoto?: string;
+  gallery?: string[];
+  // Performance
+  totalSalesVolume?: number;
+  avgResponseTimeHours?: number;
+  propertiesSoldCount?: number;
+  // Awards
+  awards?: { name: string; year?: number }[];
+  agencyCertifications?: string[];
+  // Service
+  serviceAreas?: { city: string; district?: string; country?: string }[];
+  serviceCountries?: string[];
+  // Contact
+  calendlyUrl?: string;
+  // CTA
+  newsletterEnabled?: boolean;
+  ctaText?: string;
+  ctaUrl?: string;
 };
 
 /** Pobočka kanceláře */
@@ -823,6 +893,11 @@ export type Branch = {
   latitude: number;
   longitude: number;
   isHeadquarters: boolean;
+  photo?: string;
+  description?: string;
+  openingHours?: string;
+  specializations?: string[];
+  brokerCount?: number;
 };
 
 /** Hodnocení makléře nebo kanceláře */
@@ -835,6 +910,26 @@ export type Review = {
   text: string;
   date: string;
   propertyType?: string;
+  isFeatured?: boolean;
+  propertyCity?: string;
+  verified?: boolean;
+};
+
+/** Nedávno prodané */
+export type RecentSale = {
+  id: string;
+  brokerId?: string;
+  agencyId?: string;
+  propertyId?: string;
+  title: string;
+  city: string;
+  country: string;
+  price: number;
+  priceCurrency: string;
+  area: number;
+  category: string;
+  imageUrl: string;
+  soldDate: string;
 };
 
 // ===== BODY ZAJMU =====
