@@ -9282,4 +9282,171 @@ table.admin-table tr:hover td {
   .agency-branches-grid { grid-template-columns: 1fr; }
   .agency-brokers-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .broker-reviews-grid { grid-template-columns: 1fr; }
+  .bp-about-grid { flex-direction: column; }
+  .bp-gallery { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Broker Profile Extended Sections ──────────────────────── */
+.bp-section { margin-top: 48px; }
+.bp-title {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-accent, #ffb800);
+  margin-bottom: 2px;
+}
+.bp-motto {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Social icons */
+.bp-socials {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.bp-social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  color: var(--text-muted);
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.bp-social-icon:hover {
+  background: var(--color-accent, #ffb800);
+  color: #000;
+  border-color: var(--color-accent, #ffb800);
+}
+
+/* Video embed */
+.bp-video-wrap {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-filter);
+}
+.bp-video-wrap iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* About grid */
+.bp-about-grid {
+  display: flex;
+  gap: 32px;
+}
+.bp-about-text {
+  flex: 2;
+  min-width: 0;
+}
+.bp-about-text p {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: pre-line;
+}
+.bp-about-details {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bp-detail-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light, #e0e0e0);
+}
+.bp-detail-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.bp-detail-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.bp-awards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bp-award {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--color-accent, #ffb800);
+  color: #000;
+}
+
+/* Chips */
+.bp-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bp-chip {
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  color: var(--text-primary);
+}
+.bp-chip--accent {
+  background: var(--color-accent, #ffb800);
+  color: #000;
+  border-color: var(--color-accent, #ffb800);
+}
+.bp-price-range {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+/* Gallery */
+.bp-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.bp-gallery-item {
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  background: var(--bg-filter);
+}
+.bp-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.bp-gallery-item:hover img {
+  transform: scale(1.05);
 }
