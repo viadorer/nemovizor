@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    services: (services || []).map((s) => ({ ...s, base_price_display: (s.base_price as number) / 100 })),
+    services: (services || []).map((s) => ({ ...s, base_price_display: (s.base_price as number) / 100, credits_price: (s as Record<string, unknown>).credits_price || 0 })),
     ...(includeRegional ? { regionalPricing: regionalPricing.map((r) => ({ ...r, price_display: ((r.price as number) || 0) / 100 })) } : {}),
   });
 }

@@ -5,14 +5,14 @@ import { useT } from "@/i18n/provider";
 
 type Service = {
   id: string; code: string; name: string; description: string | null;
-  base_price: number; base_price_display: number; currency: string;
+  base_price: number; base_price_display: number; credits_price: number; currency: string;
   duration_days: number | null; category: string; active: boolean;
 };
 
 type ListingPrice = {
   id: string; country: string; region: string | null; city: string | null;
   listing_type: string | null; price_per_day: number; price_display: number;
-  currency: string; active: boolean;
+  credits_per_day: number; currency: string; active: boolean;
 };
 
 type VolumeDiscount = {
@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   agency_promo: "Promo kanceláře", project: "Projekt",
 };
 const SYMS: Record<string, string> = { czk: "Kč", eur: "€", chf: "CHF", gbp: "£" };
-const COUNTRIES: Record<string, string> = { cz: "Česko", fr: "Francie", ch: "Švýcarsko", es: "Španělsko", it: "Itálie", uk: "UK", de: "Německo" };
+const COUNTRIES: Record<string, string> = { cz: "Česko", fr: "Francie", ch: "Švýcarsko", es: "Španělsko", it: "Itálie", uk: "UK", gb: "UK", de: "Německo", at: "Rakousko", sk: "Slovensko", pl: "Polsko", hu: "Maďarsko", hr: "Chorvatsko", si: "Slovinsko", gr: "Řecko", pt: "Portugalsko", nl: "Nizozemsko", be: "Belgie", mc: "Monako", cy: "Kypr", mt: "Malta", bg: "Bulharsko", ro: "Rumunsko", me: "Černá Hora", al: "Albánie", tr: "Turecko" };
 const TYPE_LABELS: Record<string, string> = { sale: "Prodej", rent: "Pronájem" };
 
 export default function AdminServiceCatalogPage() {
@@ -124,7 +124,7 @@ export default function AdminServiceCatalogPage() {
                     <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
                         <tr>
-                          {["Kód", "Název", "Popis", "Základní cena", "Trvání", "Stav", "Akce"].map((h, i) => (
+                          {["Kód", "Název", "Popis", "Kredity", "Trvání", "Stav", "Akce"].map((h, i) => (
                             <th key={h} style={{ textAlign: i === 3 ? "right" : i >= 4 ? "center" : "left", padding: "8px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--text-muted)" }}>{h}</th>
                           ))}
                         </tr>
@@ -136,7 +136,7 @@ export default function AdminServiceCatalogPage() {
                             <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", fontWeight: 500 }}>{s.name}</td>
                             <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", fontSize: "0.82rem", color: "var(--text-muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description || "—"}</td>
                             <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "right", fontWeight: 600 }}>
-                              {s.base_price_display.toLocaleString("cs", { minimumFractionDigits: 2 })} {SYMS[s.currency] || s.currency.toUpperCase()}
+                              {(s.credits_price || 0).toLocaleString("cs")} kr
                             </td>
                             <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "center", fontSize: "0.82rem" }}>
                               {s.duration_days ? `${s.duration_days} dní` : "Trvalé"}
@@ -170,15 +170,12 @@ export default function AdminServiceCatalogPage() {
                 <div key={country} style={{ marginBottom: 32 }}>
                   <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12 }}>
                     {COUNTRIES[country] || country.toUpperCase()}
-                    <span style={{ fontWeight: 400, fontSize: "0.82rem", color: "var(--text-muted)", marginLeft: 8 }}>
-                      ({items[0]?.currency?.toUpperCase()})
-                    </span>
                   </h2>
                   <div style={{ overflowX: "auto" }}>
                     <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
                         <tr>
-                          {["Město / Region", "Typ", "Cena/den", "Akce"].map((h, i) => (
+                          {["Město / Region", "Typ", "Kredity/den", "Akce"].map((h, i) => (
                             <th key={h} style={{ textAlign: i === 2 ? "right" : i === 3 ? "center" : "left", padding: "8px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--text-muted)" }}>{h}</th>
                           ))}
                         </tr>
@@ -240,12 +237,11 @@ export default function AdminServiceCatalogPage() {
 // ─── Inline editable pricing row ──────────────────────────────
 function PricingRow({ p, onUpdate }: { p: ListingPrice; onUpdate: (id: string, price: number) => void }) {
   const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(String(p.price_display));
-
-  const sym = SYMS[p.currency] || p.currency.toUpperCase();
+  const credits = p.credits_per_day || p.price_display || 0;
+  const [val, setVal] = useState(String(credits));
 
   function save() {
-    const num = parseFloat(val.replace(",", "."));
+    const num = parseInt(val, 10);
     if (!isNaN(num) && num >= 0) {
       onUpdate(p.id, num);
     }
@@ -270,19 +266,19 @@ function PricingRow({ p, onUpdate }: { p: ListingPrice; onUpdate: (id: string, p
               onKeyDown={(e) => e.key === "Enter" && save()}
               onBlur={save}
               autoFocus
-              style={{ width: 80, padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 4, textAlign: "right", fontSize: "0.85rem" }}
+              style={{ width: 60, padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 4, textAlign: "right", fontSize: "0.85rem" }}
             />
-            <span style={{ fontSize: "0.82rem" }}>{sym}</span>
+            <span style={{ fontSize: "0.82rem" }}>kr/den</span>
           </span>
         ) : (
-          <span>{p.price_display.toLocaleString("cs", { minimumFractionDigits: 2 })} {sym}/den</span>
+          <span>{credits} kr/den</span>
         )}
       </td>
       <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "center" }}>
         <button
           className="admin-btn"
           style={{ fontSize: "0.75rem", padding: "4px 10px" }}
-          onClick={() => { setVal(String(p.price_display)); setEditing(!editing); }}
+          onClick={() => { setVal(String(credits)); setEditing(!editing); }}
         >
           {editing ? "Zrušit" : "Upravit"}
         </button>

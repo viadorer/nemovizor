@@ -16,7 +16,8 @@ export async function GET() {
   return NextResponse.json({
     pricing: (pricing || []).map((p: Record<string, unknown>) => ({
       ...p,
-      price_display: ((p.price_per_day as number) || 0) / 100,
+      price_display: (p.credits_per_day as number) || 0,
+      credits_per_day: (p.credits_per_day as number) || 0,
     })),
     discounts: discounts || [],
   });
@@ -83,7 +84,9 @@ export async function PATCH(req: Request) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (price_per_day !== undefined) updates.price_per_day = Math.round((price_per_day as number) * 100);
+  if (price_per_day !== undefined) {
+    updates.credits_per_day = Math.round(price_per_day as number);
+  }
   if (active !== undefined) updates.active = active;
 
   const { error } = await auth.supabase.from("listing_pricing").update(updates).eq("id", id);
