@@ -8538,3 +8538,456 @@ table.admin-table tr:hover td {
     flex-direction: column;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM AGENT DIRECTORY — /makleri
+   ═══════════════════════════════════════════════════════════════ */
+
+.agent-directory {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.agent-directory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 32px;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+}
+.agent-directory-header-text {
+  max-width: 600px;
+}
+.agent-directory-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-accent, #ffb800);
+  margin-bottom: 12px;
+}
+.agent-directory-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+.agent-directory-desc {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+/* Toggle Agents/Offices */
+.agent-directory-toggle {
+  display: flex;
+  padding: 4px;
+  border-radius: 50px;
+  background: var(--bg-filter, #f0f0f0);
+  flex-shrink: 0;
+}
+.agent-directory-toggle button {
+  padding: 10px 28px;
+  border-radius: 50px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--text-muted);
+}
+.agent-directory-toggle button.active {
+  background: var(--bg-card, #fff);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ── Body layout ────────────────────────────────────────────── */
+.agent-directory-body {
+  display: flex;
+  gap: 40px;
+}
+
+/* ── Sidebar filters ────────────────────────────────────────── */
+.agent-directory-filters {
+  width: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+}
+.agent-filter-group {
+  margin-bottom: 32px;
+}
+.agent-filter-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.agent-filter-search {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--bg-card, #fff);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+.agent-filter-search:focus {
+  box-shadow: 0 0 0 2px var(--color-accent, #ffb800);
+}
+.agent-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.agent-chip {
+  padding: 6px 14px;
+  border-radius: 50px;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-filter, #f0f0f0);
+  color: var(--text-muted);
+}
+.agent-chip.active {
+  background: var(--color-accent, #ffb800);
+  color: #000;
+}
+.agent-chip:hover:not(.active) {
+  background: var(--bg-card-hover, #e8e8e8);
+}
+.agent-filter-clear {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--text-primary);
+  color: var(--bg-card, #fff);
+  transition: opacity 0.2s;
+}
+.agent-filter-clear:hover {
+  opacity: 0.85;
+}
+
+/* ── Grid section ───────────────────────────────────────────── */
+.agent-directory-grid-section {
+  flex: 1;
+  min-width: 0;
+}
+.agent-directory-count {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+/* ── Agent card — portrait style ────────────────────────────── */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+.agent-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.4s ease;
+}
+.agent-card:hover {
+  transform: translateY(-6px);
+}
+.agent-card-portrait {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-filter, #e8e8e8);
+}
+.agent-card-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(100%);
+  transition: filter 0.6s ease, transform 0.6s ease;
+}
+.agent-card:hover .agent-card-portrait img {
+  filter: grayscale(0%);
+  transform: scale(1.04);
+}
+.agent-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: var(--bg-filter);
+}
+.agent-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 50%);
+  opacity: 0.8;
+  transition: opacity 0.4s;
+}
+.agent-card:hover .agent-card-overlay {
+  opacity: 0.9;
+}
+.agent-card-promoted {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 4px 12px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  background: var(--color-accent, #ffb800);
+  color: #000;
+  border-radius: 4px;
+}
+.agent-card-content {
+  position: absolute;
+  inset: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.agent-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.agent-card-meta {
+  flex: 1;
+}
+.agent-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.agent-stars {
+  display: flex;
+  gap: 1px;
+}
+.agent-card-rating-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+.agent-card-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+.agent-card-spec {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
+}
+.agent-card-arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.agent-card:hover .agent-card-arrow {
+  background: var(--color-accent, #ffb800);
+  color: #000;
+}
+.agent-card-stats {
+  display: flex;
+  gap: 16px;
+  padding: 10px 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Agency card ────────────────────────────────────────────── */
+.agency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+.agency-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  padding: 28px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.agency-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+}
+.agency-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.agency-card-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--bg-filter);
+  flex-shrink: 0;
+}
+.agency-card-logo-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-filter);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.agency-card-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.agency-card-city {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.agency-card-rating {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.agency-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.agency-card-stats {
+  display: flex;
+  gap: 32px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border, #eee);
+  margin-bottom: 12px;
+}
+.agency-card-stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: block;
+}
+.agency-card-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.agency-card-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.agency-card-spec-tag {
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--bg-filter, #f0f0f0);
+  color: var(--text-muted);
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .agent-directory-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .agent-directory-title {
+    font-size: 2rem;
+  }
+  .agent-directory-body {
+    flex-direction: column;
+  }
+  .agent-directory-filters {
+    width: 100%;
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .agent-filter-group {
+    margin-bottom: 0;
+  }
+  .agent-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .agent-card-name {
+    font-size: 1.1rem;
+  }
+  .agent-card-content {
+    padding: 14px;
+  }
+  .agent-card-arrow {
+    width: 32px;
+    height: 32px;
+  }
+  .agent-card-stats {
+    font-size: 0.68rem;
+    gap: 10px;
+  }
+  .agency-grid {
+    grid-template-columns: 1fr;
+  }
+}
