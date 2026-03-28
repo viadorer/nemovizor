@@ -20,15 +20,23 @@ export async function GET() {
   const since7d = new Date(Date.now() - 7 * 86400_000).toISOString();
   const since14d = new Date(Date.now() - 14 * 86400_000).toISOString();
 
-  // ── Fetch all events (7d) in one go for in-memory aggregation ──────────
-  const { data: allEvents } = await client
-    .from("analytics_events")
-    .select("event_type, session_id, properties, url, referrer, device_type, created_at")
-    .gte("created_at", since14d)
-    .order("created_at", { ascending: true })
-    .limit(50000);
-
-  const events = (allEvents || []) as Ev[];
+  // ── Fetch all events (14d) with pagination (Supabase max 1000/page) ──
+  const events: Ev[] = [];
+  let page = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data: batch } = await client
+      .from("analytics_events")
+      .select("event_type, session_id, properties, url, referrer, device_type, created_at")
+      .gte("created_at", since14d)
+      .order("created_at", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (!batch || batch.length === 0) break;
+    events.push(...(batch as Ev[]));
+    if (batch.length < PAGE_SIZE) break;
+    page++;
+    if (page > 50) break; // safety: max 50K events
+  }
   const events7d = events.filter((e) => e.created_at >= since7d);
 
   // ── Basic KPIs ─────────────────────────────────────────────────────────
