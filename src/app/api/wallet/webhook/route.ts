@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
     const { error: txErr } = await client.from("wallet_transactions").insert({
       wallet_id: wallet.id,
       type: "credit",
+      amount: credits,
       credits,
       balance_before: wallet.credits || 0,
       balance_after: newBalance,
