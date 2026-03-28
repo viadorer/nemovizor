@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { getSupabase } from "@/lib/supabase";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion,
+});
 
 /**
  * POST /api/wallet/topup
- * Admin or self top-up wallet.
- * Body: { wallet_id: string, amount: number (in main units, e.g. 100 = 100 CZK), note?: string }
+ * Body: { user_id, currency, amount }
+ * Creates a Stripe Checkout session for credit purchase.
+ *
+ * Body: { wallet_id, amount, note }  (admin manual topup — no Stripe)
  */
 export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,49 +19,103 @@ export async function POST(req: NextRequest) {
   if (!client) return NextResponse.json({ error: "No DB" }, { status: 503 });
 
   const body = await req.json().catch(() => null);
-  if (!body?.wallet_id || !body?.amount || body.amount <= 0) {
-    return NextResponse.json({ error: "wallet_id and positive amount required" }, { status: 400 });
+  if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+  // ── Mode 1: Admin manual topup (no Stripe) ──────────────────────────
+  if (body.wallet_id && body.amount && !body.currency) {
+    const { data: wallet, error: wErr } = await client
+      .from("wallets")
+      .select("id, credits, user_id")
+      .eq("id", body.wallet_id)
+      .single();
+
+    if (wErr || !wallet) return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+
+    const credits = Math.round(body.amount);
+    const newBalance = (wallet.credits || 0) + credits;
+
+    const { error: txErr } = await client.from("wallet_transactions").insert({
+      wallet_id: wallet.id,
+      type: "credit",
+      credits,
+      balance_before: wallet.credits || 0,
+      balance_after: newBalance,
+      category: "deposit",
+      description: body.note || `Ruční dobití ${credits} kr`,
+      reference_type: "manual",
+      created_by: wallet.user_id,
+    });
+    if (txErr) return NextResponse.json({ error: txErr.message }, { status: 400 });
+
+    await client.from("wallets").update({ credits: newBalance }).eq("id", wallet.id);
+
+    return NextResponse.json({ ok: true, credits: newBalance });
   }
 
-  // Get wallet to determine currency multiplier
-  const { data: wallet, error: wErr } = await client
-    .from("wallets")
-    .select("id, currency, balance, user_id")
-    .eq("id", body.wallet_id)
+  // ── Mode 2: Stripe Checkout ──────────────────────────────────────────
+  const { user_id, currency = "czk", amount } = body as {
+    user_id: string;
+    currency: string;
+    amount: number;
+  };
+
+  if (!user_id || !amount || amount <= 0) {
+    return NextResponse.json({ error: "user_id and positive amount required" }, { status: 400 });
+  }
+
+  // Get exchange rate
+  const { data: rate } = await client
+    .from("credit_exchange_rates")
+    .select("credits_per_unit")
+    .eq("currency", currency.toLowerCase())
+    .eq("active", true)
     .single();
 
-  if (wErr || !wallet) {
-    return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+  if (!rate) {
+    return NextResponse.json({ error: `No exchange rate for ${currency}` }, { status: 400 });
   }
 
-  // Convert main units to smallest unit (haléře/cents)
-  const multiplier = 100; // all currencies use 100 subunits
-  const amountSmallest = Math.round(body.amount * multiplier);
+  const creditsToAdd = Math.round(amount * rate.credits_per_unit);
 
-  const { data: txId, error } = await client.rpc("wallet_credit", {
-    p_wallet_id: wallet.id,
-    p_amount: amountSmallest,
-    p_category: "deposit",
-    p_description: body.note || `Dobití ${body.amount} ${wallet.currency.toUpperCase()}`,
-    p_reference_type: "manual",
-  });
+  // Stripe expects amount in smallest currency unit (cents/haléře)
+  // HUF and JPY are zero-decimal currencies
+  const zeroDecimal = ["huf", "jpy", "krw", "clp", "pyg", "rwf", "ugx", "vnd"];
+  const stripeAmount = zeroDecimal.includes(currency.toLowerCase())
+    ? Math.round(amount)
+    : Math.round(amount * 100);
 
-  if (error) {
-    console.error("[wallet/topup]", error.message);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  const origin = req.headers.get("origin") || "http://localhost:3000";
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: stripeAmount,
+            product_data: {
+              name: `${creditsToAdd.toLocaleString("cs")} kreditů — Nemovizor`,
+              description: `Dobití ${amount.toLocaleString("cs")} ${currency.toUpperCase()} → ${creditsToAdd.toLocaleString("cs")} kr`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        user_id,
+        credits: String(creditsToAdd),
+        currency: currency.toLowerCase(),
+        amount: String(amount),
+      },
+      success_url: `${origin}/dashboard/penezenka?topup=success&credits=${creditsToAdd}`,
+      cancel_url: `${origin}/dashboard/penezenka?topup=cancelled`,
+    });
+
+    return NextResponse.json({ url: session.url, credits: creditsToAdd });
+  } catch (err) {
+    console.error("[wallet/topup] Stripe error:", err);
+    return NextResponse.json({ error: "Stripe session failed" }, { status: 500 });
   }
-
-  // Fetch updated balance
-  const { data: updated } = await client
-    .from("wallets")
-    .select("balance")
-    .eq("id", wallet.id)
-    .single();
-
-  return NextResponse.json({
-    ok: true,
-    transaction_id: txId,
-    new_balance: (updated?.balance || 0) / multiplier,
-    currency: wallet.currency,
-  });
 }

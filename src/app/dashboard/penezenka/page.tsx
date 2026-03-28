@@ -33,6 +33,14 @@ function formatDateLabel(dateStr: string): string {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("cs-CZ", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 }
 
+const TOPUP_PRESETS: Record<string, number[]> = {
+  czk: [500, 1000, 2000, 5000, 10000],
+  eur: [20, 50, 100, 200, 500],
+  chf: [20, 50, 100, 200, 500],
+  gbp: [20, 50, 100, 200, 500],
+  pln: [100, 200, 500, 1000, 2000],
+};
+
 export default function WalletPage() {
   const { user } = useAuth();
   const t = useT();
@@ -44,6 +52,10 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [txLoading, setTxLoading] = useState(false);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const [showTopup, setShowTopup] = useState(false);
+  const [topupCurrency, setTopupCurrency] = useState("czk");
+  const [topupAmount, setTopupAmount] = useState(0);
+  const [topupLoading, setTopupLoading] = useState(false);
   const TX_LIMIT = 200;
 
   // Load wallet
@@ -91,6 +103,31 @@ export default function WalletPage() {
 
   const txPages = Math.ceil(txTotal / TX_LIMIT);
 
+  const selectedRate = rates.find((r) => r.currency === topupCurrency);
+  const topupCredits = selectedRate && topupAmount > 0 ? Math.round(topupAmount * selectedRate.credits_per_unit) : 0;
+
+  const handleTopup = async () => {
+    if (!user || !topupAmount || topupLoading) return;
+    setTopupLoading(true);
+    try {
+      const res = await fetch("/api/wallet/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, currency: topupCurrency, amount: topupAmount }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Chyba při vytváření platby");
+      }
+    } catch {
+      alert("Chyba připojení");
+    } finally {
+      setTopupLoading(false);
+    }
+  };
+
   if (loading) return <div className="dashboard-page"><p style={{ color: "var(--text-muted)" }}>{t.common.loading}</p></div>;
 
   if (!wallet) return (
@@ -136,11 +173,128 @@ export default function WalletPage() {
             )}
           </div>
 
-          <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
-            Celkem transakcí: {txTotal}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+            <button
+              onClick={() => setShowTopup(!showTopup)}
+              style={{
+                padding: "10px 24px", borderRadius: 10, border: "none",
+                background: "var(--color-accent, #ffb800)", color: "#000",
+                fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+              }}
+            >
+              Dobít kredity
+            </button>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+              Celkem transakcí: {txTotal}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── Topup dialog ──────────────────────────────────────── */}
+      {showTopup && (
+        <div style={{
+          background: "var(--bg-card)", borderRadius: 14, padding: "24px 28px",
+          border: "2px solid var(--color-accent, #ffb800)", marginBottom: 28,
+        }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 16 }}>Dobít kredity</h2>
+
+          {/* Currency select */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: "0.82rem", fontWeight: 600, display: "block", marginBottom: 6 }}>Měna platby</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {rates.map((r) => (
+                <button key={r.currency} onClick={() => { setTopupCurrency(r.currency); setTopupAmount(0); }}
+                  style={{
+                    padding: "6px 14px", borderRadius: 8,
+                    border: topupCurrency === r.currency ? "2px solid var(--color-accent, #ffb800)" : "1px solid var(--border)",
+                    background: topupCurrency === r.currency ? "var(--color-accent, #ffb800)" : "var(--bg-card)",
+                    color: topupCurrency === r.currency ? "#000" : "inherit",
+                    fontWeight: 600, fontSize: "0.82rem", cursor: "pointer",
+                  }}
+                >
+                  {r.currency_label || r.currency.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount presets */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: "0.82rem", fontWeight: 600, display: "block", marginBottom: 6 }}>Částka</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {(TOPUP_PRESETS[topupCurrency] || TOPUP_PRESETS.eur || []).map((amt) => (
+                <button key={amt} onClick={() => setTopupAmount(amt)}
+                  style={{
+                    padding: "10px 18px", borderRadius: 10,
+                    border: topupAmount === amt ? "2px solid var(--color-accent, #ffb800)" : "1px solid var(--border)",
+                    background: topupAmount === amt ? "var(--color-accent, #ffb800)" : "var(--bg-card)",
+                    color: topupAmount === amt ? "#000" : "inherit",
+                    fontWeight: 600, fontSize: "0.9rem", cursor: "pointer",
+                  }}
+                >
+                  {amt.toLocaleString("cs")} {topupCurrency.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {/* Custom amount */}
+            <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="number"
+                min={1}
+                placeholder="Jiná částka..."
+                value={topupAmount || ""}
+                onChange={(e) => setTopupAmount(Number(e.target.value) || 0)}
+                style={{
+                  padding: "8px 14px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: "var(--bg-card)", fontSize: "0.9rem", width: 160,
+                }}
+              />
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{topupCurrency.toUpperCase()}</span>
+            </div>
+          </div>
+
+          {/* Preview */}
+          {topupAmount > 0 && selectedRate && (
+            <div style={{
+              background: "var(--bg-filter, #f5f5f5)", borderRadius: 10, padding: "14px 18px",
+              marginBottom: 16, fontSize: "0.9rem",
+            }}>
+              <span style={{ color: "var(--text-muted)" }}>Získáte: </span>
+              <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>{topupCredits.toLocaleString("cs")} kreditů</span>
+              <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>
+                (kurz: 1 {topupCurrency.toUpperCase()} = {selectedRate.credits_per_unit} kr)
+              </span>
+            </div>
+          )}
+
+          {/* Pay button */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              disabled={!topupAmount || topupLoading}
+              onClick={handleTopup}
+              style={{
+                padding: "12px 28px", borderRadius: 10, border: "none",
+                background: topupAmount ? "var(--color-accent, #ffb800)" : "var(--bg-filter, #e0e0e0)",
+                color: topupAmount ? "#000" : "var(--text-muted)",
+                fontWeight: 700, fontSize: "0.95rem",
+                cursor: topupAmount ? "pointer" : "default",
+                opacity: topupLoading ? 0.6 : 1,
+              }}
+            >
+              {topupLoading ? "Přesměrování..." : `Zaplatit ${topupAmount ? topupAmount.toLocaleString("cs") + " " + topupCurrency.toUpperCase() : ""}`}
+            </button>
+            <button onClick={() => setShowTopup(false)}
+              style={{
+                padding: "12px 20px", borderRadius: 10, border: "1px solid var(--border)",
+                background: "var(--bg-card)", cursor: "pointer", fontSize: "0.9rem",
+              }}
+            >
+              Zrušit
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Exchange rates ─────────────────────────────────────── */}
       {rates.length > 0 && (
