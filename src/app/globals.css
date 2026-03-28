@@ -9286,3 +9286,270 @@ table.admin-table tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM AGENCY DETAIL — /kancelare/[slug]
+   ═══════════════════════════════════════════════════════════════ */
+
+.agency-hero {
+  background: var(--bg-filter, #f3f4f5);
+  padding: 80px 24px;
+  text-align: center;
+}
+.agency-hero-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.agency-hero-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  object-fit: contain;
+  background: var(--bg-card, #fff);
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.agency-hero-logo-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card, #fff);
+  color: var(--text-muted);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.agency-hero-name {
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+.agency-hero-desc {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 560px;
+}
+.agency-hero-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.agency-hero-stats {
+  display: flex;
+  gap: 48px;
+  margin: 16px 0;
+}
+.agency-hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.agency-hero-stat-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.agency-hero-stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.agency-hero-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+.agency-parent-link {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.agency-parent-link a {
+  color: var(--color-accent, #ffb800);
+  font-weight: 600;
+  text-decoration: none;
+}
+.agency-parent-link a:hover {
+  text-decoration: underline;
+}
+
+/* ── Branches grid ──────────────────────────────────────────── */
+.agency-branches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+.agency-branch-card {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  transition: box-shadow 0.2s;
+}
+.agency-branch-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+}
+.agency-branch-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: var(--bg-filter, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.agency-branch-card-content {
+  flex: 1;
+  min-width: 0;
+}
+.agency-branch-card-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agency-branch-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: var(--color-accent, #ffb800);
+  color: #000;
+}
+.agency-branch-card-address {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.agency-branch-card-contacts {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Agency brokers grid (mini portrait cards) ──────────────── */
+.agency-brokers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+.agency-broker-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s;
+}
+.agency-broker-card:hover {
+  transform: translateY(-4px);
+}
+.agency-broker-card-portrait {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-filter, #e8e8e8);
+}
+.agency-broker-card-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(80%);
+  transition: filter 0.5s, transform 0.5s;
+}
+.agency-broker-card:hover .agency-broker-card-portrait img {
+  filter: grayscale(0%);
+  transform: scale(1.03);
+}
+.agency-broker-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.agency-broker-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+}
+.agency-broker-card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+}
+.agency-broker-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+}
+.agency-broker-card-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+}
+.agency-broker-card-spec {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+}
+
+/* ── Agency mobile ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .agency-hero {
+    padding: 40px 20px;
+  }
+  .agency-hero-name {
+    font-size: 1.8rem;
+  }
+  .agency-hero-stats {
+    gap: 24px;
+  }
+  .agency-hero-stat-value {
+    font-size: 1.5rem;
+  }
+  .agency-hero-contacts {
+    flex-direction: column;
+    width: 100%;
+  }
+  .agency-branches-grid {
+    grid-template-columns: 1fr;
+  }
+  .agency-brokers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .agency-broker-card-name {
+    font-size: 0.88rem;
+  }
+}
