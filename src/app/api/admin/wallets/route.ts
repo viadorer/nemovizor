@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("wallets")
-    .select("id, user_id, country, currency, balance, credit_limit, frozen, created_at, updated_at", { count: "exact" });
+    .select("id, user_id, country, currency, credits, balance, credit_limit, discount_pct, promo_balance, frozen, created_at, updated_at", { count: "exact" });
 
   if (userId) query = query.eq("user_id", userId);
   if (country) query = query.eq("country", country);
@@ -32,8 +32,10 @@ export async function GET(req: NextRequest) {
 
   const wallets = (data || []).map((w) => ({
     ...w,
-    balance_display: (w.balance as number) / 100,
-    credit_limit_display: (w.credit_limit as number) / 100,
+    balance_display: (w as Record<string, unknown>).credits as number || 0,
+    credit_limit_display: (w.credit_limit as number) || 0,
+    discount_pct: (w as Record<string, unknown>).discount_pct as number || 0,
+    promo_balance: (w as Record<string, unknown>).promo_balance as number || 0,
   }));
 
   return NextResponse.json({ wallets, total: count ?? 0, page, pages: Math.ceil((count ?? 0) / limit) });

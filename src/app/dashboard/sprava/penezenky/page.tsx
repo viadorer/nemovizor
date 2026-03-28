@@ -10,8 +10,7 @@ type WalletRow = {
 };
 
 const FLAGS: Record<string, string> = { cz: "🇨🇿", sk: "🇸🇰", de: "🇩🇪", at: "🇦🇹", ch: "🇨🇭", fr: "🇫🇷", it: "🇮🇹", es: "🇪🇸", pt: "🇵🇹", gb: "🇬🇧", be: "🇧🇪", hu: "🇭🇺", hr: "🇭🇷", gr: "🇬🇷" };
-const SYMS: Record<string, string> = { czk: "Kč", eur: "€", chf: "CHF", gbp: "£" };
-function fmt(n: number, c: string) { return `${n.toLocaleString("cs", { minimumFractionDigits: 2 })} ${SYMS[c] || c.toUpperCase()}`; }
+function fmt(n: number) { return `${n.toLocaleString("cs", { minimumFractionDigits: 2 })} kr`; }
 
 export default function AdminWalletsPage() {
   const t = useT();
@@ -83,10 +82,10 @@ export default function AdminWalletsPage() {
                     {FLAGS[w.country] || ""} {w.country.toUpperCase()}
                   </td>
                   <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "right", fontWeight: 600 }}>
-                    {fmt(w.balance_display, w.currency)}
+                    {fmt(w.balance_display)}
                   </td>
                   <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "right", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                    {w.credit_limit_display > 0 ? fmt(w.credit_limit_display, w.currency) : "—"}
+                    {w.credit_limit_display > 0 ? fmt(w.credit_limit_display) : "—"}
                   </td>
                   <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", textAlign: "center" }}>
                     <span style={{ fontSize: "0.78rem", fontWeight: 600, color: w.frozen ? "#ef4444" : "#22c55e" }}>
