@@ -8786,17 +8786,18 @@ table.admin-table tr:hover td {
 /* ── Broker hero (detail) ───────────────────────────────────── */
 .broker-hero {
   display: flex;
-  min-height: 480px;
-  background: var(--bg-filter, #f3f4f5);
-  overflow: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  gap: 40px;
+  align-items: flex-start;
 }
 .broker-hero-text {
-  flex: 3;
-  padding: 48px 40px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 16px;
+  gap: 14px;
 }
 .broker-hero-label {
   font-size: 0.72rem;
@@ -8804,24 +8805,28 @@ table.admin-table tr:hover td {
   color: var(--text-muted);
 }
 .broker-hero-name {
-  font-size: 2.4rem;
+  font-size: 2rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 .broker-hero-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 32px;
+  gap: 24px;
   margin-top: 4px;
+  padding: 16px 20px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  border-radius: 14px;
 }
 .broker-hero-stat-value {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
   display: block;
 }
 .broker-hero-stat-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -8877,21 +8882,28 @@ table.admin-table tr:hover td {
 }
 
 /* Portrait */
+.broker-hero-portrait-wrap {
+  flex-shrink: 0;
+  width: 320px;
+}
 .broker-hero-portrait {
-  flex: 2;
+  flex-shrink: 0;
+  width: 320px;
   position: relative;
-  min-height: 360px;
+  border-radius: 16px;
+  overflow: hidden;
   background: var(--bg-filter);
 }
 .broker-hero-portrait img {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 3/4;
   object-fit: cover;
   object-position: center top;
+  display: block;
 }
 .broker-hero-portrait-placeholder {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 3/4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8899,14 +8911,12 @@ table.admin-table tr:hover td {
   opacity: 0.3;
 }
 .broker-hero-quote {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  max-width: 260px;
-  background: var(--color-accent, #ffb800);
-  color: #000;
-  padding: 20px;
-  border-radius: 14px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  color: var(--text-primary);
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 12px;
 }
 .broker-hero-quote p {
   font-size: 0.82rem;
@@ -9048,18 +9058,19 @@ table.admin-table tr:hover td {
   gap: 16px;
 }
 .agency-hero-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   object-fit: contain;
-  background: var(--bg-filter, #f0f0f0);
-  padding: 6px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  padding: 4px;
   flex-shrink: 0;
 }
 .agency-hero-logo-placeholder {
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9068,11 +9079,11 @@ table.admin-table tr:hover td {
   flex-shrink: 0;
 }
 .agency-hero-name {
-  font-size: 1.6rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .agency-hero-desc {
   font-size: 0.85rem;
@@ -9227,7 +9238,7 @@ table.admin-table tr:hover td {
 .agency-broker-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%);
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 40%, transparent 60%);
 }
 .agency-broker-card-info {
   position: absolute;
@@ -9267,11 +9278,13 @@ table.admin-table tr:hover td {
   .ad-grid--agency { grid-template-columns: 1fr; }
   .ad-card-name { font-size: 0.88rem; }
 
-  .broker-hero { flex-direction: column; min-height: auto; }
-  .broker-hero-text { padding: 24px 20px; order: 2; }
-  .broker-hero-name { font-size: 1.8rem; }
-  .broker-hero-portrait { order: 1; min-height: 280px; max-height: 360px; }
-  .broker-hero-quote { display: none; }
+  .broker-hero { flex-direction: column; gap: 20px; padding: 20px 16px; }
+  .broker-hero-text { order: 2; }
+  .broker-hero-name { font-size: 1.6rem; }
+  .broker-hero-portrait-wrap { width: 100%; order: 1; }
+  .broker-hero-portrait { width: 100%; }
+  .broker-hero-portrait img { aspect-ratio: 4/3; max-height: 320px; }
+  .broker-hero-stats { gap: 16px; padding: 12px 16px; }
   .broker-hero-actions { flex-direction: column; }
   .broker-hero-btn { justify-content: center; }
 

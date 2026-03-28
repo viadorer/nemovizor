@@ -197,14 +197,16 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
         </div>
 
         {/* Portrait */}
-        <div className="broker-hero-portrait">
-          {broker.photo ? (
-            <img src={broker.photo} alt={broker.name} />
-          ) : (
-            <div className="broker-hero-portrait-placeholder">
-              <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-            </div>
-          )}
+        <div className="broker-hero-portrait-wrap">
+          <div className="broker-hero-portrait">
+            {broker.photo ? (
+              <img src={broker.photo} alt={broker.name} />
+            ) : (
+              <div className="broker-hero-portrait-placeholder">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+              </div>
+            )}
+          </div>
           {broker.bio && (
             <div className="broker-hero-quote">
               <p>{broker.bio.slice(0, 180)}{broker.bio.length > 180 ? "..." : ""}</p>
