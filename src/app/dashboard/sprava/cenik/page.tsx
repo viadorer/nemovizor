@@ -59,13 +59,13 @@ export default function AdminServiceCatalogPage() {
     setServices((prev) => prev.map((s) => s.id === id ? { ...s, active: !active } : s));
   }
 
-  async function updatePrice(id: string, newPrice: number) {
+  async function updatePrice(id: string, newCredits: number) {
     await fetch("/api/admin/listing-pricing", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, price_per_day: newPrice }),
+      body: JSON.stringify({ id, credits_per_day: newCredits }),
     });
-    setPricing((prev) => prev.map((p) => p.id === id ? { ...p, price_display: newPrice, price_per_day: Math.round(newPrice * 100) } : p));
+    setPricing((prev) => prev.map((p) => p.id === id ? { ...p, credits_per_day: newCredits } : p));
   }
 
   // Group services by category

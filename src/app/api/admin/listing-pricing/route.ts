@@ -80,11 +80,13 @@ export async function PATCH(req: Request) {
   const auth = await requireAuth(["admin"]);
   if (!auth) return NextResponse.json({ error: "Admin required" }, { status: 403 });
 
-  const { id, price_per_day, active } = await req.json();
+  const { id, price_per_day, credits_per_day, active } = await req.json();
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (price_per_day !== undefined) {
+  if (credits_per_day !== undefined) {
+    updates.credits_per_day = Number(credits_per_day);
+  } else if (price_per_day !== undefined) {
     updates.credits_per_day = Math.round(price_per_day as number);
   }
   if (active !== undefined) updates.active = active;
