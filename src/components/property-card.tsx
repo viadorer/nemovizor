@@ -39,7 +39,9 @@ export const PropertyCard = memo(function PropertyCard({ property, isTip }: Prop
     setIdx((i) => (i + 1) % images.length);
   }, [images.length]);
 
-  const currentSrc = images[idx] || property.imageSrc;
+  const rawSrc = images[idx] || property.imageSrc;
+  // Filter out external placeholder URLs that aren't in next.config remotePatterns
+  const currentSrc = rawSrc && !rawSrc.includes("placeholder.com") ? rawSrc : "/branding/placeholder.png";
   const currentAlt = idx === 0 ? property.imageAlt : `${property.imageAlt} ${idx + 1}`;
 
   return (
