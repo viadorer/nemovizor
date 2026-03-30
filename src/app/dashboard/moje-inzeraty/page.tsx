@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
 import { useT } from "@/i18n/provider";
+import { PurchaseDialog } from "@/components/purchase-dialog";
 
 type PropertyRow = {
   id: string; slug: string; title: string; city: string; price: number; price_currency: string;
   listing_type: string; category: string; active: boolean; created_at: string;
   image_src: string; area: number; rooms_label: string;
+  featured: boolean; featured_until: string | null;
 };
 
 // ── Reusable filter dropdown (same style as listings page) ──────────
@@ -292,7 +294,7 @@ export default function BrokerListingsPage() {
 
     let query = supabase
       .from("properties")
-      .select("id, slug, title, city, price, price_currency, listing_type, category, active, created_at, image_src, area, rooms_label", { count: "exact" })
+      .select("id, slug, title, city, price, price_currency, listing_type, category, active, created_at, image_src, area, rooms_label, featured, featured_until", { count: "exact" })
       .or(filters.join(","));
 
     if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,city.ilike.%${debouncedSearch}%`);
@@ -403,30 +405,8 @@ export default function BrokerListingsPage() {
       ) : properties.length === 0 ? (
         <p style={{ color: "var(--text-muted)", padding: 20 }}>Žádné nabídky neodpovídají filtrům.</p>
       ) : (
-        <div className="dashboard-favorites-grid">
-          {properties.map((p) => (
-            <div key={p.id} className="dashboard-fav-card" style={{ cursor: "pointer", position: "relative" }} onClick={() => router.push(`/dashboard/moje-inzeraty/${p.id}/upravit`)}>
-              <div className="dashboard-fav-image">
-                <img src={p.image_src && !p.image_src.includes("placeholder") ? p.image_src : "/branding/placeholder.png"} alt={p.title || ""} />
-                <span className={`property-badge property-badge--${p.listing_type}`}>
-                  {p.listing_type === "sale" ? "Prodej" : p.listing_type === "rent" ? "Pronájem" : p.listing_type}
-                </span>
-                <span style={{ position: "absolute", top: 6, right: 6, background: p.active ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)", color: "#fff", borderRadius: 6, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 600 }}>
-                  {p.active ? "Aktivní" : "Neaktivní"}
-                </span>
-              </div>
-              <div className="dashboard-fav-info">
-                <span className="dashboard-fav-price">{formatPrice(p.price, p.price_currency)}</span>
-                <span className="dashboard-fav-meta">
-                  {ALL_CATEGORIES[p.category] || p.category}
-                  {p.rooms_label ? ` · ${p.rooms_label}` : ""}
-                  {p.area ? ` · ${p.area} m²` : ""}
-                </span>
-                <span className="dashboard-fav-location">{p.city || "—"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <PropertyGrid properties={properties} router={router} formatPrice={formatPrice} allCategories={ALL_CATEGORIES} onRefresh={() => setPage(page)} />
+
       )}
 
       {/* ── Pagination ───────────────────────────────────────────── */}
@@ -438,5 +418,82 @@ export default function BrokerListingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Property Grid with TIP/TOP buttons ────────────────────────────
+function PropertyGrid({ properties, router, formatPrice, allCategories, onRefresh }: {
+  properties: PropertyRow[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  router: any;
+  formatPrice: (p: number, c: string) => string;
+  allCategories: Record<string, string>;
+  onRefresh: () => void;
+}) {
+  const [purchaseTarget, setPurchaseTarget] = useState<{ id: string; code: string } | null>(null);
+
+  function isTipActive(p: PropertyRow) {
+    return p.featured && (!p.featured_until || new Date(p.featured_until) > new Date());
+  }
+
+  return (
+    <>
+      <div className="dashboard-favorites-grid">
+        {properties.map((p) => (
+          <div key={p.id} className="dashboard-fav-card" style={{ position: "relative" }}>
+            <div className="dashboard-fav-image" style={{ cursor: "pointer" }} onClick={() => router.push(`/dashboard/moje-inzeraty/${p.id}/upravit`)}>
+              <img src={p.image_src && !p.image_src.includes("placeholder") ? p.image_src : "/branding/placeholder.png"} alt={p.title || ""} />
+              <span className={`property-badge property-badge--${p.listing_type}`}>
+                {p.listing_type === "sale" ? "Prodej" : p.listing_type === "rent" ? "Pronájem" : p.listing_type}
+              </span>
+              <span style={{ position: "absolute", top: 6, right: 6, background: p.active ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)", color: "#fff", borderRadius: 6, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 600 }}>
+                {p.active ? "Aktivní" : "Neaktivní"}
+              </span>
+              {isTipActive(p) && (
+                <span style={{ position: "absolute", bottom: 6, left: 6, background: "var(--color-accent, #ffb800)", color: "#000", borderRadius: 6, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 700 }}>
+                  TIP
+                </span>
+              )}
+            </div>
+            <div className="dashboard-fav-info" style={{ cursor: "pointer" }} onClick={() => router.push(`/dashboard/moje-inzeraty/${p.id}/upravit`)}>
+              <span className="dashboard-fav-price">{formatPrice(p.price, p.price_currency)}</span>
+              <span className="dashboard-fav-meta">
+                {allCategories[p.category] || p.category}
+                {p.rooms_label ? ` · ${p.rooms_label}` : ""}
+                {p.area ? ` · ${p.area} m²` : ""}
+              </span>
+              <span className="dashboard-fav-location">{p.city || "—"}</span>
+            </div>
+            {/* Service buttons */}
+            <div style={{ display: "flex", gap: 4, padding: "0 10px 10px", flexWrap: "wrap" }}>
+              {!isTipActive(p) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPurchaseTarget({ id: p.id, code: "tip_7d" }); }}
+                  style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid var(--color-accent, #ffb800)", background: "transparent", color: "var(--color-accent, #ffb800)", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer" }}
+                >
+                  TIP
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setPurchaseTarget({ id: p.id, code: "top_listing_7d" }); }}
+                style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                TOP
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {purchaseTarget && (
+        <PurchaseDialog
+          serviceCode={purchaseTarget.code}
+          targetId={purchaseTarget.id}
+          targetType="property"
+          onSuccess={() => { setPurchaseTarget(null); onRefresh(); }}
+          onClose={() => setPurchaseTarget(null)}
+        />
+      )}
+    </>
   );
 }
