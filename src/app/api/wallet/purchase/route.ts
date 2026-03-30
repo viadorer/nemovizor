@@ -2,16 +2,11 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-utils";
 
 /**
- * POST /api/wallet/purchase — purchase a service using wallet balance
- * Body: { service_code, country, property_id?, broker_id?, agency_id?, city?, listing_type?, property_category? }
+ * POST /api/wallet/purchase — purchase a service using wallet credits
+ * Body: { service_code, property_id?, broker_id?, agency_id? }
  *
- * Flow:
- * 1. Look up service in catalog
- * 2. Get price (regional override or base)
- * 3. Find/create wallet for country
- * 4. Atomic debit via wallet_debit()
- * 5. Create purchase record
- * 6. Apply effects (e.g., set featured = true)
+ * Uses unified credit system (1 credit = 1 kr).
+ * Reads price from service_catalog.credits_price (fallback base_price/100).
  */
 export async function POST(req: Request) {
   const auth = await requireAuth(["broker", "admin"]);
@@ -21,90 +16,75 @@ export async function POST(req: Request) {
   const body = await req.json();
 
   const {
-    service_code, country,
+    service_code,
     property_id, broker_id, agency_id,
-    city, listing_type, property_category,
   } = body as {
-    service_code: string; country: string;
+    service_code: string;
     property_id?: string; broker_id?: string; agency_id?: string;
-    city?: string; listing_type?: string; property_category?: string;
   };
 
-  if (!service_code || !country) {
-    return NextResponse.json({ error: "service_code and country required" }, { status: 400 });
+  if (!service_code) {
+    return NextResponse.json({ error: "service_code required" }, { status: 400 });
   }
 
-  // 1. Get service price via RPC
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any;
-  const { data: priceData, error: priceErr } = await sb.rpc("get_service_price", {
-    p_service_code: service_code,
-    p_country: country,
-    p_city: city || null,
-    p_listing_type: listing_type || null,
-    p_property_category: property_category || null,
-  });
 
-  if (priceErr || !priceData || priceData.length === 0) {
-    return NextResponse.json({ error: priceErr?.message || "Service not found or no price configured" }, { status: 404 });
-  }
-
-  const price = priceData[0].price as number;
-  const currency = priceData[0].currency as string;
-
-  // 2. Find or create wallet for this country
-  let { data: wallet } = await supabase
-    .from("wallets")
-    .select("id, balance, credit_limit, frozen, currency")
-    .eq("user_id", user.id)
-    .eq("country", country)
-    .single();
-
-  if (!wallet) {
-    // Auto-create wallet
-    const { data: newWallet, error: createErr } = await supabase
-      .from("wallets")
-      .insert({ user_id: user.id, country, currency })
-      .select("id, balance, credit_limit, frozen, currency")
-      .single();
-    if (createErr || !newWallet) {
-      return NextResponse.json({ error: "Failed to create wallet: " + (createErr?.message || "") }, { status: 500 });
-    }
-    wallet = newWallet;
-  }
-
-  // 3. Pre-flight checks
-  if (wallet.frozen) {
-    return NextResponse.json({ error: "Wallet is frozen. Contact support." }, { status: 403 });
-  }
-
-  if (wallet.balance + wallet.credit_limit < price) {
-    return NextResponse.json({
-      error: "Insufficient funds",
-      balance: wallet.balance / 100,
-      credit_limit: wallet.credit_limit / 100,
-      price_required: price / 100,
-      currency,
-    }, { status: 402 });
-  }
-
-  // 4. Get service duration
-  const { data: serviceRow } = await supabase
+  // 1. Get service from catalog
+  const { data: service } = await supabase
     .from("service_catalog")
-    .select("duration_days, category, name")
+    .select("code, name, description, base_price, duration_days, category, active, metadata")
     .eq("code", service_code)
     .eq("active", true)
     .single();
 
-  if (!serviceRow) {
+  if (!service) {
     return NextResponse.json({ error: "Service not found or inactive" }, { status: 404 });
   }
 
-  const expiresAt = serviceRow.duration_days
-    ? new Date(Date.now() + serviceRow.duration_days * 86400_000).toISOString()
+  // 2. Get price in credits — try credits_price column, fallback to base_price/100
+  let creditPrice: number;
+  const { data: catalogRow } = await sb.from("service_catalog").select("credits_price, base_price").eq("code", service_code).single();
+  if (catalogRow?.credits_price && catalogRow.credits_price > 0) {
+    creditPrice = Number(catalogRow.credits_price);
+  } else {
+    creditPrice = Math.round((catalogRow?.base_price || 0) / 100);
+  }
+
+  if (creditPrice <= 0) {
+    return NextResponse.json({ error: "No price configured for this service" }, { status: 404 });
+  }
+
+  // 3. Find wallet (unified — one per user, country='global')
+  let { data: wallet } = await supabase
+    .from("wallets")
+    .select("id, credits, frozen")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!wallet) {
+    return NextResponse.json({ error: "No wallet found. Please contact support." }, { status: 404 });
+  }
+
+  // 4. Pre-flight checks
+  if (wallet.frozen) {
+    return NextResponse.json({ error: "Wallet is frozen. Contact support." }, { status: 403 });
+  }
+
+  if (wallet.credits < creditPrice) {
+    return NextResponse.json({
+      error: "Insufficient credits",
+      credits: wallet.credits,
+      price_required: creditPrice,
+    }, { status: 402 });
+  }
+
+  // 5. Expiration date
+  const expiresAt = service.duration_days
+    ? new Date(Date.now() + service.duration_days * 86400_000).toISOString()
     : null;
 
-  // 5. Create purchase record first (to get reference_id)
+  // 6. Create purchase record
   const { data: purchase, error: purchaseErr } = await supabase
     .from("purchases")
     .insert({
@@ -114,9 +94,9 @@ export async function POST(req: Request) {
       property_id: property_id || null,
       broker_id: broker_id || null,
       agency_id: agency_id || null,
-      price_paid: price,
-      currency,
-      country,
+      price_paid: creditPrice,
+      currency: "credits",
+      country: "global",
       started_at: new Date().toISOString(),
       expires_at: expiresAt,
       status: "active",
@@ -128,48 +108,86 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to create purchase: " + (purchaseErr?.message || "") }, { status: 500 });
   }
 
-  // 6. Atomic debit via RPC
-  const { data: txId, error: debitErr } = await sb.rpc("wallet_debit", {
-    p_wallet_id: wallet.id,
-    p_amount: price,
-    p_category: serviceRow.category === "tip" ? "tip_purchase" : `${serviceRow.category}_fee`,
-    p_description: `${serviceRow.name} — ${country.toUpperCase()}`,
-    p_reference_type: "purchase",
-    p_reference_id: purchase.id,
-    p_created_by: user.id,
+  // 7. Debit credits from wallet
+  const newCredits = wallet.credits - creditPrice;
+  const { error: txErr } = await supabase.from("wallet_transactions").insert({
+    wallet_id: wallet.id,
+    type: "debit",
+    amount: creditPrice,
+    credits: creditPrice,
+    balance_before: wallet.credits,
+    balance_after: newCredits,
+    category: mapCategory(service.category),
+    description: `${service.name} (${creditPrice} kr)`,
+    reference_type: "purchase",
+    reference_id: purchase.id,
+    created_by: user.id,
   });
 
-  if (debitErr) {
-    // Rollback purchase
+  if (txErr) {
     await supabase.from("purchases").update({ status: "cancelled" }).eq("id", purchase.id);
-    return NextResponse.json({ error: "Payment failed: " + debitErr.message }, { status: 402 });
+    return NextResponse.json({ error: "Payment failed: " + txErr.message }, { status: 402 });
   }
 
-  // 7. Apply service effects
-  if (serviceRow.category === "tip" && property_id) {
+  await supabase.from("wallets").update({ credits: newCredits }).eq("id", wallet.id);
+
+  // 8. Apply service effects
+  const cat = service.category;
+
+  // TIP — featured property
+  if ((cat === "tip") && property_id) {
     await supabase.from("properties").update({
       featured: true,
       featured_until: expiresAt,
     }).eq("id", property_id);
   }
 
-  if (serviceRow.category === "broker_promo" && broker_id) {
+  // TOP — top position in category
+  if (service_code.startsWith("top_listing") && property_id) {
+    await supabase.from("properties").update({
+      top_position: true,
+      top_until: expiresAt,
+    }).eq("id", property_id);
+  }
+
+  // Broker promo
+  if (cat === "broker_promo" && broker_id) {
     await supabase.from("brokers").update({ is_promoted: true }).eq("id", broker_id);
+  }
+
+  // Agency promo
+  if (cat === "agency_promo" && agency_id) {
+    await supabase.from("agencies").update({ is_promoted: true }).eq("id", agency_id);
+  }
+
+  // Listing basic/premium — mark as premium if premium
+  if (cat === "listing" && property_id && service_code.includes("premium")) {
+    await supabase.from("properties").update({ is_premium: true }).eq("id", property_id);
   }
 
   return NextResponse.json({
     success: true,
     purchase_id: purchase.id,
-    transaction_id: txId,
-    price_paid: price / 100,
-    currency,
+    price_paid: creditPrice,
+    credits_remaining: newCredits,
     expires_at: expiresAt,
   }, { status: 201 });
 }
 
+function mapCategory(serviceCategory: string): string {
+  switch (serviceCategory) {
+    case "tip": return "tip_purchase";
+    case "broker_promo": return "broker_promo";
+    case "agency_promo": return "agency_promo";
+    case "project": return "project_page";
+    case "listing": return "listing_fee";
+    default: return serviceCategory;
+  }
+}
+
 /**
  * GET /api/wallet/purchase — get price quote without purchasing
- * Query: service_code, country, city?, listing_type?, property_category?
+ * Query: service_code
  */
 export async function GET(req: Request) {
   const auth = await requireAuth();
@@ -177,42 +195,42 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const service_code = url.searchParams.get("service_code");
-  const country = url.searchParams.get("country");
 
-  if (!service_code || !country) {
-    return NextResponse.json({ error: "service_code and country required" }, { status: 400 });
+  if (!service_code) {
+    return NextResponse.json({ error: "service_code required" }, { status: 400 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = auth.supabase as any;
-  const { data: priceData, error } = await sb.rpc("get_service_price", {
-    p_service_code: service_code,
-    p_country: country,
-    p_city: url.searchParams.get("city") || null,
-    p_listing_type: url.searchParams.get("listing_type") || null,
-    p_property_category: url.searchParams.get("property_category") || null,
-  });
 
-  if (error || !priceData || priceData.length === 0) {
-    return NextResponse.json({ error: error?.message || "Price not found" }, { status: 404 });
-  }
-
-  const { data: service } = await auth.supabase
+  const { data: service } = await sb
     .from("service_catalog")
-    .select("name, description, duration_days, category")
+    .select("code, name, description, duration_days, category, credits_price, base_price")
     .eq("code", service_code)
     .eq("active", true)
     .single();
 
+  if (!service) {
+    return NextResponse.json({ error: "Service not found" }, { status: 404 });
+  }
+
+  const credits = service.credits_price > 0 ? Number(service.credits_price) : Math.round((service.base_price || 0) / 100);
+
+  // Get wallet balance
+  const { data: wallet } = await auth.supabase
+    .from("wallets")
+    .select("credits")
+    .eq("user_id", auth.user.id)
+    .single();
+
   return NextResponse.json({
-    service_code,
-    name: service?.name || service_code,
-    description: service?.description,
-    duration_days: service?.duration_days,
-    category: service?.category,
-    price: priceData[0].price / 100,
-    price_raw: priceData[0].price,
-    currency: priceData[0].currency,
-    country,
+    service_code: service.code,
+    name: service.name,
+    description: service.description,
+    duration_days: service.duration_days,
+    category: service.category,
+    price: credits,
+    wallet_credits: wallet?.credits ?? 0,
+    can_afford: (wallet?.credits ?? 0) >= credits,
   });
 }
