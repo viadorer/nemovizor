@@ -125,12 +125,16 @@ export async function GET(req: NextRequest) {
   const total = count ?? 0;
   const now = new Date().toISOString();
 
-  // Expire featured: if featured_until is set and past, treat as not featured
+  // Expire featured + filter placeholder URLs
+  const isPlaceholder = (url: unknown) => typeof url === "string" && url.includes("placeholder.com");
   const rows = (data || []).map((row: Record<string, unknown>) => {
-    if (row.featured && row.featured_until && (row.featured_until as string) < now) {
-      return { ...row, featured: false };
+    const r = { ...row };
+    if (r.featured && r.featured_until && (r.featured_until as string) < now) {
+      r.featured = false;
     }
-    return row;
+    if (isPlaceholder(r.image_src)) r.image_src = "/branding/placeholder.png";
+    if (Array.isArray(r.images)) r.images = (r.images as string[]).filter((u) => !isPlaceholder(u));
+    return r;
   });
 
   return NextResponse.json(

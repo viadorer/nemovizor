@@ -678,7 +678,7 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
       .then((r) => r.json())
       .then((data: FilterOptionsResponse) => setFilterOptions(data))
       .catch((e) => { console.error("Failed to fetch filter options:", e); });
-  }, [listingType, categories, debouncedBounds]);
+  }, [listingType, categories, countries, debouncedBounds]);
 
   // Location label for display
   const [locationLabel, setLocationLabel] = useState<string | null>(

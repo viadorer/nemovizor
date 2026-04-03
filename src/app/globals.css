@@ -2356,7 +2356,6 @@ a.ph-contact:hover { color: var(--accent); }
   background: var(--bg-secondary);
   border-radius: 8px;
   padding: 2px;
-  margin-left: auto;
 }
 .view-toggle__btn {
   display: flex;
