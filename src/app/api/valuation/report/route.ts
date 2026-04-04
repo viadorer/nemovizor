@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { PDFDocument, rgb } from "pdf-lib";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
 import path from "path";
@@ -114,7 +114,38 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = await generatePDF(reportData);
 
     // ── 6. Upload to R2 ──
-    const pdfUrl = await uploadPdfToR2(pdfBuffer, valuationId);
+    let pdfUrl = "";
+    const r2AccountId = process.env.R2_ACCOUNT_ID || "";
+    const r2AccessKey = process.env.R2_ACCESS_KEY_ID || "";
+    const r2SecretKey = process.env.R2_SECRET_ACCESS_KEY || "";
+    const r2Bucket = process.env.R2_BUCKET_NAME || "nemovizor-media";
+    const r2PublicUrl = process.env.R2_PUBLIC_URL || "";
+    const r2Endpoint = process.env.R2_ENDPOINT || `https://${r2AccountId}.r2.cloudflarestorage.com`;
+
+    if (r2AccountId && r2AccessKey && r2SecretKey) {
+      try {
+        const r2 = new S3Client({
+          region: "auto",
+          endpoint: r2Endpoint,
+          credentials: { accessKeyId: r2AccessKey, secretAccessKey: r2SecretKey },
+        });
+        const key = `reports/valuation-${valuationId}-${Date.now()}.pdf`;
+        await r2.send(new PutObjectCommand({
+          Bucket: r2Bucket,
+          Key: key,
+          Body: pdfBuffer,
+          ContentType: "application/pdf",
+          CacheControl: "public, max-age=31536000, immutable",
+        }));
+        pdfUrl = r2PublicUrl ? `${r2PublicUrl}/${key}` : key;
+        console.log("[valuation/report] PDF uploaded:", pdfUrl);
+      } catch (e) {
+        console.error("[valuation/report] R2 upload error:", e);
+      }
+    } else {
+      console.warn("[valuation/report] R2 not configured — missing env vars",
+        { hasAccountId: !!r2AccountId, hasAccessKey: !!r2AccessKey, hasSecretKey: !!r2SecretKey });
+    }
 
     // ── 7. Update DB ──
     await client.from("valuation_reports").update({
