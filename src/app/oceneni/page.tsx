@@ -63,6 +63,7 @@ type FormData = {
   energyRating: string;
   landType: string;
   name: string;
+  lastName: string;
   email: string;
   phone: string;
   consent: boolean;
@@ -204,6 +205,7 @@ export default function ValuationPage() {
     energyRating: "",
     landType: "",
     name: "",
+    lastName: "",
     email: "",
     phone: "",
     consent: false,
@@ -261,7 +263,7 @@ export default function ValuationPage() {
       case 6: return form.floor.length > 0;
       case 7: return true; // optional
       case 8: return form.propertyType === "land" ? form.landType.length > 0 : form.ownership.length > 0;
-      case 9: return form.name.length > 0 && form.email.length > 0 && form.phone.length > 0 && form.consent;
+      case 9: return form.name.length > 0 && form.lastName.length > 0 && form.email.length > 0 && form.phone.length > 0 && form.consent;
       default: return false;
     }
   }
@@ -322,6 +324,7 @@ export default function ValuationPage() {
           rooms: form.disposition ? parseInt(form.disposition) || undefined : undefined,
           email: form.email,
           name: form.name,
+          lastName: form.lastName,
           phone: form.phone,
           address: form.address,
           city: form.city,
@@ -731,15 +734,27 @@ export default function ValuationPage() {
             {stepId === 9 && (
               <div className="valuation-step">
                 <h2 className="valuation-step-title">{t.valuation.whereToSend}</h2>
-                <div className="valuation-field">
-                  <label>{t.sell.contactName}</label>
-                  <input
-                    className="valuation-input"
-                    type="text"
-                    placeholder={t.sell.namePlaceholder}
-                    value={form.name}
-                    onChange={(e) => updateForm({ name: e.target.value })}
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="valuation-field">
+                    <label>Jméno *</label>
+                    <input
+                      className="valuation-input"
+                      type="text"
+                      placeholder="Jan"
+                      value={form.name}
+                      onChange={(e) => updateForm({ name: e.target.value })}
+                    />
+                  </div>
+                  <div className="valuation-field">
+                    <label>Příjmení *</label>
+                    <input
+                      className="valuation-input"
+                      type="text"
+                      placeholder="Novák"
+                      value={form.lastName}
+                      onChange={(e) => updateForm({ lastName: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="valuation-field">
                   <label>{t.sell.contactEmail}</label>

@@ -101,12 +101,9 @@ export async function POST(req: NextRequest) {
     }
     {
       try {
-        const nameParts = (name || "").trim().split(" ");
-        const firstName = nameParts[0] || "Návštěvník";
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Nemovizor";
         const valuoBody = {
-          firstName,
-          lastName,
+          firstName: (name || "Návštěvník").trim(),
+          lastName: (body.lastName || "Nemovizor").trim(),
           email,
           phone: phone || "",
           kind: kind || "sale",
