@@ -209,6 +209,16 @@ export async function POST(req: NextRequest) {
       console.error("[valuation] DB save error:", dbErr);
     }
 
+    // ── Pre-generate PDF in background (don't block response) ──
+    if (valuationId) {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nemovizor.vercel.app";
+      fetch(`${baseUrl}/api/valuation/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valuationId, skipPayment: true }),
+      }).catch((e) => console.error("[valuation] PDF pre-generation error:", e));
+    }
+
     return NextResponse.json({
       success: true,
       valuationId,
