@@ -259,7 +259,7 @@ async function generatePDF(data: any): Promise<Buffer> {
 
   const prop = data.property || {};
   const typeLabels: Record<string, string> = { flat: "Byt", house: "Dům", land: "Pozemek" };
-  const infoLines: [string, string][] = [
+  const infoLines = ([
     ["Adresa", prop.address || "—"],
     ["Typ", typeLabels[prop.type] || prop.type || "—"],
     ["Dispozice", prop.disposition || "—"],
@@ -267,7 +267,7 @@ async function generatePDF(data: any): Promise<Buffer> {
     ["Stav", prop.condition || "—"],
     ["Patro", prop.floor ? `${prop.floor}/${prop.totalFloors || "?"}` : "—"],
     ["Vlastnictví", prop.ownership === "private" ? "Osobní" : prop.ownership === "cooperative" ? "Družstevní" : prop.ownership || "—"],
-  ].filter(([, v]) => v !== "—");
+  ] as [string, string][]).filter(([, v]) => v !== "—");
 
   for (const [label, value] of infoLines) {
     page.drawText(label, { x: ML, y, size: 9.5, font, color: BRAND.textMuted });
