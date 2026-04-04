@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = getSupabase() as any;
       if (client) {
-        const { data: inserted } = await client.from("valuation_reports").insert({
+        const insertResult = await client.from("valuation_reports").insert({
           email,
           name: name || null,
           phone: phone || null,
@@ -187,8 +187,12 @@ export async function POST(req: NextRequest) {
           price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
           price_per_m2: valuoResult?.avg_price_m2 || 0,
           used_fallback: false,
-        }).select("id").single().catch(() => ({ data: null }));
-        if (inserted?.id) valuationId = inserted.id;
+        }).select("id").single();
+        if (insertResult.error) {
+          console.error("[valuation] DB insert error:", insertResult.error.message);
+        } else if (insertResult.data?.id) {
+          valuationId = insertResult.data.id;
+        }
 
         await client.from("leads").insert({
           name: name || "",
