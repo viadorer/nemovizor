@@ -289,7 +289,7 @@ export default function ValuationPage() {
 
     // Map conditions to Valuo rating
     const conditionMap: Record<string, string> = {
-      new: "1", veryGood: "2", good: "3", average: "4", beforeRenovation: "5", bad: "6",
+      "new": "excellent", "very-good": "very_good", "good": "good", "average": "nothing_much", "before-renovation": "bad", "bad": "bad",
     };
 
     // Map property types
@@ -307,7 +307,7 @@ export default function ValuationPage() {
           lng: form.lng || undefined,
           floorArea: Number(form.area) || undefined,
           lotArea: Number(form.areaLand) || undefined,
-          rating: conditionMap[form.condition] || undefined,
+          rating: conditionMap[form.condition] || "good",
           kind: "sale",
           localType: form.disposition || undefined,
           ownership: form.ownership || undefined,
