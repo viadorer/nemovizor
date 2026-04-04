@@ -163,7 +163,7 @@ export default function MojeOceneniPage() {
                     )}
 
                     <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {r.pdf_url ? (
+                      {r.pdf_url && r.paid ? (
                         <a href={r.pdf_url} target="_blank" rel="noopener" style={{
                           padding: "8px 20px", borderRadius: 8, background: "var(--color-accent, #ffb800)", color: "#000",
                           fontWeight: 600, fontSize: "0.85rem", textDecoration: "none",
@@ -173,15 +173,18 @@ export default function MojeOceneniPage() {
                       ) : (
                         <button
                           onClick={async () => {
+                            // Pay with wallet credits
                             const res = await fetch("/api/valuation/report", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ valuationId: r.id, skipPayment: true }),
+                              body: JSON.stringify({ valuationId: r.id, userId: user?.id }),
                             });
                             const data = await res.json();
                             if (data.pdf_url) {
-                              setReports((prev) => prev.map((rr) => rr.id === r.id ? { ...rr, pdf_url: data.pdf_url, gemini_text: data.report_data?.ai_commentary || rr.gemini_text } : rr));
+                              setReports((prev) => prev.map((rr) => rr.id === r.id ? { ...rr, pdf_url: data.pdf_url, paid: true, gemini_text: data.report_data?.ai_commentary || rr.gemini_text } : rr));
                               window.open(data.pdf_url, "_blank");
+                            } else if (data.error) {
+                              alert(data.error);
                             }
                           }}
                           style={{
@@ -189,7 +192,7 @@ export default function MojeOceneniPage() {
                             background: "var(--bg-card)", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
                           }}
                         >
-                          Vygenerovat PDF
+                          Získat PDF report (50 kr)
                         </button>
                       )}
                     </div>
