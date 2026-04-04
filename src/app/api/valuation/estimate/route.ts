@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       valuoRequest.floor_area = floorArea;
       if (rating) valuoRequest.rating = rating;
       if (localType) valuoRequest.local_type = localType;
-      if (ownership) valuoRequest.ownership = ownership;
+      valuoRequest.ownership = ownership || "private"; // Valuo requires ownership for flats
     } else if (propertyType === "house") {
       valuoRequest.floor_area = floorArea;
       if (rating) valuoRequest.rating = rating;
