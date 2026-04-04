@@ -33,10 +33,23 @@ const dispositionsByType: Record<string, string[]> = {
 
 const energyRatings = ["A", "B", "C", "D", "E", "F", "G"];
 
+type ValuationResult = {
+  avg_price: number;
+  min_price: number;
+  max_price: number;
+  avg_price_m2: number;
+  range_price: [number, number];
+  currency: string;
+  calc_area: number;
+  as_of: string;
+};
+
 type FormData = {
   propertyType: "apartment" | "house" | "land" | "commercial" | null;
   city: string;
   address: string;
+  lat: number;
+  lng: number;
   disposition: string;
   area: string;
   areaLand: string;
@@ -175,6 +188,8 @@ export default function ValuationPage() {
     propertyType: null,
     city: "",
     address: "",
+    lat: 0,
+    lng: 0,
     disposition: "",
     area: "",
     areaLand: "",
@@ -191,6 +206,10 @@ export default function ValuationPage() {
     phone: "",
     consent: false,
   });
+
+  const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [cities, setCities] = useState<string[]>([]);
   useEffect(() => { getUniqueCities().then(setCities); }, []);
@@ -242,18 +261,88 @@ export default function ValuationPage() {
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!canProceed()) return;
+
+    // Validate email
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setSubmitError("Zadejte platný email");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
     track("valuation_submit", {
       property_type: form.propertyType ?? "",
       city: form.city,
       disposition: form.disposition,
       area: form.area ?? 0,
     });
-    setSubmitted(true);
+
+    // Map conditions to Valuo rating
+    const conditionMap: Record<string, string> = {
+      new: "1", veryGood: "2", good: "3", average: "4", beforeRenovation: "5", bad: "6",
+    };
+
+    // Map property types
+    const typeMap: Record<string, string> = {
+      apartment: "flat", house: "house", land: "land", commercial: "flat",
+    };
+
+    try {
+      const res = await fetch("/api/valuation/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyType: typeMap[form.propertyType || "apartment"] || "flat",
+          lat: form.lat || undefined,
+          lng: form.lng || undefined,
+          floorArea: Number(form.area) || undefined,
+          lotArea: Number(form.areaLand) || undefined,
+          rating: conditionMap[form.condition] || undefined,
+          kind: "sale",
+          localType: form.disposition || undefined,
+          ownership: form.ownership || undefined,
+          landType: form.landType || undefined,
+          floor: form.floor ? Number(form.floor) : undefined,
+          totalFloors: form.totalFloors ? Number(form.totalFloors) : undefined,
+          elevator: form.features.includes("elevator"),
+          energyPerformance: form.energyRating || undefined,
+          balconyArea: form.features.includes("balcony") ? 5 : undefined,
+          cellarArea: form.features.includes("cellar") ? 5 : undefined,
+          gardenArea: form.features.includes("garden") ? 50 : undefined,
+          terraceArea: form.features.includes("terrace") ? 10 : undefined,
+          garages: form.features.includes("garage") ? 1 : 0,
+          rooms: form.disposition ? parseInt(form.disposition) || undefined : undefined,
+          email: form.email,
+          name: form.name,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Chyba při ocenění");
+      }
+
+      const data = await res.json();
+      if (data.success && data.result) {
+        setValuationResult(data.result);
+      }
+      setSubmitted(true);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Chyba při ocenění");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const isLastStep = currentIndex === totalSteps - 1;
+
+  const fmtPrice = (n: number) => n ? `${Math.round(n).toLocaleString("cs")} Kč` : "—";
 
   if (submitted) {
     return (
@@ -267,12 +356,56 @@ export default function ValuationPage() {
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <path d="M22 4L12 14.01l-3-3" />
                 </svg>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
-                  {t.valuation.thankYouTitle}
-                </h2>
-                <p style={{ color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.6 }}>
-                  {t.valuation.thankYouMessage}
-                </p>
+
+                {valuationResult ? (
+                  <>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
+                      Odhadovaná cena nemovitosti
+                    </h2>
+
+                    <div style={{ margin: "24px auto", maxWidth: 420, background: "var(--bg-card)", borderRadius: 16, padding: "24px 32px", border: "1px solid var(--border)" }}>
+                      <div style={{ textAlign: "center", marginBottom: 16 }}>
+                        <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text)" }}>
+                          {fmtPrice(valuationResult.avg_price)}
+                        </div>
+                        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: 4 }}>
+                          odhadovaná tržní cena
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Rozsah ceny</span>
+                        <span style={{ fontWeight: 600 }}>{fmtPrice(valuationResult.min_price)} – {fmtPrice(valuationResult.max_price)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Cena za m²</span>
+                        <span style={{ fontWeight: 600 }}>{fmtPrice(valuationResult.avg_price_m2)}/m²</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Použitá plocha</span>
+                        <span style={{ fontWeight: 600 }}>{valuationResult.calc_area} m²</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Datum odhadu</span>
+                        <span style={{ fontWeight: 600 }}>{valuationResult.as_of}</span>
+                      </div>
+                    </div>
+
+                    <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: "0.85rem", lineHeight: 1.6 }}>
+                      Kompletní report s porovnáním a grafy byl odeslán na <strong>{form.email}</strong>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
+                      {t.valuation.thankYouTitle}
+                    </h2>
+                    <p style={{ color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.6 }}>
+                      Výsledek ocenění bude odeslán na <strong>{form.email}</strong>
+                    </p>
+                  </>
+                )}
+
                 <Link href="/nabidky" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", marginTop: 24, textDecoration: "none" }}>
                   {t.valuation.backToListings}
                 </Link>
@@ -355,7 +488,11 @@ export default function ValuationPage() {
                     placeholder={t.valuation.startTypingAddress}
                     initialValue={form.address}
                     onSelect={(item) => {
-                      updateForm({ address: item.name + (item.location ? `, ${item.location}` : "") });
+                      updateForm({
+                        address: item.name + (item.location ? `, ${item.location}` : ""),
+                        lat: item.position?.lat || 0,
+                        lng: item.position?.lon || 0,
+                      });
                       if (item.city) {
                         const matchedCity = cities.find((c) => c === item.city);
                         if (matchedCity) updateForm({ city: matchedCity });
@@ -636,11 +773,16 @@ export default function ValuationPage() {
                 ) : (
                   <button
                     className="valuation-btn valuation-btn--primary"
-                    disabled={!canProceed()}
+                    disabled={!canProceed() || submitting}
                     onClick={handleSubmit}
                   >
-                    {t.valuation.submitAndGetValuation}
+                    {submitting ? "Oceňuji..." : t.valuation.submitAndGetValuation}
                   </button>
+                )}
+                {submitError && (
+                  <div style={{ color: "#ef4444", fontSize: "0.82rem", marginTop: 8, textAlign: "center", width: "100%" }}>
+                    {submitError}
+                  </div>
                 )}
               </div>
             )}

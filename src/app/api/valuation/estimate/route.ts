@@ -1,0 +1,289 @@
+import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * POST /api/valuation/estimate
+ * Proxy to RealVisor → Valuo API for property valuation.
+ * Falls back to own DB-based estimate if external API unavailable.
+ *
+ * Body: { propertyType, lat, lng, floorArea, rating, kind, email, name, phone, ...optional }
+ * Returns: { avg_price, min_price, max_price, avg_price_m2, range_price, success }
+ */
+
+type ValuoResult = {
+  avg_price: number;
+  min_price: number;
+  max_price: number;
+  avg_price_m2: number;
+  min_price_m2: number;
+  max_price_m2: number;
+  range_price: [number, number];
+  range_price_m2: [number, number];
+  calc_area: number;
+  currency: string;
+  as_of: string;
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      propertyType, lat, lng, floorArea, lotArea, rating, kind,
+      email, name, phone,
+      // Optional fields
+      localType, ownership, houseType, landType, construction,
+      floor, totalFloors, elevator, energyPerformance,
+      equipment, easyAccess,
+      loggiaArea, balconyArea, terraceArea, cellarArea, gardenArea,
+      rooms, bathrooms, garages, parkingSpaces,
+    } = body;
+
+    // Validate required fields
+    if (!email || !email.includes("@")) {
+      return NextResponse.json({ error: "Platný email je povinný" }, { status: 400 });
+    }
+    if (!propertyType || !lat || !lng) {
+      return NextResponse.json({ error: "Typ nemovitosti a adresa jsou povinné" }, { status: 400 });
+    }
+    if (propertyType !== "land" && !floorArea) {
+      return NextResponse.json({ error: "Plocha je povinná" }, { status: 400 });
+    }
+
+    // ── Build Valuo API request ──
+    const valuoRequest: Record<string, unknown> = {
+      place: `${lat}, ${lng}`,
+      kind: kind || "sale",
+      property_type: propertyType,
+    };
+
+    if (propertyType === "flat") {
+      valuoRequest.floor_area = floorArea;
+      if (rating) valuoRequest.rating = rating;
+      if (localType) valuoRequest.local_type = localType;
+      if (ownership) valuoRequest.ownership = ownership;
+    } else if (propertyType === "house") {
+      valuoRequest.floor_area = floorArea;
+      if (rating) valuoRequest.rating = rating;
+      if (lotArea) valuoRequest.lot_area = lotArea;
+      if (houseType) valuoRequest.house_type = houseType;
+    } else if (propertyType === "land") {
+      valuoRequest.lot_area = lotArea || floorArea;
+      if (landType) valuoRequest.land_type = landType;
+    }
+
+    // Optional fields
+    if (construction) valuoRequest.construction = construction;
+    if (floor !== undefined) valuoRequest.floor = floor;
+    if (totalFloors) valuoRequest.total_floors = totalFloors;
+    if (elevator !== undefined) valuoRequest.elevator = elevator;
+    if (energyPerformance) valuoRequest.energy_performance = energyPerformance;
+    if (equipment !== undefined) valuoRequest.equipment = equipment;
+    if (easyAccess !== undefined) valuoRequest.easy_access = easyAccess;
+    if (loggiaArea) valuoRequest.loggia_area = loggiaArea;
+    if (balconyArea) valuoRequest.balcony_area = balconyArea;
+    if (terraceArea) valuoRequest.terrace_area = terraceArea;
+    if (cellarArea) valuoRequest.cellar_area = cellarArea;
+    if (gardenArea) valuoRequest.garden_area = gardenArea;
+    if (rooms) valuoRequest.rooms = rooms;
+    if (bathrooms) valuoRequest.bathrooms = bathrooms;
+    if (garages) valuoRequest.garages = garages;
+    if (parkingSpaces) valuoRequest.parking_spaces = parkingSpaces;
+
+    // ── Call RealVisor API (proxies to Valuo) ──
+    const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://api.realvisor.cz";
+    const REALVISOR_FORM_CODE = process.env.REALVISOR_FORM_CODE || "nemovizor";
+    const VALUO_API_KEY = process.env.VALUO_API_KEY;
+
+    let valuoResult: ValuoResult | null = null;
+    let usedFallback = false;
+
+    // Try RealVisor proxy first
+    try {
+      const step1Body = {
+        formCode: REALVISOR_FORM_CODE,
+        kind: kind || "sale",
+        propertyType,
+        address: body.address || "",
+        addressFull: body.addressFull || "",
+        lat, lng,
+        street: body.street, city: body.city, district: body.district,
+        region: body.region, postalCode: body.postalCode,
+        floorArea, lotArea, rating,
+        localType, ownership, houseType, landType, construction,
+        floor, totalFloors, elevator, energyPerformance,
+        equipment, easyAccess,
+        loggiaArea, balconyArea, terraceArea, cellarArea, gardenArea,
+        rooms, bathrooms, garages, parkingSpaces,
+      };
+
+      const res = await fetch(`${REALVISOR_API_URL}/public/valuo/${REALVISOR_FORM_CODE}/step1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(step1Body),
+        signal: AbortSignal.timeout(25000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.valuation) {
+          valuoResult = data.valuation;
+        }
+        // Step 2: submit contact info → creates lead in RealVisor CRM
+        if (data.valuationId) {
+          fetch(`${REALVISOR_API_URL}/public/valuo/${REALVISOR_FORM_CODE}/step2`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              valuationId: data.valuationId,
+              firstName: name?.split(" ")[0] || "",
+              lastName: name?.split(" ").slice(1).join(" ") || "",
+              email,
+              phone: phone || "",
+              referrerUrl: "nemovizor.cz/oceneni",
+            }),
+          }).catch(() => {}); // fire-and-forget
+        }
+      }
+    } catch (e) {
+      console.error("[valuation/estimate] RealVisor API error:", e);
+    }
+
+    // Fallback: call Valuo directly if RealVisor failed
+    if (!valuoResult && VALUO_API_KEY) {
+      try {
+        const res = await fetch("https://v2p.api.valuo.cz/market-value", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${VALUO_API_KEY}`,
+          },
+          body: JSON.stringify(valuoRequest),
+          signal: AbortSignal.timeout(20000),
+        });
+        const data = await res.json();
+        if (data.success && data.result) {
+          valuoResult = data.result;
+        }
+      } catch (e) {
+        console.error("[valuation/estimate] Valuo direct API error:", e);
+      }
+    }
+
+    // Fallback: DB-based estimate
+    if (!valuoResult) {
+      usedFallback = true;
+      valuoResult = await getDbEstimate(body);
+    }
+
+    // ── Save to DB ──
+    const { getSupabase } = await import("@/lib/supabase");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = getSupabase() as any;
+    if (client) {
+      await client.from("valuation_reports").insert({
+        email,
+        property_params: body,
+        valuo_request: valuoRequest,
+        valuo_response: valuoResult,
+        estimated_price: valuoResult?.avg_price || 0,
+        price_range_min: valuoResult?.min_price || valuoResult?.range_price?.[0] || 0,
+        price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
+        price_per_m2: valuoResult?.avg_price_m2 || 0,
+        used_fallback: usedFallback,
+      });
+
+      // Also save as lead
+      await client.from("leads").insert({
+        name: name || "",
+        email,
+        phone: phone || "",
+        property_type: propertyType,
+        intent: "odhad",
+        address: body.address || `${lat}, ${lng}`,
+        note: `Ocenění: ${valuoResult?.avg_price?.toLocaleString("cs")} Kč`,
+        source: "nemovizor-oceneni",
+      }).catch(() => {});
+    }
+
+    return NextResponse.json({
+      success: true,
+      usedFallback,
+      result: {
+        avg_price: valuoResult?.avg_price || 0,
+        min_price: valuoResult?.min_price || 0,
+        max_price: valuoResult?.max_price || 0,
+        avg_price_m2: valuoResult?.avg_price_m2 || 0,
+        range_price: valuoResult?.range_price || [0, 0],
+        currency: valuoResult?.currency || "CZK",
+        calc_area: valuoResult?.calc_area || floorArea || 0,
+        as_of: valuoResult?.as_of || new Date().toISOString().slice(0, 10),
+      },
+    });
+  } catch (e) {
+    console.error("[valuation/estimate] Error:", e);
+    return NextResponse.json({ error: "Chyba při ocenění" }, { status: 500 });
+  }
+}
+
+/** Fallback: estimate from our own DB data (avg price/m2 per city) */
+async function getDbEstimate(body: Record<string, unknown>): Promise<ValuoResult | null> {
+  try {
+    const { getSupabase } = await import("@/lib/supabase");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = getSupabase() as any;
+    if (!client) return null;
+
+    const city = String(body.city || "");
+    const propertyType = String(body.propertyType || "apartment");
+    const floorArea = Number(body.floorArea || 0);
+    const category = propertyType === "flat" ? "apartment" : propertyType === "house" ? "house" : propertyType;
+
+    // Get avg price/m2 for this city and category
+    const { data } = await client
+      .from("properties")
+      .select("price, area")
+      .eq("country", "cz")
+      .eq("listing_type", body.kind || "sale")
+      .eq("active", true)
+      .gt("price", 0)
+      .gt("area", 0)
+      .ilike("city", city ? `%${city}%` : "%")
+      .eq("category", category)
+      .limit(200);
+
+    if (!data || data.length < 3) return null;
+
+    const pricesPerM2 = data
+      .map((p: { price: number; area: number }) => p.price / p.area)
+      .filter((v: number) => v > 0 && v < 500000);
+
+    if (pricesPerM2.length < 3) return null;
+
+    pricesPerM2.sort((a: number, b: number) => a - b);
+    const trimmed = pricesPerM2.slice(
+      Math.floor(pricesPerM2.length * 0.1),
+      Math.floor(pricesPerM2.length * 0.9)
+    );
+
+    const avgPriceM2 = trimmed.reduce((a: number, b: number) => a + b, 0) / trimmed.length;
+    const minPriceM2 = trimmed[Math.floor(trimmed.length * 0.25)];
+    const maxPriceM2 = trimmed[Math.floor(trimmed.length * 0.75)];
+
+    const area = floorArea || 1;
+
+    return {
+      avg_price: Math.round(avgPriceM2 * area),
+      min_price: Math.round(minPriceM2 * area),
+      max_price: Math.round(maxPriceM2 * area),
+      avg_price_m2: Math.round(avgPriceM2),
+      min_price_m2: Math.round(minPriceM2),
+      max_price_m2: Math.round(maxPriceM2),
+      range_price: [Math.round(minPriceM2 * area), Math.round(maxPriceM2 * area)],
+      range_price_m2: [Math.round(minPriceM2), Math.round(maxPriceM2)],
+      calc_area: area,
+      currency: "CZK",
+      as_of: new Date().toISOString().slice(0, 10),
+    };
+  } catch {
+    return null;
+  }
+}
