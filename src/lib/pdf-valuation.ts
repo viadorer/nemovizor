@@ -80,15 +80,16 @@ export async function generateValuationPDF(data: any): Promise<Buffer> {
   const cad = data.cadastre || {};
   const apiKey = process.env.NEXT_PUBLIC_MAPY_API_KEY || "";
 
-  // ── Fetch images ──
+  // ── Fetch images (correct aspect ratio + pin marker) ──
   let mapImg = null; let panoImg = null;
   if (prop.lat && prop.lng && apiKey) {
     try {
-      const r1 = await fetch(`https://api.mapy.com/v1/static/map?lon=${prop.lng}&lat=${prop.lat}&zoom=15&width=500&height=250&mapset=basic&apikey=${apiKey}`, { signal: AbortSignal.timeout(10000) });
+      const marker = encodeURIComponent(`color:red;size:large;${prop.lng},${prop.lat}`);
+      const r1 = await fetch(`https://api.mapy.com/v1/static/map?lon=${prop.lng}&lat=${prop.lat}&zoom=16&width=600&height=300&mapset=basic&markers=${marker}&apikey=${apiKey}`, { signal: AbortSignal.timeout(10000) });
       if (r1.ok) { const b = Buffer.from(await r1.arrayBuffer()); if (b.length > 1000) mapImg = await doc.embedPng(b).catch(() => null); }
     } catch { /**/ }
     try {
-      const r2 = await fetch(`https://api.mapy.cz/v1/static/pano?lon=${prop.lng}&lat=${prop.lat}&width=500&height=250&yaw=auto&apikey=${apiKey}`, { signal: AbortSignal.timeout(10000) });
+      const r2 = await fetch(`https://api.mapy.cz/v1/static/pano?lon=${prop.lng}&lat=${prop.lat}&width=600&height=300&yaw=auto&apikey=${apiKey}`, { signal: AbortSignal.timeout(10000) });
       if (r2.ok) { const b = Buffer.from(await r2.arrayBuffer()); if (b.length > 1000) panoImg = await doc.embedJpg(b).catch(() => null); }
     } catch { /**/ }
   }
@@ -129,22 +130,22 @@ export async function generateValuationPDF(data: any): Promise<Buffer> {
   for (const [lb, vl] of rows) { row(p1, lb, vl!, y, f, f); y -= 16; }
   y -= 20;
 
-  // Map — full width with padding
+  // Map — full width, correct 2:1 aspect ratio
   if (mapImg) {
     p1.drawText("Mapa lokality", { x: ML, y: y + 3, size: 8, font: f, color: B.muted }); y -= 2;
-    const mh = 160;
+    const mh = Math.round(CW / 2); // 2:1 ratio matching source 600x300
     p1.drawRectangle({ x: ML - 1, y: y - mh - 1, width: CW + 2, height: mh + 2, color: B.border });
     p1.drawImage(mapImg, { x: ML, y: y - mh, width: CW, height: mh });
-    y -= mh + 20;
+    y -= mh + 18;
   }
 
-  // Panorama — full width with padding
+  // Panorama — full width, correct 2:1 aspect ratio
   if (panoImg) {
     p1.drawText("Pohled z ulice", { x: ML, y: y + 3, size: 8, font: f, color: B.muted }); y -= 2;
-    const ph = 160;
+    const ph = Math.round(CW / 2); // 2:1 ratio matching source 600x300
     p1.drawRectangle({ x: ML - 1, y: y - ph - 1, width: CW + 2, height: ph + 2, color: B.border });
     p1.drawImage(panoImg, { x: ML, y: y - ph, width: CW, height: ph });
-    y -= ph + 20;
+    y -= ph + 18;
   }
 
   // ═══════════════════════════════════════════════════
