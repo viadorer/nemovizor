@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 export default function ValuationReportPage() {
+  return (
+    <Suspense fallback={<div className="page-shell"><SiteHeader /><main style={{ paddingTop: 96, minHeight: "100vh", background: "var(--bg)", textAlign: "center", paddingTop: 200 }}><div className="pf-spinner" style={{ margin: "0 auto" }} /></main><SiteFooter /></div>}>
+      <ReportContent />
+    </Suspense>
+  );
+}
+
+function ReportContent() {
   const searchParams = useSearchParams();
   const valuationId = searchParams.get("valuation_id");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
