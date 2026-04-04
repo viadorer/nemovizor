@@ -207,6 +207,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       usedFallback,
+      valuationId,
       result: {
         avg_price: valuoResult?.avg_price || 0,
         min_price: valuoResult?.min_price || 0,

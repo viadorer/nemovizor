@@ -337,6 +337,9 @@ export default function ValuationPage() {
       if (data.success && data.result) {
         setValuationResult(data.result);
       }
+      if (data.valuationId) {
+        setLastValuationId(data.valuationId);
+      }
       setSubmitted(true);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Chyba při ocenění");
@@ -371,36 +374,69 @@ export default function ValuationPage() {
                   Zkontrolujte prosím svou e-mailovou schránku.
                 </p>
 
-                {/* Detailní analýza CTA */}
-                <div style={{ marginTop: 32, padding: "28px 28px", background: "var(--bg-card)", borderRadius: 14, border: "1px solid var(--border)", maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 12, textAlign: "center" }}>
-                    Detailní posouzení nemovitosti
+                {/* Detailní PDF report */}
+                <div style={{ marginTop: 32, padding: "28px 28px", background: "var(--bg-card)", borderRadius: 14, border: "1px solid var(--border)", maxWidth: 500, marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 8 }}>
+                    Detailní PDF report
                   </div>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16, lineHeight: 1.6, textAlign: "center" }}>
-                    Na rozdíl od orientačního odhadu zahrnuje detailní posouzení
-                    individuální přístup odborníka a komplexní analýzu:
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 20, lineHeight: 1.6 }}>
+                    Kompletní analýza s AI komentářem, katastrálními daty a porovnáním s okolím ke stažení ihned.
                   </p>
-                  <ul style={{ color: "var(--text)", fontSize: "0.85rem", lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
-                    <li>Osobní konzultace s odhadcem — upřesnění stavu a specifik nemovitosti</li>
-                    <li>Porovnání s realizovanými prodeji v okolí (comparable sales)</li>
-                    <li>Katastrální data a právní prověrka vlastnictví</li>
-                    <li>Cenový vývoj v lokalitě a investiční doporučení</li>
-                    <li>AI analýza s komentářem k pozitivům i rizikům</li>
-                    <li>Profesionální PDF report ke stažení</li>
-                  </ul>
-                  <div style={{ textAlign: "center" }}>
-                    <a
-                      href={`mailto:info@nemovizor.cz?subject=Detailní posouzení nemovitosti&body=Dobrý den,%0A%0Amám zájem o detailní posouzení nemovitosti.%0A%0AEmail: ${form.email}%0AAdresa: ${form.address || ""}%0AMěsto: ${form.city || ""}%0A%0ADěkuji`}
-                      className="valuation-btn valuation-btn--primary"
-                      style={{ textDecoration: "none", display: "inline-block" }}
-                    >
-                      Objednat posouzení — 99 Kč
+
+                  {reportPdfUrl ? (
+                    <a href={reportPdfUrl} target="_blank" rel="noopener" className="valuation-btn valuation-btn--primary" style={{ textDecoration: "none", display: "inline-block" }}>
+                      Stáhnout PDF report
                     </a>
-                    <p style={{ color: "var(--text-muted)", fontSize: "0.78rem", marginTop: 12, lineHeight: 1.5 }}>
-                      Po objednávce vás bude kontaktovat náš odborník
-                      pro upřesnění detailů. Nebo volejte +420 774 052 232.
-                    </p>
-                  </div>
+                  ) : !lastValuationId ? (
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Report není dostupný — zkuste ocenění znovu.</p>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                      {/* Peněženka (přihlášený) */}
+                      {user && (
+                        <button
+                          className="valuation-btn valuation-btn--primary"
+                          disabled={reportLoading}
+                          onClick={async () => {
+                            setReportLoading(true);
+                            try {
+                              const res = await fetch("/api/valuation/report", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ valuationId: lastValuationId, userId: user.id }),
+                              });
+                              const data = await res.json();
+                              if (data.pdf_url) { setReportPdfUrl(data.pdf_url); window.open(data.pdf_url, "_blank"); }
+                              else if (data.error) alert(data.error);
+                            } catch { /* ignore */ }
+                            setReportLoading(false);
+                          }}
+                        >
+                          {reportLoading ? "Generuji..." : "Získat za 50 kr"}
+                        </button>
+                      )}
+                      {/* Stripe (vždy) */}
+                      <button
+                        className="valuation-btn"
+                        disabled={reportLoading}
+                        style={{ border: "1px solid var(--border)", background: "var(--bg)" }}
+                        onClick={async () => {
+                          setReportLoading(true);
+                          try {
+                            const res = await fetch("/api/valuation/checkout", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ valuationId: lastValuationId, email: form.email }),
+                            });
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                          } catch { /* ignore */ }
+                          setReportLoading(false);
+                        }}
+                      >
+                        {reportLoading ? "Připravuji..." : "Zaplatit 99 Kč kartou"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <Link href="/nabidky" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", marginTop: 24, textDecoration: "none" }}>
