@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 
 export default function ValuationReportPage() {
   return (
-    <Suspense fallback={<div className="page-shell"><SiteHeader /><main style={{ paddingTop: 96, minHeight: "100vh", background: "var(--bg)", textAlign: "center", paddingTop: 200 }}><div className="pf-spinner" style={{ margin: "0 auto" }} /></main><SiteFooter /></div>}>
+    <Suspense fallback={<div className="page-shell"><SiteHeader /><main style={{ paddingTop: 200, minHeight: "100vh", background: "var(--bg)", textAlign: "center" }}><div className="pf-spinner" style={{ margin: "0 auto" }} /></main><SiteFooter /></div>}>
       <ReportContent />
     </Suspense>
   );
