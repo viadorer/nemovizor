@@ -89,62 +89,63 @@ export async function POST(req: NextRequest) {
     if (parkingSpaces) valuoRequest.parking_spaces = parkingSpaces;
 
     // ── Call RealVisor API (proxies to Valuo) ──
-    const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://realvisor.com";
-    const REALVISOR_FORM_CODE = process.env.REALVISOR_FORM_CODE || "nemovizor";
+    const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://api-production-88cf.up.railway.app";
+    const REALVISOR_API_KEY = process.env.REALVISOR_API_KEY || "";
     const VALUO_API_KEY = process.env.VALUO_API_KEY;
 
     let valuoResult: ValuoResult | null = null;
     let usedFallback = false;
 
-    // Try RealVisor proxy first
-    try {
-      const step1Body = {
-        formCode: REALVISOR_FORM_CODE,
-        kind: kind || "sale",
-        propertyType,
-        address: body.address || "",
-        addressFull: body.addressFull || "",
-        lat, lng,
-        street: body.street, city: body.city, district: body.district,
-        region: body.region, postalCode: body.postalCode,
-        floorArea, lotArea, rating,
-        localType, ownership, houseType, landType, construction,
-        floor, totalFloors, elevator, energyPerformance,
-        equipment, easyAccess,
-        loggiaArea, balconyArea, terraceArea, cellarArea, gardenArea,
-        rooms, bathrooms, garages, parkingSpaces,
-      };
+    // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
+    if (REALVISOR_API_KEY) {
+      try {
+        const nameParts = (name || "").split(" ");
+        const valuoBody = {
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          email,
+          phone: phone || "",
+          kind: kind || "sale",
+          propertyType,
+          address: body.address || "",
+          lat, lng,
+          floorArea: floorArea || undefined,
+          lotArea: lotArea || undefined,
+          rating,
+          localType, ownership, houseType, landType, construction,
+          floor, totalFloors, elevator, energyPerformance,
+          equipment, easyAccess,
+          loggiaArea, balconyArea, terraceArea, cellarArea, gardenArea,
+          rooms, bathrooms, garages, parkingSpaces,
+          street: body.street, city: body.city, district: body.district,
+          region: body.region, postalCode: body.postalCode,
+          data: { source: "nemovizor-oceneni" },
+        };
 
-      const res = await fetch(`${REALVISOR_API_URL}/public/valuo/${REALVISOR_FORM_CODE}/step1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(step1Body),
-        signal: AbortSignal.timeout(25000),
-      });
+        const res = await fetch(`${REALVISOR_API_URL}/api/v1/public/api-leads/valuo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": REALVISOR_API_KEY,
+          },
+          body: JSON.stringify(valuoBody),
+          signal: AbortSignal.timeout(25000),
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.valuation) {
-          valuoResult = data.valuation;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.valuation?.result) {
+            valuoResult = data.valuation.result;
+          } else if (data.valuation) {
+            valuoResult = data.valuation;
+          }
+        } else {
+          const errText = await res.text().catch(() => "");
+          console.error("[valuation/estimate] RealVisor API", res.status, errText.slice(0, 200));
         }
-        // Step 2: submit contact info → creates lead in RealVisor CRM
-        if (data.valuationId) {
-          fetch(`${REALVISOR_API_URL}/public/valuo/${REALVISOR_FORM_CODE}/step2`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              valuationId: data.valuationId,
-              firstName: name?.split(" ")[0] || "",
-              lastName: name?.split(" ").slice(1).join(" ") || "",
-              email,
-              phone: phone || "",
-              referrerUrl: "nemovizor.cz/oceneni",
-            }),
-          }).catch(() => {}); // fire-and-forget
-        }
+      } catch (e) {
+        console.error("[valuation/estimate] RealVisor API error:", e);
       }
-    } catch (e) {
-      console.error("[valuation/estimate] RealVisor API error:", e);
     }
 
     // Fallback: call Valuo directly if RealVisor failed
