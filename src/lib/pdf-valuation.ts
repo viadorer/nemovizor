@@ -270,17 +270,23 @@ export async function generateValuationPDF(data: any): Promise<Buffer> {
   p3.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: B.accent });
   y = H - 50;
 
-  // AI Commentary
+  // AI Commentary (auto-paginate)
+  let currentPage = p3;
   if (data.ai_commentary) {
-    p3.drawText("Odborný komentář", { x: ML, y, size: 13, font: fb, color: B.text }); y -= 6;
-    p3.drawRectangle({ x: ML, y, width: 50, height: 2, color: B.accent }); y -= 20;
+    currentPage.drawText("Odborný komentář", { x: ML, y, size: 13, font: fb, color: B.text }); y -= 6;
+    currentPage.drawRectangle({ x: ML, y, width: 50, height: 2, color: B.accent }); y -= 20;
 
     const clean = String(data.ai_commentary).replace(/\*\*/g, "").replace(/\*/g, "").replace(/#{1,3}\s/g, "").replace(/\n{2,}/g, "\n").trim();
     for (const para of clean.split("\n")) {
       if (!para.trim()) { y -= 8; continue; }
       for (const line of wrap(para.trim(), CW, f, 9.5)) {
-        if (y < 200) break;
-        p3.drawText(line, { x: ML, y, size: 9.5, font: f, color: B.text });
+        if (y < 80) {
+          // New page
+          currentPage = doc.addPage([W, H]);
+          currentPage.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: B.accent });
+          y = H - 50;
+        }
+        currentPage.drawText(line, { x: ML, y, size: 9.5, font: f, color: B.text });
         y -= 14;
       }
       y -= 5;
@@ -288,29 +294,34 @@ export async function generateValuationPDF(data: any): Promise<Buffer> {
     y -= 15;
   }
 
-  // CTA Box
-  if (y > 150) {
+  // CTA Box (on current page if fits, otherwise new page)
+  if (y < 150) {
+    currentPage = doc.addPage([W, H]);
+    currentPage.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: B.accent });
+    y = H - 50;
+  }
+  {
     const ctaH = 95;
-    p3.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: ctaH, color: rgb(0.98, 0.96, 0.9) });
-    p3.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: 3, color: B.accent });
+    currentPage.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: ctaH, color: rgb(0.98, 0.96, 0.9) });
+    currentPage.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: 3, color: B.accent });
 
-    p3.drawText("Chcete přesnější posouzení zdarma?", { x: ML + 16, y: y - 20, size: 13, font: fb, color: B.text });
-    p3.drawText("Nabízíme bezplatné osobní posouzení nemovitosti odborníkem — bez závazků.", { x: ML + 16, y: y - 36, size: 9.5, font: f, color: B.text });
+    currentPage.drawText("Chcete přesnější posouzení zdarma?", { x: ML + 16, y: y - 20, size: 13, font: fb, color: B.text });
+    currentPage.drawText("Nabízíme bezplatné osobní posouzení nemovitosti odborníkem — bez závazků.", { x: ML + 16, y: y - 36, size: 9.5, font: f, color: B.text });
 
     let cy = y - 52;
     for (const l of [
       "Osobní posouzení odborníkem zdarma v lokalitách: Praha, Plzeň, Beroun",
       "Individuální přístup s ohledem na specifika vaší nemovitosti",
       "Doporučení optimální prodejní strategie a stanovení ceny",
-    ]) { p3.drawText(`•  ${l}`, { x: ML + 16, y: cy, size: 8.5, font: f, color: B.muted }); cy -= 12; }
+    ]) { currentPage.drawText(`•  ${l}`, { x: ML + 16, y: cy, size: 8.5, font: f, color: B.muted }); cy -= 12; }
 
     y -= ctaH + 20;
   }
 
   // Contact
   if (y > 80) {
-    p3.drawText("Kontaktujte nás:", { x: ML, y, size: 10, font: fb, color: B.text }); y -= 16;
-    p3.drawText("nemovizor.cz  |  info@nemovizor.cz  |  +420 774 052 232", { x: ML, y, size: 9, font: f, color: B.muted });
+    currentPage.drawText("Kontaktujte nás:", { x: ML, y, size: 10, font: fb, color: B.text }); y -= 16;
+    currentPage.drawText("nemovizor.cz  |  info@nemovizor.cz  |  +420 774 052 232", { x: ML, y, size: 9, font: f, color: B.muted });
   }
 
   // Disclaimer + footer on all pages
