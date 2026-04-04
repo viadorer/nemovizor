@@ -266,19 +266,19 @@ ${params.energyPerformance && ["E", "F", "G"].includes(String(params.energyPerfo
 
 5. DOPORUČENÍ (min. 150 slov)
 Přizpůsob doporučení záměru klienta (${clientContext}):
-${String(params.intent) === "sell" ? `- Doporučená nabídková cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč a proč
-- Jak maximalizovat prodejní cenu (konkrétní tipy vycházející ze stavu nemovitosti)
-- Realistický odhad doby prodeje na základě průměrné doby inzerce ${Math.round(n("avg_duration"))} dní
-- Zda je aktuální doba vhodná pro prodej
-- Doporučení ohledně spolupráce s realitní kanceláří` :
-String(params.intent) === "buy" ? `- Zhodnoť zda je požadovaná cena férová ve srovnání s odhadem
-- Na co si dát pozor při prohlídce (s ohledem na stav a stáří budovy)
-- Tipy pro vyjednávání o ceně — jaký je prostor pro slevu
-- Doporučení ohledně financování a dalších kroků` :
-String(params.intent) === "inheritance" ? `- Vysvětli význam ocenění pro účely dědického řízení
-- Doporuč další kroky (znalecký posudek pro soud/notáře)
-- Upozorni na daňové aspekty (daň z nabytí, příjem z prodeje)
-- Možnosti: ponechat, prodat, pronajmout — stručné zhodnocení` :
+${String(params.intent) === "sell" ? `- Cenové pásmo pro nabídku: ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč (25.–75. percentil realizovaných prodejů)
+- Průměrná doba inzerce v okolí je ${Math.round(n("avg_duration"))} dní — zmiň tento údaj jako orientaci
+- Doporuč osobní posouzení odborníkem pro přesnější stanovení ceny
+- Doporuč profesionální fotografie a kvalitní prezentaci nemovitosti
+- NEVYMÝŠLEJ si tipy na renovace ani staging — nemáš informace o aktuálním stavu interiéru` :
+String(params.intent) === "buy" ? `- Zhodnoť odhadovanou cenu ve vztahu k parametrům nemovitosti (POUZE na základě dodaných dat)
+- Upozorni na faktory, které mohou ovlivnit skutečnou cenu (stav, stáří, energetická náročnost — pouze pokud máš data)
+- Doporuč osobní prohlídku a ověření stavu nemovitosti odborníkem
+- Doporuč nechat zpracovat znalecký posudek před rozhodnutím o koupi` :
+String(params.intent) === "inheritance" ? `- Upozorni, že tento orientační odhad NENÍ znalecký posudek a pro dědické řízení je nutný úřední odhad
+- Doporuč nechat zpracovat znalecký posudek soudním znalcem
+- Doporuč konzultaci s právníkem nebo notářem ohledně dalších kroků
+- NEVYMÝŠLEJ si daňové informace — odkaz na odborného poradce` :
 `- Doporučená tržní cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč
 - Jak tuto informaci využít pro další rozhodování
 - Zda doporučuješ nechat zpracovat znalecký posudek
