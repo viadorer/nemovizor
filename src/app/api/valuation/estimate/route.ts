@@ -93,7 +93,6 @@ export async function POST(req: NextRequest) {
     const REALVISOR_API_KEY = process.env.REALVISOR_API_KEY || "";
 
     let valuoResult: ValuoResult | null = null;
-    let usedFallback = false;
 
     // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
     if (REALVISOR_API_KEY) {
@@ -161,10 +160,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fallback: DB-based estimate (only if RealVisor failed)
+    // No fallback — RealVisor is the only source
     if (!valuoResult) {
-      usedFallback = true;
-      valuoResult = await getDbEstimate(body);
+      return NextResponse.json({ error: "Ocenění se nepodařilo. Zkuste to prosím znovu." }, { status: 502 });
     }
 
     // ── Save to DB (non-blocking — don't fail if tables missing) ──
@@ -185,7 +183,7 @@ export async function POST(req: NextRequest) {
           price_range_min: valuoResult?.min_price || valuoResult?.range_price?.[0] || 0,
           price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
           price_per_m2: valuoResult?.avg_price_m2 || 0,
-          used_fallback: usedFallback,
+          used_fallback: false,
         }).select("id").single().catch(() => ({ data: null }));
         if (inserted?.id) valuationId = inserted.id;
 
@@ -206,7 +204,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      usedFallback,
       valuationId,
       result: {
         avg_price: valuoResult?.avg_price || 0,
@@ -225,66 +222,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** Fallback: estimate from our own DB data (avg price/m2 per city) */
-async function getDbEstimate(body: Record<string, unknown>): Promise<ValuoResult | null> {
-  try {
-    const { getSupabase } = await import("@/lib/supabase");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = getSupabase() as any;
-    if (!client) return null;
-
-    const city = String(body.city || "");
-    const propertyType = String(body.propertyType || "apartment");
-    const floorArea = Number(body.floorArea || 0);
-    const category = propertyType === "flat" ? "apartment" : propertyType === "house" ? "house" : propertyType;
-
-    // Get avg price/m2 for this city and category
-    const { data } = await client
-      .from("properties")
-      .select("price, area")
-      .eq("country", "cz")
-      .eq("listing_type", body.kind || "sale")
-      .eq("active", true)
-      .gt("price", 0)
-      .gt("area", 0)
-      .ilike("city", city ? `%${city}%` : "%")
-      .eq("category", category)
-      .limit(200);
-
-    if (!data || data.length < 3) return null;
-
-    const pricesPerM2 = data
-      .map((p: { price: number; area: number }) => p.price / p.area)
-      .filter((v: number) => v > 0 && v < 500000);
-
-    if (pricesPerM2.length < 3) return null;
-
-    pricesPerM2.sort((a: number, b: number) => a - b);
-    const trimmed = pricesPerM2.slice(
-      Math.floor(pricesPerM2.length * 0.1),
-      Math.floor(pricesPerM2.length * 0.9)
-    );
-
-    const avgPriceM2 = trimmed.reduce((a: number, b: number) => a + b, 0) / trimmed.length;
-    const minPriceM2 = trimmed[Math.floor(trimmed.length * 0.25)];
-    const maxPriceM2 = trimmed[Math.floor(trimmed.length * 0.75)];
-
-    const area = floorArea || 1;
-
-    return {
-      avg_price: Math.round(avgPriceM2 * area),
-      min_price: Math.round(minPriceM2 * area),
-      max_price: Math.round(maxPriceM2 * area),
-      avg_price_m2: Math.round(avgPriceM2),
-      min_price_m2: Math.round(minPriceM2),
-      max_price_m2: Math.round(maxPriceM2),
-      range_price: [Math.round(minPriceM2 * area), Math.round(maxPriceM2 * area)],
-      range_price_m2: [Math.round(minPriceM2), Math.round(maxPriceM2)],
-      calc_area: area,
-      currency: "CZK",
-      as_of: new Date().toISOString().slice(0, 10),
-    };
-  } catch {
-    return null;
-  }
-}
