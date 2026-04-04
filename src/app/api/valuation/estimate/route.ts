@@ -179,6 +179,7 @@ export async function POST(req: NextRequest) {
           email,
           name: name || null,
           phone: phone || null,
+          user_id: body.userId || null,
           property_params: body,
           valuo_request: valuoRequest,
           valuo_response: valuoResult,

@@ -340,6 +340,7 @@ export default function ValuationPage() {
           name: form.name,
           lastName: form.lastName,
           phone: form.phone,
+          userId: user?.id || null,
           address: form.address,
           city: form.city,
         }),
