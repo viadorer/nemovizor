@@ -80,10 +80,19 @@ export async function POST(req: NextRequest) {
     const params = report.property_params || {};
     const geminiText = await generateGeminiCommentary(params, valuation);
 
-    // ── 4. Build report_data snapshot ──
+    // ── 4. Build report_data snapshot (comprehensive) ──
+    const v = (k: string) => valuation[k] ?? valuation[k.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())] ?? 0;
+    const cadastre = report.cadastre_data || {};
+    const ruian = cadastre.ruianData || {};
+
     const reportData = {
-      version: 1,
+      version: 2,
       generated_at: new Date().toISOString(),
+      contact: {
+        name: `${params.name || ""} ${params.lastName || ""}`.trim(),
+        email: report.email || "",
+        phone: params.phone || "",
+      },
       property: {
         address: params.address || "", city: params.city || "",
         lat: params.lat || 0, lng: params.lng || 0,
@@ -93,19 +102,46 @@ export async function POST(req: NextRequest) {
         condition: params.rating || params.condition || "",
         floor: params.floor || null, totalFloors: params.totalFloors || null,
         ownership: params.ownership || "private",
+        energyRating: params.energyPerformance || null,
+        houseType: params.houseType || null,
       },
       valuation: {
-        avg_price: valuation.avg_price ?? valuation.avgPrice ?? 0,
-        min_price: valuation.min_price ?? valuation.minPrice ?? 0,
-        max_price: valuation.max_price ?? valuation.maxPrice ?? 0,
-        avg_price_m2: valuation.avg_price_m2 ?? valuation.avgPriceM2 ?? 0,
+        avg_price: v("avg_price"),
+        min_price: v("min_price"),
+        max_price: v("max_price"),
+        avg_price_m2: v("avg_price_m2"),
+        min_price_m2: v("min_price_m2"),
+        max_price_m2: v("max_price_m2"),
+        std_price_m2: v("std_price_m2"),
         range_price: valuation.range_price ?? valuation.rangePrice ?? [0, 0],
-        calc_area: valuation.calc_area ?? valuation.calcArea ?? params.floorArea ?? 0,
+        range_price_m2: valuation.range_price_m2 ?? valuation.rangePriceM2 ?? [0, 0],
+        calc_area: v("calc_area") || params.floorArea || 0,
         currency: valuation.currency ?? "CZK",
         as_of: valuation.as_of ?? valuation.asOf ?? new Date().toISOString().slice(0, 10),
-        avg_score: valuation.avg_score ?? valuation.avgScore ?? 0,
+        avg_score: v("avg_score"),
+        avg_distance: v("avg_distance"),
+        avg_age: v("avg_age"),
+        avg_duration: v("avg_duration"),
+        distance: v("distance"),
+        keep_ids_count: v("keep_ids_count"),
       },
-      cadastre: report.cadastre_data || null,
+      cadastre: {
+        cadastralArea: cadastre.cadastralArea || null,
+        parcelNumber: cadastre.parcelNumber || null,
+        address: ruian?.adresniMisto ? `${params.address}` : null,
+        postalCode: ruian?.adresniMisto?.psc || null,
+        building: ruian?.stavebniObjekt ? {
+          floors: ruian.stavebniObjekt.pocetPodlazi || null,
+          units: ruian.stavebniObjekt.pocetBytu || null,
+          construction: ruian.stavebniObjekt.druhKonstrukce || null,
+          completionDate: ruian.stavebniObjekt.datumDokonceni || null,
+        } : null,
+        parcel: ruian?.parcela ? {
+          number: ruian.parcela.kmenoveCislo + (ruian.parcela.poddeleniCisla ? `/${ruian.parcela.poddeleniCisla}` : ""),
+          cadastralCode: ruian.parcela.kodKatastralnihoUzemi || null,
+          cadastralName: ruian.parcela.nazevKatastralnihoUzemi || null,
+        } : null,
+      },
       ai_commentary: geminiText,
       branding: { name: "Nemovizor", color: "#FFB800", url: "https://nemovizor.cz" },
     };
@@ -207,218 +243,269 @@ Struktura: 1) Zhodnocení ceny ve vztahu k lokalitě 2) Faktory ovlivňující c
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PDF Generation with pdf-lib + fontkit (Czech diacritics)
+// PDF Generation — Professional Valuation Report
 // ═══════════════════════════════════════════════════════════════
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generatePDF(data: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
-  // Load fonts
-  const fontPath = path.join(process.cwd(), "public/fonts/Roboto-Regular.ttf");
-  const fontBoldPath = path.join(process.cwd(), "public/fonts/Roboto-Bold.ttf");
-  const fontBytes = await fs.readFile(fontPath);
-  const fontBoldBytes = await fs.readFile(fontBoldPath);
+  const fontBytes = await fs.readFile(path.join(process.cwd(), "public/fonts/Roboto-Regular.ttf"));
+  const fontBoldBytes = await fs.readFile(path.join(process.cwd(), "public/fonts/Roboto-Bold.ttf"));
   const font = await pdfDoc.embedFont(fontBytes);
   const fontBold = await pdfDoc.embedFont(fontBoldBytes);
 
-  // Load logo
   let logoImage = null;
-  try {
-    const logoPath = path.join(process.cwd(), "public/branding/logo-dark.png");
-    const logoBytes = await fs.readFile(logoPath);
-    logoImage = await pdfDoc.embedPng(logoBytes);
-  } catch { /* logo optional */ }
+  try { logoImage = await pdfDoc.embedPng(await fs.readFile(path.join(process.cwd(), "public/branding/logo-dark.png"))); } catch { /* */ }
 
-  const page = pdfDoc.addPage([595, 842]); // A4
-  const { width, height } = page.getSize();
-  const ML = 50; // margin left
-  const MR = 545; // margin right
-  const CW = MR - ML; // content width
-  let y = height - 40;
-
-  const fmtPrice = (n: number) => n ? `${Math.round(n).toLocaleString("cs")} Kč` : "—";
-
-  // Helper: draw right-aligned text
-  const drawRight = (text: string, x: number, yPos: number, opts: { font: typeof font; size: number; color: typeof BRAND.text }) => {
-    const w = opts.font.widthOfTextAtSize(text, opts.size);
-    page.drawText(text, { x: x - w, y: yPos, size: opts.size, font: opts.font, color: opts.color });
-  };
-
-  // Helper: wrap text into lines
-  const wrapText = (text: string, maxWidth: number, f: typeof font, size: number): string[] => {
-    const words = text.split(" ");
-    const lines: string[] = [];
-    let line = "";
-    for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (f.widthOfTextAtSize(test, size) > maxWidth) {
-        if (line) lines.push(line);
-        line = word;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    return lines;
-  };
-
-  // ══════════════════════════════════════════
-  // HEADER — Yellow bar with logo
-  // ══════════════════════════════════════════
-  const headerH = 55;
-  page.drawRectangle({ x: 0, y: height - headerH, width, height: headerH, color: BRAND.accent });
-
-  if (logoImage) {
-    const logoH = 28;
-    const logoW = logoH * (logoImage.width / logoImage.height);
-    page.drawImage(logoImage, { x: ML, y: height - headerH + (headerH - logoH) / 2, width: logoW, height: logoH });
-  } else {
-    page.drawText("NEMOVIZOR", { x: ML, y: height - 36, size: 22, font: fontBold, color: BRAND.black });
-  }
-
-  page.drawText("Ocenění nemovitosti", { x: ML, y: height - headerH + 10, size: 10, font, color: rgb(0.3, 0.24, 0) });
-  drawRight(data.generated_at?.slice(0, 10) || "", MR, height - headerH + 10, { font, size: 10, color: rgb(0.3, 0.24, 0) });
-
-  y = height - headerH - 30;
-
-  // ══════════════════════════════════════════
-  // PROPERTY INFO
-  // ══════════════════════════════════════════
-  page.drawText("Nemovitost", { x: ML, y, size: 13, font: fontBold, color: BRAND.text });
-  y -= 20;
-
+  const W = 595; const H = 842; // A4
+  const ML = 45; const MR = 550; const CW = MR - ML;
+  const fmtP = (n: number) => n ? `${Math.round(n).toLocaleString("cs")} Kč` : "—";
+  const fmtPm2 = (n: number) => n ? `${Math.round(n).toLocaleString("cs")} Kč/m²` : "—";
   const prop = data.property || {};
-  const typeLabels: Record<string, string> = { flat: "Byt", house: "Dům", land: "Pozemek" };
-  const infoLines = ([
-    ["Adresa", prop.address || "—"],
-    ["Typ", typeLabels[prop.type] || prop.type || "—"],
-    ["Dispozice", prop.disposition || "—"],
-    ["Plocha", prop.area ? `${prop.area} m²` : "—"],
-    ["Stav", prop.condition || "—"],
-    ["Patro", prop.floor ? `${prop.floor}/${prop.totalFloors || "?"}` : "—"],
-    ["Vlastnictví", prop.ownership === "private" ? "Osobní" : prop.ownership === "cooperative" ? "Družstevní" : prop.ownership || "—"],
-  ] as [string, string][]).filter(([, v]) => v !== "—");
+  const val = data.valuation || {};
+  const cad = data.cadastre || {};
+  const contact = data.contact || {};
 
-  for (const [label, value] of infoLines) {
-    page.drawText(label, { x: ML, y, size: 9.5, font, color: BRAND.textMuted });
-    page.drawText(value, { x: ML + 90, y, size: 10, font, color: BRAND.text });
-    y -= 16;
+  const typeLabels: Record<string, string> = { flat: "Byt", house: "Dům", land: "Pozemek" };
+  const condLabels: Record<string, string> = { excellent: "Luxusní/novostavba", very_good: "Po rekonstrukci", good: "Průměrný", nothing_much: "Před rekonstrukcí", bad: "Neobyvatelný", new: "Novostavba" };
+  const ownLabels: Record<string, string> = { private: "Osobní", cooperative: "Družstevní", council: "Státní/obecní" };
+
+  // Helper functions
+  type FontType = typeof font;
+  const drawRight = (pg: typeof page, text: string, x: number, yy: number, f: FontType, s: number, c: typeof BRAND.text) => {
+    pg.drawText(text, { x: x - f.widthOfTextAtSize(text, s), y: yy, size: s, font: f, color: c });
+  };
+  const wrap = (text: string, maxW: number, f: FontType, s: number): string[] => {
+    const words = text.split(" "); const lines: string[] = []; let line = "";
+    for (const w of words) { const t = line ? `${line} ${w}` : w; if (f.widthOfTextAtSize(t, s) > maxW) { if (line) lines.push(line); line = w; } else { line = t; } }
+    if (line) lines.push(line); return lines;
+  };
+  const drawRow = (pg: typeof page, label: string, value: string, yy: number, lx: number = ML, vx: number = ML + 120) => {
+    pg.drawText(label, { x: lx, y: yy, size: 9, font, color: BRAND.textMuted });
+    pg.drawText(value, { x: vx, y: yy, size: 9.5, font, color: BRAND.text });
+  };
+  // Score bar helper
+  const drawScoreBar = (pg: typeof page, x: number, yy: number, w: number, pct: number, label: string) => {
+    pg.drawRectangle({ x, y: yy, width: w, height: 8, color: BRAND.border });
+    const barColor = pct >= 70 ? rgb(0.13, 0.73, 0.38) : pct >= 40 ? rgb(1, 0.76, 0) : rgb(0.93, 0.26, 0.14);
+    pg.drawRectangle({ x, y: yy, width: Math.max(w * (pct / 100), 2), height: 8, color: barColor });
+    pg.drawText(`${label}: ${pct}%`, { x, y: yy - 11, size: 7.5, font, color: BRAND.textMuted });
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // PAGE 1: Main valuation
+  // ═══════════════════════════════════════════════════════════════
+  const page = pdfDoc.addPage([W, H]);
+  let y = H - 40;
+
+  // ── HEADER ──
+  page.drawRectangle({ x: 0, y: H - 50, width: W, height: 50, color: BRAND.accent });
+  if (logoImage) {
+    const lh = 24; page.drawImage(logoImage, { x: ML, y: H - 50 + (50 - lh) / 2, width: lh * (logoImage.width / logoImage.height), height: lh });
+  } else {
+    page.drawText("NEMOVIZOR", { x: ML, y: H - 36, size: 20, font: fontBold, color: BRAND.black });
+  }
+  page.drawText("Orientační ocenění nemovitosti", { x: ML, y: H - 46, size: 9, font, color: rgb(0.3, 0.24, 0) });
+  drawRight(page, data.generated_at?.slice(0, 10) || "", MR, H - 36, font, 9, rgb(0.3, 0.24, 0));
+
+  y = H - 72;
+
+  // ── PROPERTY INFO ──
+  page.drawText("Nemovitost", { x: ML, y, size: 12, font: fontBold, color: BRAND.text }); y -= 18;
+
+  const rows = ([
+    ["Adresa", prop.address],
+    ["Město", prop.city],
+    ["Typ nemovitosti", typeLabels[prop.type] || prop.type],
+    ["Dispozice", prop.disposition],
+    ["Užitná plocha", prop.area ? `${prop.area} m²` : null],
+    ["Plocha pozemku", prop.lotArea ? `${prop.lotArea} m²` : null],
+    ["Stav", condLabels[prop.condition] || prop.condition],
+    ["Vlastnictví", ownLabels[prop.ownership] || prop.ownership],
+    ["Patro / Podlaží", prop.floor ? `${prop.floor}. patro z ${prop.totalFloors || "?"}` : null],
+    ["Energetický štítek", prop.energyRating],
+    ["GPS souřadnice", prop.lat ? `${Number(prop.lat).toFixed(5)}, ${Number(prop.lng).toFixed(5)}` : null],
+  ] as [string, string | null][]).filter(([, v]) => v);
+
+  for (const [label, value] of rows) {
+    drawRow(page, label, value!, y); y -= 15;
   }
 
-  y -= 10;
+  y -= 12;
 
-  // ══════════════════════════════════════════
-  // VALUATION RESULT — highlighted box
-  // ══════════════════════════════════════════
-  const val = data.valuation || {};
-  const boxH = 100;
-  page.drawRectangle({ x: ML, y: y - boxH + 15, width: CW, height: boxH, color: BRAND.bgLight });
-  // Left border accent
-  page.drawRectangle({ x: ML, y: y - boxH + 15, width: 4, height: boxH, color: BRAND.accent });
+  // ── VALUATION BOX ──
+  const vBoxH = 110;
+  page.drawRectangle({ x: ML, y: y - vBoxH + 10, width: CW, height: vBoxH, color: BRAND.bgLight });
+  page.drawRectangle({ x: ML, y: y - vBoxH + 10, width: 4, height: vBoxH, color: BRAND.accent });
 
-  const boxY = y;
-  page.drawText("Výsledek ocenění", { x: ML + 15, y: boxY, size: 11, font: fontBold, color: BRAND.textMuted });
+  const vY = y;
+  page.drawText("Výsledek ocenění", { x: ML + 14, y: vY, size: 10, font: fontBold, color: BRAND.textMuted });
+  page.drawText(fmtP(val.avg_price), { x: ML + 14, y: vY - 28, size: 28, font: fontBold, color: BRAND.text });
+  page.drawText("odhadovaná tržní cena", { x: ML + 14, y: vY - 42, size: 8.5, font, color: BRAND.textMuted });
 
-  page.drawText(fmtPrice(val.avg_price), { x: ML + 15, y: boxY - 30, size: 26, font: fontBold, color: BRAND.text });
-  page.drawText("odhadovaná tržní cena", { x: ML + 15, y: boxY - 45, size: 9, font, color: BRAND.textMuted });
+  // Score bar
+  const score = Math.round((val.avg_score || 0) * 100);
+  drawScoreBar(page, ML + 14, vY - 60, 180, score, "Kvalita odhadu");
 
   // Right column
   const rx = ML + CW / 2 + 10;
-  page.drawText("Rozsah ceny", { x: rx, y: boxY, size: 9, font, color: BRAND.textMuted });
-  page.drawText(`${fmtPrice(val.min_price)} – ${fmtPrice(val.max_price)}`, { x: rx, y: boxY - 16, size: 12, font: fontBold, color: BRAND.text });
+  page.drawText("Rozsah ceny", { x: rx, y: vY - 2, size: 8, font, color: BRAND.textMuted });
+  page.drawText(`${fmtP(val.min_price)} – ${fmtP(val.max_price)}`, { x: rx, y: vY - 16, size: 11, font: fontBold, color: BRAND.text });
 
-  page.drawText("Cena za m²", { x: rx, y: boxY - 38, size: 9, font, color: BRAND.textMuted });
-  page.drawText(`${fmtPrice(val.avg_price_m2)}/m²`, { x: rx, y: boxY - 54, size: 12, font: fontBold, color: BRAND.text });
+  page.drawText("Cenové pásmo (25.–75. percentil)", { x: rx, y: vY - 32, size: 8, font, color: BRAND.textMuted });
+  const rp = val.range_price || [0, 0];
+  page.drawText(`${fmtP(rp[0])} – ${fmtP(rp[1])}`, { x: rx, y: vY - 44, size: 10, font, color: BRAND.text });
 
-  page.drawText(`Datum: ${val.as_of || "—"} | Kvalita dat: ${Math.round((val.avg_score || 0) * 100)}%`, {
-    x: ML + 15, y: boxY - 72, size: 8, font, color: BRAND.textLight,
-  });
+  page.drawText("Cena za m²", { x: rx, y: vY - 60, size: 8, font, color: BRAND.textMuted });
+  page.drawText(fmtPm2(val.avg_price_m2), { x: rx, y: vY - 73, size: 11, font: fontBold, color: BRAND.text });
 
-  y -= boxH + 15;
+  const rpm2 = val.range_price_m2 || [0, 0];
+  page.drawText(`Rozsah: ${fmtPm2(rpm2[0])} – ${fmtPm2(rpm2[1])}`, { x: rx, y: vY - 86, size: 8, font, color: BRAND.textMuted });
 
-  // ══════════════════════════════════════════
-  // CADASTRE
-  // ══════════════════════════════════════════
-  if (data.cadastre) {
-    page.drawText("Katastrální údaje", { x: ML, y, size: 11, font: fontBold, color: BRAND.text });
-    y -= 16;
-    if (data.cadastre.cadastralArea) {
-      page.drawText(`Katastrální území: ${data.cadastre.cadastralArea}`, { x: ML, y, size: 9.5, font, color: BRAND.text });
-      y -= 14;
+  y -= vBoxH + 15;
+
+  // ── DETAILED METRICS ──
+  page.drawText("Detailní metriky", { x: ML, y, size: 11, font: fontBold, color: BRAND.text }); y -= 16;
+
+  const metrics = ([
+    ["Min. cena za m²", fmtPm2(val.min_price_m2)],
+    ["Max. cena za m²", fmtPm2(val.max_price_m2)],
+    ["Směrodatná odchylka", val.std_price_m2 ? `${Math.round(val.std_price_m2).toLocaleString("cs")} Kč/m²` : null],
+    ["Započítaná plocha", val.calc_area ? `${val.calc_area} m²` : null],
+    ["Porovnáno nemovitostí", val.keep_ids_count ? `${val.keep_ids_count} ks` : null],
+    ["Průměrná vzdálenost", val.avg_distance ? `${Math.round(val.avg_distance)} m` : null],
+    ["Radius porovnání", val.distance ? `${val.distance} m` : null],
+    ["Prům. stáří dat", val.avg_age ? `${Math.round(val.avg_age)} dní` : null],
+    ["Prům. doba inzerce", val.avg_duration ? `${Math.round(val.avg_duration)} dní` : null],
+    ["Datum výpočtu", val.as_of ? String(val.as_of).slice(0, 10) : null],
+    ["Měna", val.currency || "CZK"],
+  ] as [string, string | null][]).filter(([, v]) => v);
+
+  const halfIdx = Math.ceil(metrics.length / 2);
+  for (let i = 0; i < halfIdx; i++) {
+    const [l1, v1] = metrics[i];
+    drawRow(page, l1, v1!, y, ML, ML + 110);
+    if (metrics[i + halfIdx]) {
+      const [l2, v2] = metrics[i + halfIdx];
+      drawRow(page, l2, v2!, y, ML + CW / 2, ML + CW / 2 + 110);
     }
-    if (data.cadastre.parcelNumber) {
-      page.drawText(`Parcela: ${data.cadastre.parcelNumber}`, { x: ML, y, size: 9.5, font, color: BRAND.text });
-      y -= 14;
-    }
-    y -= 10;
+    y -= 14;
   }
 
-  // ══════════════════════════════════════════
-  // AI COMMENTARY
-  // ══════════════════════════════════════════
+  y -= 12;
+
+  // ── CADASTRE ──
+  const hasCadastre = cad.cadastralArea || cad.parcelNumber || cad.building || cad.parcel;
+  if (hasCadastre) {
+    page.drawText("Katastrální údaje (RÚIAN)", { x: ML, y, size: 11, font: fontBold, color: BRAND.text }); y -= 16;
+
+    const cadRows = ([
+      ["Katastrální území", cad.cadastralArea || cad.parcel?.cadastralName],
+      ["Parcela", cad.parcelNumber || cad.parcel?.number],
+      ["Kód k. ú.", cad.parcel?.cadastralCode ? String(cad.parcel.cadastralCode) : null],
+      ["Počet podlaží", cad.building?.floors ? String(cad.building.floors) : null],
+      ["Počet bytů", cad.building?.units ? String(cad.building.units) : null],
+      ["Konstrukce", cad.building?.construction],
+      ["Datum dokončení", cad.building?.completionDate ? String(cad.building.completionDate).slice(0, 10) : null],
+    ] as [string, string | null][]).filter(([, v]) => v);
+
+    for (const [label, value] of cadRows) {
+      drawRow(page, label, value!, y); y -= 14;
+    }
+
+    // Building age analysis
+    if (cad.building?.completionDate) {
+      const completionYear = new Date(cad.building.completionDate).getFullYear();
+      const age = new Date().getFullYear() - completionYear;
+      const lifespan = 100;
+      const remaining = Math.max(lifespan - age, 0);
+      const pct = Math.round((remaining / lifespan) * 100);
+
+      y -= 6;
+      page.drawText(`Stáří budovy: ${age} let (rok ${completionYear})`, { x: ML, y, size: 8.5, font: fontBold, color: BRAND.text }); y -= 12;
+      page.drawText(`Zbývající životnost: ${remaining} let (${pct}%)`, { x: ML, y, size: 8, font, color: BRAND.textMuted });
+      drawScoreBar(page, ML + 200, y - 2, 120, pct, "Životnost");
+      y -= 20;
+    }
+    y -= 8;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PAGE 2: AI Commentary + CTA
+  // ═══════════════════════════════════════════════════════════════
+  const page2 = pdfDoc.addPage([W, H]);
+  y = H - 50;
+
+  // Header stripe
+  page2.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: BRAND.accent });
+
+  // AI Commentary
   if (data.ai_commentary) {
-    page.drawText("Odborný komentář", { x: ML, y, size: 11, font: fontBold, color: BRAND.text });
-    y -= 16;
+    page2.drawText("Odborný komentář", { x: ML, y, size: 12, font: fontBold, color: BRAND.text }); y -= 8;
+    page2.drawRectangle({ x: ML, y, width: 60, height: 2, color: BRAND.accent }); y -= 16;
 
-    // Clean markdown formatting
-    const cleanText = data.ai_commentary
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/#{1,3}\s/g, "")
-      .replace(/\n{2,}/g, "\n")
-      .trim();
-
-    const paragraphs = cleanText.split("\n");
-    for (const para of paragraphs) {
+    const cleanText = data.ai_commentary.replace(/\*\*/g, "").replace(/\*/g, "").replace(/#{1,3}\s/g, "").replace(/\n{2,}/g, "\n").trim();
+    for (const para of cleanText.split("\n")) {
       if (!para.trim()) { y -= 6; continue; }
-      const lines = wrapText(para.trim(), CW, font, 9);
-      for (const line of lines) {
-        if (y < 60) {
-          // New page
-          const newPage = pdfDoc.addPage([595, 842]);
-          y = newPage.getSize().height - 50;
-          newPage.drawText(line, { x: ML, y, size: 9, font, color: BRAND.text });
-        } else {
-          page.drawText(line, { x: ML, y, size: 9, font, color: BRAND.text });
-        }
-        y -= 13;
+      for (const line of wrap(para.trim(), CW, font, 9.5)) {
+        if (y < 60) { /* Would need page 3 — skip for now */ break; }
+        page2.drawText(line, { x: ML, y, size: 9.5, font, color: BRAND.text });
+        y -= 14;
       }
       y -= 4;
     }
-    y -= 10;
+    y -= 15;
   }
 
-  // ══════════════════════════════════════════
-  // DISCLAIMER
-  // ══════════════════════════════════════════
-  if (y < 80) {
-    const newPage = pdfDoc.addPage([595, 842]);
-    y = newPage.getSize().height - 50;
+  // ── CTA BOX — Free expert consultation ──
+  const ctaH = 90;
+  if (y > ctaH + 60) {
+    page2.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: ctaH, color: rgb(0.98, 0.96, 0.9) });
+    page2.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: 3, color: BRAND.accent });
+
+    page2.drawText("Chcete přesnější ocenění?", { x: ML + 16, y: y - 18, size: 13, font: fontBold, color: BRAND.text });
+    page2.drawText("Nabízíme bezplatné posouzení nemovitosti odborníkem zdarma a bez závazků.", { x: ML + 16, y: y - 34, size: 9.5, font, color: BRAND.text });
+
+    const ctaLines = [
+      "Individuální přístup s ohledem na specifika vaší nemovitosti",
+      "Zohlednění stavu, lokality a aktuální situace na trhu",
+      "Doporučení optimální prodejní strategie",
+    ];
+    let ctaY = y - 50;
+    for (const line of ctaLines) {
+      page2.drawText(`•  ${line}`, { x: ML + 16, y: ctaY, size: 8.5, font, color: BRAND.textMuted });
+      ctaY -= 12;
+    }
+
+    y -= ctaH + 15;
   }
 
-  page.drawRectangle({ x: ML, y: y - 30, width: CW, height: 1, color: BRAND.border });
-  y -= 40;
-
-  const disclaimer = "Tento odhad je orientační a nevytváří závazný znalecký posudek. Odhad vychází z porovnání s realizovanými obchody v okolí a je poskytován bez záruky. Pro závazné účely (hypotéka, soud) doporučujeme znalecký posudek.";
-  const discLines = wrapText(disclaimer, CW, font, 7);
-  for (const line of discLines) {
-    page.drawText(line, { x: ML, y, size: 7, font, color: BRAND.textLight });
-    y -= 10;
+  // Contact info
+  if (y > 80) {
+    page2.drawText("Kontaktujte nás:", { x: ML, y, size: 10, font: fontBold, color: BRAND.text }); y -= 16;
+    page2.drawText("nemovizor.cz  |  info@nemovizor.cz  |  +420 774 052 232", { x: ML, y, size: 9, font, color: BRAND.textMuted }); y -= 20;
   }
 
-  // ══════════════════════════════════════════
-  // FOOTER on all pages
-  // ══════════════════════════════════════════
-  const pages = pdfDoc.getPages();
-  for (let i = 0; i < pages.length; i++) {
-    const p = pages[i];
-    p.drawText("nemovizor.cz", { x: ML, y: 25, size: 8, font, color: BRAND.textLight });
-    drawRight(`${i + 1}/${pages.length}`, MR, 25, { font, size: 8, color: BRAND.textLight });
+  // ── DISCLAIMER ──
+  page2.drawRectangle({ x: ML, y: 55, width: CW, height: 1, color: BRAND.border });
+  const disclaimer = "Tento odhad je orientační a nevytváří závazný znalecký posudek. Odhad vychází z porovnání s realizovanými obchody v okolí a je poskytován bez záruky. Pro závazné účely (hypotéka, soud, financování) doporučujeme nechat zpracovat znalecký posudek soudním znalcem. Nemovizor nenese odpovědnost za rozhodnutí učiněná na základě tohoto odhadu.";
+  let dY = 48;
+  for (const line of wrap(disclaimer, CW, font, 7)) {
+    page2.drawText(line, { x: ML, y: dY, size: 7, font, color: BRAND.textLight });
+    dY -= 9;
   }
 
-  const pdfBytes = await pdfDoc.save();
-  return Buffer.from(pdfBytes);
+  // ── FOOTER on all pages ──
+  for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+    const p = pdfDoc.getPage(i);
+    p.drawText("nemovizor.cz", { x: ML, y: 18, size: 7.5, font, color: BRAND.textLight });
+    drawRight(p, `${i + 1}/${pdfDoc.getPageCount()}`, MR, 18, font, 7.5, BRAND.textLight);
+    // Bottom accent line
+    p.drawRectangle({ x: 0, y: 14, width: W, height: 2, color: BRAND.accent });
+  }
+
+  return Buffer.from(await pdfDoc.save());
 }
 
 // ═══════════════════════════════════════════════════════════════

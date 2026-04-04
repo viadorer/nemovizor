@@ -16,11 +16,18 @@ type ValuoResult = {
   avg_price_m2: number;
   min_price_m2: number;
   max_price_m2: number;
+  std_price_m2?: number;
   range_price: [number, number];
   range_price_m2: [number, number];
   calc_area: number;
   currency: string;
   as_of: string;
+  avg_score?: number;
+  avg_distance?: number;
+  avg_age?: number;
+  avg_duration?: number;
+  distance?: number;
+  keep_ids_count?: number;
 };
 
 export async function POST(req: NextRequest) {
@@ -93,6 +100,7 @@ export async function POST(req: NextRequest) {
     const REALVISOR_API_KEY = process.env.REALVISOR_API_KEY || "";
 
     let valuoResult: ValuoResult | null = null;
+    let realvisorFullResponse: Record<string, unknown> | null = null;
 
     // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
     if (!REALVISOR_API_KEY) {
@@ -135,9 +143,9 @@ export async function POST(req: NextRequest) {
 
         if (res.ok) {
           const data = await res.json();
+          realvisorFullResponse = data; // Store complete response
           const v = data.valuation;
           if (v && (v.avgPrice || v.avg_price)) {
-            // Map camelCase (RealVisor) to snake_case (our internal format)
             valuoResult = {
               avg_price: v.avgPrice ?? v.avg_price ?? 0,
               min_price: v.minPrice ?? v.min_price ?? 0,
@@ -145,14 +153,21 @@ export async function POST(req: NextRequest) {
               avg_price_m2: v.avgPriceM2 ?? v.avg_price_m2 ?? 0,
               min_price_m2: v.minPriceM2 ?? v.min_price_m2 ?? 0,
               max_price_m2: v.maxPriceM2 ?? v.max_price_m2 ?? 0,
+              std_price_m2: v.stdPriceM2 ?? v.std_price_m2 ?? 0,
               range_price: v.rangePrice ?? v.range_price ?? [0, 0],
               range_price_m2: v.rangePriceM2 ?? v.range_price_m2 ?? [0, 0],
               calc_area: v.calcArea ?? v.calc_area ?? 0,
               currency: v.currency ?? "CZK",
               as_of: v.asOf ?? v.as_of ?? new Date().toISOString().slice(0, 10),
+              avg_score: v.avgScore ?? v.avg_score ?? 0,
+              avg_distance: v.avgDistance ?? v.avg_distance ?? 0,
+              avg_age: v.avgAge ?? v.avg_age ?? 0,
+              avg_duration: v.avgDuration ?? v.avg_duration ?? 0,
+              distance: v.distance ?? 0,
+              keep_ids_count: (v.keepIds ?? data.valuoRawResponse?.keep_ids ?? []).length,
             };
           } else if (v?.result) {
-            valuoResult = v.result; // raw Valuo response nested
+            valuoResult = v.result;
           }
         } else {
           const errText = await res.text().catch(() => "");
@@ -188,6 +203,10 @@ export async function POST(req: NextRequest) {
           price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
           price_per_m2: valuoResult?.avg_price_m2 || 0,
           used_fallback: false,
+          cadastre_data: realvisorFullResponse?.cadastre || null,
+          realvisor_valuation_id: realvisorFullResponse?.valuationId || null,
+          realvisor_lead_id: realvisorFullResponse?.leadId || null,
+          realvisor_property_id: realvisorFullResponse?.propertyId || null,
         }).select("id").single();
         if (insertResult.error) {
           console.error("[valuation] DB insert error:", insertResult.error.message);
