@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
     // ── Call RealVisor API (proxies to Valuo) ──
     const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://api-production-88cf.up.railway.app";
     const REALVISOR_API_KEY = process.env.REALVISOR_API_KEY || "";
-    const VALUO_API_KEY = process.env.VALUO_API_KEY;
 
     let valuoResult: ValuoResult | null = null;
     let usedFallback = false;
@@ -162,28 +161,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fallback: call Valuo directly if RealVisor failed
-    if (!valuoResult && VALUO_API_KEY) {
-      try {
-        const res = await fetch("https://v2p.api.valuo.cz/market-value", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${VALUO_API_KEY}`,
-          },
-          body: JSON.stringify(valuoRequest),
-          signal: AbortSignal.timeout(20000),
-        });
-        const data = await res.json();
-        if (data.success && data.result) {
-          valuoResult = data.result;
-        }
-      } catch (e) {
-        console.error("[valuation/estimate] Valuo direct API error:", e);
-      }
-    }
-
-    // Fallback: DB-based estimate
+    // Fallback: DB-based estimate (only if RealVisor failed)
     if (!valuoResult) {
       usedFallback = true;
       valuoResult = await getDbEstimate(body);
