@@ -134,10 +134,24 @@ export async function POST(req: NextRequest) {
 
         if (res.ok) {
           const data = await res.json();
-          if (data.valuation?.result) {
-            valuoResult = data.valuation.result;
-          } else if (data.valuation) {
-            valuoResult = data.valuation;
+          const v = data.valuation;
+          if (v && (v.avgPrice || v.avg_price)) {
+            // Map camelCase (RealVisor) to snake_case (our internal format)
+            valuoResult = {
+              avg_price: v.avgPrice ?? v.avg_price ?? 0,
+              min_price: v.minPrice ?? v.min_price ?? 0,
+              max_price: v.maxPrice ?? v.max_price ?? 0,
+              avg_price_m2: v.avgPriceM2 ?? v.avg_price_m2 ?? 0,
+              min_price_m2: v.minPriceM2 ?? v.min_price_m2 ?? 0,
+              max_price_m2: v.maxPriceM2 ?? v.max_price_m2 ?? 0,
+              range_price: v.rangePrice ?? v.range_price ?? [0, 0],
+              range_price_m2: v.rangePriceM2 ?? v.range_price_m2 ?? [0, 0],
+              calc_area: v.calcArea ?? v.calc_area ?? 0,
+              currency: v.currency ?? "CZK",
+              as_of: v.asOf ?? v.as_of ?? new Date().toISOString().slice(0, 10),
+            };
+          } else if (v?.result) {
+            valuoResult = v.result; // raw Valuo response nested
           }
         } else {
           const errText = await res.text().catch(() => "");
