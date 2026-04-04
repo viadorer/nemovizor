@@ -208,8 +208,11 @@ export default function ValuationPage() {
   });
 
   const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
+  const [lastValuationId, setLastValuationId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
 
   const [cities, setCities] = useState<string[]>([]);
   useEffect(() => { getUniqueCities().then(setCities); }, []);
@@ -392,8 +395,43 @@ export default function ValuationPage() {
                     </div>
 
                     <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: "0.85rem", lineHeight: 1.6 }}>
-                      Kompletní report s porovnáním a grafy byl odeslán na <strong>{form.email}</strong>
+                      Základní výsledek odeslán na <strong>{form.email}</strong>
                     </p>
+
+                    {/* PDF Report CTA */}
+                    <div style={{ marginTop: 24, padding: "20px 24px", background: "var(--bg-card)", borderRadius: 12, border: "1px solid var(--border)", textAlign: "center" }}>
+                      <div style={{ fontWeight: 600, fontSize: "1rem", marginBottom: 8 }}>Detailní PDF report</div>
+                      <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginBottom: 16, lineHeight: 1.5 }}>
+                        AI komentář, katastrální data, porovnání s okolím, investiční doporučení
+                      </p>
+                      <button
+                        className="valuation-btn valuation-btn--primary"
+                        disabled={reportLoading}
+                        onClick={async () => {
+                          setReportLoading(true);
+                          try {
+                            const res = await fetch("/api/valuation/report", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ valuationId: lastValuationId, skipPayment: true }),
+                            });
+                            const data = await res.json();
+                            if (data.pdf_url) {
+                              setReportPdfUrl(data.pdf_url);
+                              window.open(data.pdf_url, "_blank");
+                            }
+                          } catch { /* ignore */ }
+                          setReportLoading(false);
+                        }}
+                      >
+                        {reportLoading ? "Generuji report..." : reportPdfUrl ? "Stáhnout PDF" : "Vygenerovat PDF report (50 kr)"}
+                      </button>
+                      {reportPdfUrl && (
+                        <a href={reportPdfUrl} target="_blank" rel="noopener" style={{ display: "block", marginTop: 8, fontSize: "0.82rem", color: "var(--color-accent)" }}>
+                          Otevřít PDF
+                        </a>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>

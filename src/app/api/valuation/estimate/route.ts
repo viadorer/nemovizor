@@ -190,13 +190,16 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Save to DB (non-blocking — don't fail if tables missing) ──
+    let valuationId: string | null = null;
     try {
       const { getSupabase } = await import("@/lib/supabase");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const client = getSupabase() as any;
       if (client) {
-        await client.from("valuation_reports").insert({
+        const { data: inserted } = await client.from("valuation_reports").insert({
           email,
+          name: name || null,
+          phone: phone || null,
           property_params: body,
           valuo_request: valuoRequest,
           valuo_response: valuoResult,
@@ -205,7 +208,8 @@ export async function POST(req: NextRequest) {
           price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
           price_per_m2: valuoResult?.avg_price_m2 || 0,
           used_fallback: usedFallback,
-        }).catch((e: unknown) => console.error("[valuation] DB insert error:", e));
+        }).select("id").single().catch(() => ({ data: null }));
+        if (inserted?.id) valuationId = inserted.id;
 
         await client.from("leads").insert({
           name: name || "",
