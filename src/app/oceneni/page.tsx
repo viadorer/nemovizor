@@ -490,8 +490,8 @@ export default function ValuationPage() {
                     onSelect={(item) => {
                       updateForm({
                         address: item.name + (item.location ? `, ${item.location}` : ""),
-                        lat: item.position?.lat || 0,
-                        lng: item.position?.lon || 0,
+                        lat: item.lat || 0,
+                        lng: item.lon || 0,
                       });
                       if (item.city) {
                         const matchedCity = cities.find((c) => c === item.city);
