@@ -287,14 +287,25 @@ export default function ValuationPage() {
       area: form.area ?? 0,
     });
 
-    // Map conditions to Valuo rating
+    // Map wizard values to Valuo API codes
     const conditionMap: Record<string, string> = {
       "new": "excellent", "very-good": "very_good", "good": "good", "average": "nothing_much", "before-renovation": "bad", "bad": "bad",
     };
-
-    // Map property types
     const typeMap: Record<string, string> = {
       apartment: "flat", house: "house", land: "land", commercial: "flat",
+    };
+    const ownershipMap: Record<string, string> = {
+      [t.valuation.ownershipPersonal]: "private",
+      [t.valuation.ownershipCooperative]: "cooperative",
+      [t.valuation.ownershipState]: "council",
+      "Osobní": "private", "Družstevní": "cooperative", "Státní/obecní": "council",
+    };
+    const landTypeMap: Record<string, string> = {
+      [t.valuation.landTypeBuilding]: "building",
+      [t.valuation.landTypeAgricultural]: "field",
+      [t.valuation.landTypeForest]: "forest",
+      [t.valuation.landTypeOther]: "other",
+      "Stavební": "building", "Zemědělský": "field", "Lesní": "forest", "Ostatní": "other",
     };
 
     try {
@@ -310,8 +321,9 @@ export default function ValuationPage() {
           rating: conditionMap[form.condition] || "good",
           kind: "sale",
           localType: form.disposition || undefined,
-          ownership: form.ownership || undefined,
-          landType: form.landType || undefined,
+          ownership: ownershipMap[form.ownership] || form.ownership || "private",
+          landType: landTypeMap[form.landType] || form.landType || undefined,
+          houseType: form.propertyType === "house" ? "family_house" : undefined,
           floor: form.floor ? Number(form.floor) : undefined,
           totalFloors: form.totalFloors ? Number(form.totalFloors) : undefined,
           elevator: form.features.includes("elevator"),
