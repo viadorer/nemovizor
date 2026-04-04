@@ -362,129 +362,38 @@ export default function ValuationPage() {
                   <path d="M22 4L12 14.01l-3-3" />
                 </svg>
 
-                {valuationResult ? (
-                  <>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
-                      Odhadovaná cena nemovitosti
-                    </h2>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
+                  Děkujeme za váš zájem
+                </h2>
 
-                    <div style={{ margin: "24px auto", maxWidth: 420, background: "var(--bg-card)", borderRadius: 16, padding: "24px 32px", border: "1px solid var(--border)" }}>
-                      <div style={{ textAlign: "center", marginBottom: 16 }}>
-                        <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text)" }}>
-                          {fmtPrice(valuationResult.avg_price)}
-                        </div>
-                        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: 4 }}>
-                          odhadovaná tržní cena
-                        </div>
-                      </div>
+                <p style={{ color: "var(--text-secondary)", marginTop: 12, lineHeight: 1.7, maxWidth: 460, margin: "12px auto 0" }}>
+                  Výsledek orientačního ocenění byl odeslán na <strong>{form.email}</strong>.
+                  Zkontrolujte prosím svou e-mailovou schránku.
+                </p>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Rozsah ceny</span>
-                        <span style={{ fontWeight: 600 }}>{fmtPrice(valuationResult.min_price)} – {fmtPrice(valuationResult.max_price)}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Cena za m²</span>
-                        <span style={{ fontWeight: 600 }}>{fmtPrice(valuationResult.avg_price_m2)}/m²</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Použitá plocha</span>
-                        <span style={{ fontWeight: 600 }}>{valuationResult.calc_area} m²</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Datum odhadu</span>
-                        <span style={{ fontWeight: 600 }}>{valuationResult.as_of}</span>
-                      </div>
-                    </div>
-
-                    <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: "0.85rem", lineHeight: 1.6 }}>
-                      Základní výsledek odeslán na <strong>{form.email}</strong>
-                    </p>
-
-                    {/* PDF Report CTA */}
-                    <div style={{ marginTop: 24, padding: "20px 24px", background: "var(--bg-card)", borderRadius: 12, border: "1px solid var(--border)", textAlign: "center" }}>
-                      <div style={{ fontWeight: 600, fontSize: "1rem", marginBottom: 8 }}>Detailní PDF report</div>
-                      <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginBottom: 16, lineHeight: 1.5 }}>
-                        AI komentář, katastrální data, porovnání s okolím, investiční doporučení
-                      </p>
-
-                      {reportPdfUrl ? (
-                        <a href={reportPdfUrl} target="_blank" rel="noopener" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", textDecoration: "none" }}>
-                          Stáhnout PDF report
-                        </a>
-                      ) : (
-                        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                          {/* Varianta 1: Peněženka (přihlášený) */}
-                          {user && (
-                            <button
-                              className="valuation-btn valuation-btn--primary"
-                              disabled={reportLoading}
-                              onClick={async () => {
-                                setReportLoading(true);
-                                try {
-                                  const res = await fetch("/api/valuation/report", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ valuationId: lastValuationId, userId: user.id }),
-                                  });
-                                  const data = await res.json();
-                                  if (data.pdf_url) {
-                                    setReportPdfUrl(data.pdf_url);
-                                    window.open(data.pdf_url, "_blank");
-                                  } else if (data.error?.includes("kreditů")) {
-                                    // Nedostatek kreditů — nabídnout Stripe
-                                    if (confirm(`Nedostatek kreditů (${data.balance} kr). Zaplatit 99 Kč kartou?`)) {
-                                      const stripeRes = await fetch("/api/valuation/checkout", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ valuationId: lastValuationId, email: form.email }),
-                                      });
-                                      const stripeData = await stripeRes.json();
-                                      if (stripeData.url) window.location.href = stripeData.url;
-                                    }
-                                  }
-                                } catch { /* ignore */ }
-                                setReportLoading(false);
-                              }}
-                            >
-                              {reportLoading ? "Generuji..." : "Získat za 50 kr"}
-                            </button>
-                          )}
-
-                          {/* Varianta 2: Stripe (vždy dostupná) */}
-                          <button
-                            className="valuation-btn"
-                            disabled={reportLoading}
-                            style={{ border: "1px solid var(--border)", background: "var(--bg)" }}
-                            onClick={async () => {
-                              setReportLoading(true);
-                              try {
-                                const res = await fetch("/api/valuation/checkout", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ valuationId: lastValuationId, email: form.email }),
-                                });
-                                const data = await res.json();
-                                if (data.url) window.location.href = data.url;
-                              } catch { /* ignore */ }
-                              setReportLoading(false);
-                            }}
-                          >
-                            {reportLoading ? "Připravuji..." : "Zaplatit 99 Kč kartou"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: 16, color: "var(--text)" }}>
-                      {t.valuation.thankYouTitle}
-                    </h2>
-                    <p style={{ color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.6 }}>
-                      Výsledek ocenění bude odeslán na <strong>{form.email}</strong>
-                    </p>
-                  </>
-                )}
+                {/* Detailní analýza CTA */}
+                <div style={{ marginTop: 32, padding: "24px 28px", background: "var(--bg-card)", borderRadius: 14, border: "1px solid var(--border)", textAlign: "center", maxWidth: 460, marginLeft: "auto", marginRight: "auto" }}>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 8 }}>
+                    Chcete detailnější analýzu?
+                  </div>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 20, lineHeight: 1.6 }}>
+                    Profesionální PDF report s AI komentářem, katastrálními daty,
+                    porovnáním s okolím a investičním doporučením. Budete kontaktováni
+                    naším odborníkem pro upřesnění.
+                  </p>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                    <a
+                      href={`mailto:info@nemovizor.cz?subject=Detailní ocenění nemovitosti&body=Dobrý den, mám zájem o detailní analýzu ocenění nemovitosti. Email: ${form.email}, Adresa: ${form.address || ""}`}
+                      className="valuation-btn valuation-btn--primary"
+                      style={{ textDecoration: "none", display: "inline-block" }}
+                    >
+                      Objednat analýzu — 99 Kč
+                    </a>
+                  </div>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginTop: 12 }}>
+                    Nebo volejte +420 774 052 232
+                  </p>
+                </div>
 
                 <Link href="/nabidky" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", marginTop: 24, textDecoration: "none" }}>
                   {t.valuation.backToListings}
