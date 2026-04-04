@@ -95,12 +95,18 @@ export async function POST(req: NextRequest) {
     let valuoResult: ValuoResult | null = null;
 
     // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
-    if (REALVISOR_API_KEY) {
+    if (!REALVISOR_API_KEY) {
+      console.error("[valuation/estimate] REALVISOR_API_KEY not configured");
+      return NextResponse.json({ error: "Služba ocenění není nakonfigurována." }, { status: 503 });
+    }
+    {
       try {
-        const nameParts = (name || "").split(" ");
+        const nameParts = (name || "").trim().split(" ");
+        const firstName = nameParts[0] || "Návštěvník";
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Nemovizor";
         const valuoBody = {
-          firstName: nameParts[0] || "",
-          lastName: nameParts.slice(1).join(" ") || "",
+          firstName,
+          lastName,
           email,
           phone: phone || "",
           kind: kind || "sale",
