@@ -271,6 +271,62 @@ async function generatePDF(data: any): Promise<Buffer> {
   const condLabels: Record<string, string> = { excellent: "Luxusní/novostavba", very_good: "Po rekonstrukci", good: "Průměrný", nothing_much: "Před rekonstrukcí", bad: "Neobyvatelný", new: "Novostavba" };
   const ownLabels: Record<string, string> = { private: "Osobní", cooperative: "Družstevní", council: "Státní/obecní" };
 
+  // ── Fetch static map image ──
+  let mapImage = null;
+  if (prop.lat && prop.lng) {
+    try {
+      const mapUrl = `https://api.mapy.cz/v1/static?lon=${prop.lng}&lat=${prop.lat}&zoom=15&width=500&height=200&marker=true&apikey=${process.env.NEXT_PUBLIC_MAPY_API_KEY || ""}`;
+      const mapResp = await fetch(mapUrl, { signal: AbortSignal.timeout(8000) });
+      if (mapResp.ok) {
+        const mapBuf = Buffer.from(await mapResp.arrayBuffer());
+        if (mapBuf.length > 1000) {
+          mapImage = await pdfDoc.embedPng(mapBuf).catch(() => null);
+          if (!mapImage) mapImage = await pdfDoc.embedJpg(mapBuf).catch(() => null);
+        }
+      }
+    } catch { /* map optional */ }
+  }
+
+  // ── Price scale visualization helper ──
+  const drawPriceScale = (pg: typeof page2, x: number, yy: number, w: number) => {
+    const minP = val.min_price || 0;
+    const maxP = val.max_price || 1;
+    const avgP = val.avg_price || 0;
+    const rMin = (val.range_price || [0, 0])[0];
+    const rMax = (val.range_price || [0, 0])[1];
+    if (!minP || !maxP) return yy;
+
+    const barH = 14;
+    const totalRange = maxP - minP;
+
+    // Full range bar (light)
+    pg.drawRectangle({ x, y: yy, width: w, height: barH, color: rgb(0.92, 0.93, 0.94) });
+
+    // Percentile range (medium)
+    const pctStart = ((rMin - minP) / totalRange) * w;
+    const pctEnd = ((rMax - minP) / totalRange) * w;
+    pg.drawRectangle({ x: x + pctStart, y: yy, width: Math.max(pctEnd - pctStart, 4), height: barH, color: rgb(1, 0.86, 0.4) });
+
+    // Average marker (triangle/line)
+    const avgX = x + ((avgP - minP) / totalRange) * w;
+    pg.drawRectangle({ x: avgX - 1.5, y: yy - 2, width: 3, height: barH + 4, color: rgb(0.93, 0.26, 0.14) });
+
+    // Labels
+    pg.drawText(fmtP(minP), { x, y: yy - 13, size: 7, font, color: BRAND.textMuted });
+    pg.drawText(fmtP(avgP), { x: avgX - 20, y: yy + barH + 4, size: 7.5, font: fontBold, color: rgb(0.93, 0.26, 0.14) });
+    drawRight(pg, fmtP(maxP), x + w, yy - 13, font, 7, BRAND.textMuted);
+
+    // Legend
+    pg.drawRectangle({ x, y: yy - 26, width: 10, height: 6, color: rgb(0.92, 0.93, 0.94) });
+    pg.drawText("Min–Max", { x: x + 14, y: yy - 25, size: 6.5, font, color: BRAND.textLight });
+    pg.drawRectangle({ x: x + 70, y: yy - 26, width: 10, height: 6, color: rgb(1, 0.86, 0.4) });
+    pg.drawText("25.–75. percentil", { x: x + 84, y: yy - 25, size: 6.5, font, color: BRAND.textLight });
+    pg.drawRectangle({ x: x + 175, y: yy - 26, width: 3, height: 6, color: rgb(0.93, 0.26, 0.14) });
+    pg.drawText("Průměr", { x: x + 182, y: yy - 25, size: 6.5, font, color: BRAND.textLight });
+
+    return yy - 36;
+  };
+
   // Helper functions
   type FontType = typeof font;
   const drawRight = (pg: typeof page, text: string, x: number, yy: number, f: FontType, s: number, c: typeof BRAND.text) => {
@@ -333,6 +389,15 @@ async function generatePDF(data: any): Promise<Buffer> {
   }
 
   y -= 12;
+
+  // ── MAP IMAGE ──
+  if (mapImage && y > 220) {
+    const mapW = CW;
+    const mapH = Math.min(mapW * (200 / 500), 160);
+    page.drawRectangle({ x: ML, y: y - mapH - 2, width: mapW, height: mapH + 4, color: BRAND.border }); // border
+    page.drawImage(mapImage, { x: ML + 2, y: y - mapH, width: mapW - 4, height: mapH });
+    y -= mapH + 12;
+  }
 
   // ── VALUATION BOX ──
   const vBoxH = 110;
@@ -439,6 +504,45 @@ async function generatePDF(data: any): Promise<Buffer> {
 
   // Header stripe
   page2.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: BRAND.accent });
+
+  // ── PRICE SCALE VISUALIZATION ──
+  page2.drawText("Cenová škála", { x: ML, y, size: 12, font: fontBold, color: BRAND.text }); y -= 8;
+  page2.drawRectangle({ x: ML, y, width: 40, height: 2, color: BRAND.accent }); y -= 18;
+  y = drawPriceScale(page2, ML, y, CW);
+  y -= 15;
+
+  // ── PRICE PER M2 SCALE ──
+  if (val.min_price_m2 && val.max_price_m2) {
+    page2.drawText("Cena za m² — srovnání", { x: ML, y, size: 10, font: fontBold, color: BRAND.text }); y -= 16;
+
+    const m2Min = val.min_price_m2;
+    const m2Max = val.max_price_m2;
+    const m2Avg = val.avg_price_m2;
+    const m2Range = m2Max - m2Min || 1;
+    const barW = CW; const barH = 10;
+
+    page2.drawRectangle({ x: ML, y, width: barW, height: barH, color: rgb(0.92, 0.93, 0.94) });
+
+    // Range band
+    const rm2 = val.range_price_m2 || [0, 0];
+    if (rm2[0] && rm2[1]) {
+      const s = ((rm2[0] - m2Min) / m2Range) * barW;
+      const e = ((rm2[1] - m2Min) / m2Range) * barW;
+      page2.drawRectangle({ x: ML + s, y, width: Math.max(e - s, 4), height: barH, color: rgb(0.6, 0.85, 0.65) });
+    }
+
+    // Average marker
+    const avgX = ML + ((m2Avg - m2Min) / m2Range) * barW;
+    page2.drawRectangle({ x: avgX - 1.5, y: y - 2, width: 3, height: barH + 4, color: rgb(0.13, 0.55, 0.28) });
+
+    page2.drawText(fmtPm2(m2Min), { x: ML, y: y - 14, size: 7, font, color: BRAND.textMuted });
+    page2.drawText(fmtPm2(m2Avg), { x: avgX - 25, y: y + barH + 4, size: 7.5, font: fontBold, color: rgb(0.13, 0.55, 0.28) });
+    drawRight(page2, fmtPm2(m2Max), ML + barW, y - 14, font, 7, BRAND.textMuted);
+
+    y -= 32;
+  }
+
+  y -= 10;
 
   // AI Commentary
   if (data.ai_commentary) {
