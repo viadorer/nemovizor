@@ -248,7 +248,7 @@ export default function ValuationPage() {
   function canProceed(): boolean {
     switch (stepId) {
       case 0: return form.propertyType !== null;
-      case 1: return form.city.length > 0;
+      case 1: return form.lat > 0 && form.lng > 0;
       case 2: return form.disposition.length > 0;
       case 3: return form.area.length > 0;
       case 4: return form.condition.length > 0;
@@ -470,35 +470,25 @@ export default function ValuationPage() {
               <div className="valuation-step">
                 <h2 className="valuation-step-title">{t.valuation.whereIsProperty}</h2>
                 <div className="valuation-field">
-                  <label>{t.valuation.cityLabel}</label>
-                  <select
-                    className="valuation-input"
-                    value={form.city}
-                    onChange={(e) => updateForm({ city: e.target.value })}
-                  >
-                    <option value="">{t.valuation.selectCity}</option>
-                    {cities.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="valuation-field">
-                  <label>{t.valuation.addressOptional}</label>
+                  <label>Adresa nemovitosti</label>
                   <LocationSearch
-                    placeholder={t.valuation.startTypingAddress}
+                    placeholder="Zadejte ulici, město nebo adresu..."
                     initialValue={form.address}
                     onSelect={(item) => {
                       updateForm({
                         address: item.name + (item.location ? `, ${item.location}` : ""),
+                        city: item.city || item.district || "",
                         lat: item.lat || 0,
                         lng: item.lon || 0,
                       });
-                      if (item.city) {
-                        const matchedCity = cities.find((c) => c === item.city);
-                        if (matchedCity) updateForm({ city: matchedCity });
-                      }
                     }}
                   />
+                  {form.address && form.lat > 0 && (
+                    <div style={{ marginTop: 8, fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                      {form.city && <span>{form.city} · </span>}
+                      <span>GPS: {form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
