@@ -61,6 +61,7 @@ type FormData = {
   features: string[];
   ownership: string;
   energyRating: string;
+  houseType: string;
   landType: string;
   name: string;
   lastName: string;
@@ -203,6 +204,7 @@ export default function ValuationPage() {
     features: [],
     ownership: "",
     energyRating: "",
+    houseType: "family_house",
     landType: "",
     name: "",
     lastName: "",
@@ -323,7 +325,7 @@ export default function ValuationPage() {
           localType: form.disposition || undefined,
           ownership: "private",
           landType: landTypeMap[form.landType] || form.landType || undefined,
-          houseType: form.propertyType === "house" ? "family_house" : undefined,
+          houseType: form.propertyType === "house" ? (form.houseType || "family_house") : undefined,
           floor: form.floor ? Number(form.floor) : undefined,
           totalFloors: form.totalFloors ? Number(form.totalFloors) : undefined,
           elevator: form.features.includes("elevator"),
@@ -711,19 +713,28 @@ export default function ValuationPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="valuation-field">
-                      <label>{t.valuation.ownershipType}</label>
-                      <select
-                        className="valuation-input"
-                        value={form.ownership}
-                        onChange={(e) => updateForm({ ownership: e.target.value })}
-                      >
-                        <option value="">{t.valuation.selectOption}</option>
-                        {ownershipOptions.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {form.propertyType === "house" && (
+                      <div className="valuation-field">
+                        <label>Typ domu</label>
+                        <div className="valuation-disposition-grid">
+                          {[
+                            { value: "family_house", label: "Rodinný dům" },
+                            { value: "villa", label: "Vila" },
+                            { value: "cottage", label: "Chalupa" },
+                            { value: "hut", label: "Chata" },
+                            { value: "other", label: "Jiný" },
+                          ].map((ht) => (
+                            <button
+                              key={ht.value}
+                              className={`valuation-disposition-card ${form.houseType === ht.value ? "valuation-disposition-card--selected" : ""}`}
+                              onClick={() => updateForm({ houseType: ht.value })}
+                            >
+                              {ht.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="valuation-field">
                       <label>{t.valuation.energyLabel}</label>
                       <select
