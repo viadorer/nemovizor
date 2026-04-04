@@ -372,27 +372,35 @@ export default function ValuationPage() {
                 </p>
 
                 {/* Detailní analýza CTA */}
-                <div style={{ marginTop: 32, padding: "24px 28px", background: "var(--bg-card)", borderRadius: 14, border: "1px solid var(--border)", textAlign: "center", maxWidth: 460, marginLeft: "auto", marginRight: "auto" }}>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 8 }}>
-                    Chcete detailnější analýzu?
+                <div style={{ marginTop: 32, padding: "28px 28px", background: "var(--bg-card)", borderRadius: 14, border: "1px solid var(--border)", maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 12, textAlign: "center" }}>
+                    Detailní posouzení nemovitosti
                   </div>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 20, lineHeight: 1.6 }}>
-                    Profesionální PDF report s AI komentářem, katastrálními daty,
-                    porovnáním s okolím a investičním doporučením. Budete kontaktováni
-                    naším odborníkem pro upřesnění.
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16, lineHeight: 1.6, textAlign: "center" }}>
+                    Na rozdíl od orientačního odhadu zahrnuje detailní posouzení
+                    individuální přístup odborníka a komplexní analýzu:
                   </p>
-                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                  <ul style={{ color: "var(--text)", fontSize: "0.85rem", lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
+                    <li>Osobní konzultace s odhadcem — upřesnění stavu a specifik nemovitosti</li>
+                    <li>Porovnání s realizovanými prodeji v okolí (comparable sales)</li>
+                    <li>Katastrální data a právní prověrka vlastnictví</li>
+                    <li>Cenový vývoj v lokalitě a investiční doporučení</li>
+                    <li>AI analýza s komentářem k pozitivům i rizikům</li>
+                    <li>Profesionální PDF report ke stažení</li>
+                  </ul>
+                  <div style={{ textAlign: "center" }}>
                     <a
-                      href={`mailto:info@nemovizor.cz?subject=Detailní ocenění nemovitosti&body=Dobrý den, mám zájem o detailní analýzu ocenění nemovitosti. Email: ${form.email}, Adresa: ${form.address || ""}`}
+                      href={`mailto:info@nemovizor.cz?subject=Detailní posouzení nemovitosti&body=Dobrý den,%0A%0Amám zájem o detailní posouzení nemovitosti.%0A%0AEmail: ${form.email}%0AAdresa: ${form.address || ""}%0AMěsto: ${form.city || ""}%0A%0ADěkuji`}
                       className="valuation-btn valuation-btn--primary"
                       style={{ textDecoration: "none", display: "inline-block" }}
                     >
-                      Objednat analýzu — 99 Kč
+                      Objednat posouzení — 99 Kč
                     </a>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.78rem", marginTop: 12, lineHeight: 1.5 }}>
+                      Po objednávce vás bude kontaktovat náš odborník
+                      pro upřesnění detailů. Nebo volejte +420 774 052 232.
+                    </p>
                   </div>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginTop: 12 }}>
-                    Nebo volejte +420 774 052 232
-                  </p>
                 </div>
 
                 <Link href="/nabidky" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", marginTop: 24, textDecoration: "none" }}>
