@@ -34,6 +34,39 @@ export async function POST(req: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const meta = session.metadata || {};
+
+    // ── Valuation report payment ──
+    if (meta.type === "valuation_report") {
+      const valuationId = meta.valuation_id;
+      if (valuationId) {
+        console.log(`[stripe webhook] Valuation report paid: ${valuationId}`);
+        // Trigger PDF generation
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nemovizor.vercel.app";
+          await fetch(`${baseUrl}/api/valuation/report`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ valuationId, skipPayment: true }),
+          });
+        } catch (e) {
+          console.error("[stripe webhook] Report generation error:", e);
+        }
+        // Mark as paid
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const db = getSupabase() as any;
+        if (db) {
+          await db.from("valuation_reports").update({
+            paid: true,
+            amount_paid: 99,
+            payment_method: "stripe",
+            payment_ref: session.id,
+          }).eq("id", valuationId).catch(() => {});
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    // ── Wallet topup payment ──
     const userId = meta.user_id;
     const credits = parseInt(meta.credits || "0", 10);
     const currency = meta.currency || "czk";

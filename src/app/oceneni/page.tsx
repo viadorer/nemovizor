@@ -10,6 +10,7 @@ import { getUniqueCities } from "@/lib/api";
 import { useT } from "@/i18n/provider";
 import { track } from "@/lib/analytics";
 import { brand } from "@/brands";
+import { useAuth } from "@/components/auth-provider";
 
 const ALL_STEPS = [
   { id: 0, key: "propertyType" },
@@ -79,6 +80,7 @@ function getVisibleSteps(type: FormData["propertyType"]): number[] {
 
 export default function ValuationPage() {
   const t = useT();
+  const { user } = useAuth();
 
   const propertyTypes = useMemo(() => [
     {
@@ -404,32 +406,72 @@ export default function ValuationPage() {
                       <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginBottom: 16, lineHeight: 1.5 }}>
                         AI komentář, katastrální data, porovnání s okolím, investiční doporučení
                       </p>
-                      <button
-                        className="valuation-btn valuation-btn--primary"
-                        disabled={reportLoading}
-                        onClick={async () => {
-                          setReportLoading(true);
-                          try {
-                            const res = await fetch("/api/valuation/report", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ valuationId: lastValuationId, skipPayment: true }),
-                            });
-                            const data = await res.json();
-                            if (data.pdf_url) {
-                              setReportPdfUrl(data.pdf_url);
-                              window.open(data.pdf_url, "_blank");
-                            }
-                          } catch { /* ignore */ }
-                          setReportLoading(false);
-                        }}
-                      >
-                        {reportLoading ? "Generuji report..." : reportPdfUrl ? "Stáhnout PDF" : "Vygenerovat PDF report (50 kr)"}
-                      </button>
-                      {reportPdfUrl && (
-                        <a href={reportPdfUrl} target="_blank" rel="noopener" style={{ display: "block", marginTop: 8, fontSize: "0.82rem", color: "var(--color-accent)" }}>
-                          Otevřít PDF
+
+                      {reportPdfUrl ? (
+                        <a href={reportPdfUrl} target="_blank" rel="noopener" className="valuation-btn valuation-btn--primary" style={{ display: "inline-block", textDecoration: "none" }}>
+                          Stáhnout PDF report
                         </a>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                          {/* Varianta 1: Peněženka (přihlášený) */}
+                          {user && (
+                            <button
+                              className="valuation-btn valuation-btn--primary"
+                              disabled={reportLoading}
+                              onClick={async () => {
+                                setReportLoading(true);
+                                try {
+                                  const res = await fetch("/api/valuation/report", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ valuationId: lastValuationId, userId: user.id }),
+                                  });
+                                  const data = await res.json();
+                                  if (data.pdf_url) {
+                                    setReportPdfUrl(data.pdf_url);
+                                    window.open(data.pdf_url, "_blank");
+                                  } else if (data.error?.includes("kreditů")) {
+                                    // Nedostatek kreditů — nabídnout Stripe
+                                    if (confirm(`Nedostatek kreditů (${data.balance} kr). Zaplatit 99 Kč kartou?`)) {
+                                      const stripeRes = await fetch("/api/valuation/checkout", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ valuationId: lastValuationId, email: form.email }),
+                                      });
+                                      const stripeData = await stripeRes.json();
+                                      if (stripeData.url) window.location.href = stripeData.url;
+                                    }
+                                  }
+                                } catch { /* ignore */ }
+                                setReportLoading(false);
+                              }}
+                            >
+                              {reportLoading ? "Generuji..." : "Získat za 50 kr"}
+                            </button>
+                          )}
+
+                          {/* Varianta 2: Stripe (vždy dostupná) */}
+                          <button
+                            className="valuation-btn"
+                            disabled={reportLoading}
+                            style={{ border: "1px solid var(--border)", background: "var(--bg)" }}
+                            onClick={async () => {
+                              setReportLoading(true);
+                              try {
+                                const res = await fetch("/api/valuation/checkout", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ valuationId: lastValuationId, email: form.email }),
+                                });
+                                const data = await res.json();
+                                if (data.url) window.location.href = data.url;
+                              } catch { /* ignore */ }
+                              setReportLoading(false);
+                            }}
+                          >
+                            {reportLoading ? "Připravuji..." : "Zaplatit 99 Kč kartou"}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </>
