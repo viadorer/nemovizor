@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
     // ── 3. Generate AI commentary ──
     const valuation = report.valuo_response || {};
     const params = report.property_params || {};
-    const geminiText = await generateGeminiCommentary(params, valuation);
+    const cadastreRaw = report.cadastre_data || {};
+    const geminiText = await generateGeminiCommentary(params, valuation, cadastreRaw);
 
     // ── 4. Build report_data ──
     const v = (k: string) => valuation[k] ?? valuation[k.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase())] ?? 0;
@@ -175,32 +176,81 @@ export async function POST(req: NextRequest) {
 async function generateGeminiCommentary(
   params: Record<string, unknown>,
   valuation: Record<string, unknown>,
+  cadastre?: Record<string, unknown>,
 ): Promise<string> {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) return "AI komentář není k dispozici.";
 
-  const avgPrice = Number(valuation.avg_price ?? valuation.avgPrice ?? 0);
-  const avgPriceM2 = Number(valuation.avg_price_m2 ?? valuation.avgPriceM2 ?? 0);
-  const minPrice = Number(valuation.min_price ?? valuation.minPrice ?? 0);
-  const maxPrice = Number(valuation.max_price ?? valuation.maxPrice ?? 0);
-
+  const n = (k: string) => Number(valuation[k] ?? valuation[k.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase())] ?? 0);
   const typeMap: Record<string, string> = { flat: "byt", house: "dům", land: "pozemek" };
-  const prompt = `Jsi profesionální odhadce nemovitostí v České republice. Napiš krátký, věcný a profesionální komentář k ocenění nemovitosti v češtině (max 200 slov). Nepoužívej emotikony.
+  const condMap: Record<string, string> = { excellent: "luxusní/novostavba", very_good: "po kompletní rekonstrukci", good: "průměrný/dobrý", nothing_much: "před rekonstrukcí", bad: "neobyvatelný", new: "novostavba" };
+  const ownMap: Record<string, string> = { private: "osobní", cooperative: "družstevní", council: "státní/obecní" };
 
-Údaje o nemovitosti:
-- Typ: ${typeMap[String(params.propertyType)] || params.propertyType}
+  const cad = cadastre || {};
+  const building = (cad.building || {}) as Record<string, unknown>;
+  const completionYear = building.completionDate ? new Date(String(building.completionDate)).getFullYear() : null;
+  const buildingAge = completionYear ? new Date().getFullYear() - completionYear : null;
+
+  const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro koncového klienta (vlastníka), který zvažuje prodej. Piš v češtině, formálně ale srozumitelně. Nepoužívej emotikony ani markdown formátování.
+
+NEMOVITOST:
+- Typ: ${typeMap[String(params.propertyType)] || String(params.propertyType)}
 - Adresa: ${params.address || "neuvedena"}
-- Město: ${params.city || "neuvedeno"}
+- Město/lokalita: ${params.city || "neuvedeno"}
 - Dispozice: ${params.localType || params.disposition || "neuvedena"}
-- Plocha: ${params.floorArea || "neuvedena"} m²
-- Stav: ${params.rating || params.condition || "neuvedeno"}
+- Užitná plocha: ${params.floorArea || "neuvedena"} m²
+- Stav nemovitosti: ${condMap[String(params.rating)] || condMap[String(params.condition)] || String(params.rating || params.condition || "neuvedeno")}
+- Vlastnictví: ${ownMap[String(params.ownership)] || String(params.ownership || "neuvedeno")}
+- Energetický štítek: ${params.energyPerformance || "neuvedeno"}
+${params.floor ? `- Patro: ${params.floor}. z ${params.totalFloors || "?"}` : ""}
 
-Výsledek ocenění:
-- Odhadovaná cena: ${avgPrice.toLocaleString("cs")} Kč
-- Rozsah: ${minPrice.toLocaleString("cs")} – ${maxPrice.toLocaleString("cs")} Kč
-- Cena za m²: ${avgPriceM2.toLocaleString("cs")} Kč/m²
+VÝSLEDEK OCENĚNÍ (z dat realizovaných prodejů):
+- Odhadovaná průměrná cena: ${n("avg_price").toLocaleString("cs")} Kč
+- Cenový rozsah (min–max): ${n("min_price").toLocaleString("cs")} – ${n("max_price").toLocaleString("cs")} Kč
+- Cenové pásmo (25.–75. percentil): ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč
+- Průměrná cena za m²: ${n("avg_price_m2").toLocaleString("cs")} Kč/m²
+- Rozsah ceny za m²: ${n("min_price_m2").toLocaleString("cs")} – ${n("max_price_m2").toLocaleString("cs")} Kč/m²
+- Směrodatná odchylka: ${n("std_price_m2").toLocaleString("cs")} Kč/m²
+- Kvalita odhadu (skóre podobnosti): ${Math.round(n("avg_score") * 100)}%
+- Počet porovnaných nemovitostí: ${n("keep_ids_count")} ks
+- Průměrná vzdálenost porovnávaných: ${Math.round(n("avg_distance"))} m
+- Průměrné stáří dat: ${Math.round(n("avg_age"))} dní
+- Průměrná doba inzerce v okolí: ${Math.round(n("avg_duration"))} dní
 
-Struktura: 1) Zhodnocení ceny ve vztahu k lokalitě 2) Faktory ovlivňující cenu 3) Doporučení`;
+${buildingAge ? `ÚDAJE Z KATASTRU (RÚIAN):
+- Katastrální území: ${cad.cadastralArea || "neuvedeno"}
+- Rok dokončení budovy: ${completionYear}
+- Stáří budovy: ${buildingAge} let
+- Počet podlaží: ${building.floors || "neuvedeno"}
+- Počet bytů v budově: ${building.units || "neuvedeno"}
+- Konstrukce: ${building.construction || "neuvedeno"}` : ""}
+
+POŽADOVANÁ STRUKTURA KOMENTÁŘE (min. 300 slov):
+
+1. ÚVODNÍ ZHODNOCENÍ
+Shrň výsledek ocenění ve vztahu k lokalitě a aktuálnímu trhu. Uveď konkrétní čísla.
+
+2. ANALÝZA LOKALITY
+Zhodnoť lokalitu ${params.city || ""} z hlediska atraktivity pro bydlení — dopravní dostupnost, občanská vybavenost, charakter okolí. Buď konkrétní pro danou adresu.
+
+3. FAKTORY OVLIVŇUJÍCÍ CENU
+Rozeber pozitivní a negativní faktory:
+- Pozitivní: co zvyšuje hodnotu (lokalita, dispozice, stav, plocha...)
+- Negativní/rizika: co může snižovat hodnotu (stáří budovy, energetická náročnost, stav...)
+${buildingAge ? `- Zohledni stáří budovy (${buildingAge} let) a konstrukci (${building.construction || "neuvedeno"})` : ""}
+${params.energyPerformance ? `- Zohledni energetický štítek ${params.energyPerformance} a jeho dopad na provozní náklady` : ""}
+
+4. TRŽNÍ KONTEXT
+Jak se nemovitost umisťuje v kontextu trhu — průměrná doba inzerce ${Math.round(n("avg_duration"))} dní naznačuje jakou poptávku/nabídku. Zhodnoť jestli je aktuální doba příznivá pro prodej.
+
+5. DOPORUČENÍ PRO PRODÁVAJÍCÍHO
+Konkrétní doporučení:
+- Doporučená nabídková cena (v rámci rozsahu)
+- Tipy pro maximalizaci prodejní ceny (co zlepšit, jak prezentovat)
+- Odhad doby prodeje
+- Zda doporučuješ spolupráci s realitní kanceláří`;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
   try {
     const { GoogleGenAI } = await import("@google/genai");
