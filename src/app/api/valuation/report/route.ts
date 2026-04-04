@@ -271,8 +271,30 @@ async function generatePDF(data: any): Promise<Buffer> {
   const condLabels: Record<string, string> = { excellent: "Luxusní/novostavba", very_good: "Po rekonstrukci", good: "Průměrný", nothing_much: "Před rekonstrukcí", bad: "Neobyvatelný", new: "Novostavba" };
   const ownLabels: Record<string, string> = { private: "Osobní", cooperative: "Družstevní", council: "Státní/obecní" };
 
-  // Map image intentionally omitted — static map APIs require separate keys
-  // GPS coordinates are shown in property info section instead
+  // ── Fetch static map + panorama from Mapy.cz ──
+  let mapImage = null;
+  let panoImage = null;
+  if (prop.lat && prop.lng) {
+    const mapApiKey = process.env.NEXT_PUBLIC_MAPY_API_KEY || "";
+    // Static map
+    try {
+      const mapUrl = `https://api.mapy.com/v1/static/map?lon=${prop.lng}&lat=${prop.lat}&zoom=15&width=500&height=200&mapset=basic&apikey=${mapApiKey}`;
+      const mapResp = await fetch(mapUrl, { signal: AbortSignal.timeout(10000) });
+      if (mapResp.ok) {
+        const mapBuf = Buffer.from(await mapResp.arrayBuffer());
+        if (mapBuf.length > 1000) mapImage = await pdfDoc.embedPng(mapBuf).catch(() => null);
+      }
+    } catch { /* */ }
+    // Static panorama (streetview)
+    try {
+      const panoUrl = `https://api.mapy.cz/v1/static/pano?lon=${prop.lng}&lat=${prop.lat}&width=500&height=200&yaw=auto&apikey=${mapApiKey}`;
+      const panoResp = await fetch(panoUrl, { signal: AbortSignal.timeout(10000) });
+      if (panoResp.ok) {
+        const panoBuf = Buffer.from(await panoResp.arrayBuffer());
+        if (panoBuf.length > 1000) panoImage = await pdfDoc.embedJpg(panoBuf).catch(() => null);
+      }
+    } catch { /* */ }
+  }
 
   // ── Price scale visualization helper ──
   const drawPriceScale = (pg: typeof page2, x: number, yy: number, w: number) => {
@@ -376,6 +398,35 @@ async function generatePDF(data: any): Promise<Buffer> {
   }
 
   y -= 12;
+
+  // ── MAP + PANORAMA ──
+  const hasImages = mapImage || panoImage;
+  if (hasImages && y > 200) {
+    const imgW = mapImage && panoImage ? (CW - 6) / 2 : CW; // side by side or full width
+    const imgH = Math.min(imgW * (200 / 500), 140);
+
+    if (mapImage && panoImage) {
+      // Side by side: map left, panorama right
+      page.drawText("Mapa", { x: ML, y: y + 2, size: 7.5, font, color: BRAND.textMuted });
+      page.drawText("Pohled z ulice", { x: ML + imgW + 8, y: y + 2, size: 7.5, font, color: BRAND.textMuted });
+      y -= 2;
+      page.drawRectangle({ x: ML - 1, y: y - imgH - 1, width: imgW + 2, height: imgH + 2, color: BRAND.border });
+      page.drawImage(mapImage, { x: ML, y: y - imgH, width: imgW, height: imgH });
+      page.drawRectangle({ x: ML + imgW + 5, y: y - imgH - 1, width: imgW + 2, height: imgH + 2, color: BRAND.border });
+      page.drawImage(panoImage, { x: ML + imgW + 6, y: y - imgH, width: imgW, height: imgH });
+      y -= imgH + 8;
+    } else if (mapImage) {
+      page.drawText("Mapa lokality", { x: ML, y: y + 2, size: 7.5, font, color: BRAND.textMuted }); y -= 2;
+      page.drawRectangle({ x: ML - 1, y: y - imgH - 1, width: imgW + 2, height: imgH + 2, color: BRAND.border });
+      page.drawImage(mapImage, { x: ML, y: y - imgH, width: imgW, height: imgH });
+      y -= imgH + 8;
+    } else if (panoImage) {
+      page.drawText("Pohled z ulice", { x: ML, y: y + 2, size: 7.5, font, color: BRAND.textMuted }); y -= 2;
+      page.drawRectangle({ x: ML - 1, y: y - imgH - 1, width: imgW + 2, height: imgH + 2, color: BRAND.border });
+      page.drawImage(panoImage, { x: ML, y: y - imgH, width: imgW, height: imgH });
+      y -= imgH + 8;
+    }
+  }
 
   // ── VALUATION BOX ──
   const vBoxH = 110;
@@ -546,13 +597,13 @@ async function generatePDF(data: any): Promise<Buffer> {
     page2.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: ctaH, color: rgb(0.98, 0.96, 0.9) });
     page2.drawRectangle({ x: ML, y: y - ctaH, width: CW, height: 3, color: BRAND.accent });
 
-    page2.drawText("Chcete přesnější ocenění?", { x: ML + 16, y: y - 18, size: 13, font: fontBold, color: BRAND.text });
-    page2.drawText("Nabízíme bezplatné posouzení nemovitosti odborníkem zdarma a bez závazků.", { x: ML + 16, y: y - 34, size: 9.5, font, color: BRAND.text });
+    page2.drawText("Chcete přesnější posouzení zdarma?", { x: ML + 16, y: y - 18, size: 13, font: fontBold, color: BRAND.text });
+    page2.drawText("Nabízíme bezplatné osobní posouzení nemovitosti odborníkem — bez závazků.", { x: ML + 16, y: y - 34, size: 9.5, font, color: BRAND.text });
 
     const ctaLines = [
+      "Osobní posouzení odborníkem zdarma v lokalitách: Praha, Plzeň, Beroun",
       "Individuální přístup s ohledem na specifika vaší nemovitosti",
-      "Zohlednění stavu, lokality a aktuální situace na trhu",
-      "Doporučení optimální prodejní strategie",
+      "Doporučení optimální prodejní strategie a stanovení ceny",
     ];
     let ctaY = y - 50;
     for (const line of ctaLines) {
