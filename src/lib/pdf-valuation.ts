@@ -238,39 +238,37 @@ export async function generateValuationPDF(data: any): Promise<Buffer> {
     }
   }
 
-  // ═══════════════════════════════════════════════════
-  // PAGE 3: Price scales + AI + CTA
-  // ═══════════════════════════════════════════════════
-  const p3 = doc.addPage([W, H]);
-  p3.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: B.accent });
-  y = H - 50;
+  // ── Price scales (on page 2, after cadastre) ──
+  y -= 10;
+  p2.drawText("Cenová škála", { x: ML, y, size: 12, font: fb, color: B.text }); y -= 6;
+  p2.drawRectangle({ x: ML, y, width: 40, height: 2, color: B.accent }); y -= 22;
+  y = priceScale(p2, ML, y, CW, val.min_price, val.max_price, val.avg_price, (val.range_price || [0, 0])[0], (val.range_price || [0, 0])[1], f, fb);
+  y -= 20;
 
-  // Price scale
-  p3.drawText("Cenová škála", { x: ML, y, size: 13, font: fb, color: B.text }); y -= 6;
-  p3.drawRectangle({ x: ML, y, width: 40, height: 2, color: B.accent }); y -= 22;
-  y = priceScale(p3, ML, y, CW, val.min_price, val.max_price, val.avg_price, (val.range_price || [0, 0])[0], (val.range_price || [0, 0])[1], f, fb);
-  y -= 25;
-
-  // Price per m2 scale
   if (val.min_price_m2 && val.max_price_m2) {
-    p3.drawText("Cena za m² — srovnání", { x: ML, y, size: 11, font: fb, color: B.text }); y -= 20;
+    p2.drawText("Cena za m² — srovnání", { x: ML, y, size: 11, font: fb, color: B.text }); y -= 20;
     const m2R = val.max_price_m2 - val.min_price_m2 || 1;
-    p3.drawRectangle({ x: ML, y, width: CW, height: 12, color: rgb(0.92, 0.93, 0.94) });
+    p2.drawRectangle({ x: ML, y, width: CW, height: 12, color: rgb(0.92, 0.93, 0.94) });
     const rm = val.range_price_m2 || [0, 0];
     if (rm[0] && rm[1]) {
       const s = ((rm[0] - val.min_price_m2) / m2R) * CW;
       const e = ((rm[1] - val.min_price_m2) / m2R) * CW;
-      p3.drawRectangle({ x: ML + s, y, width: Math.max(e - s, 4), height: 12, color: rgb(0.6, 0.85, 0.65) });
+      p2.drawRectangle({ x: ML + s, y, width: Math.max(e - s, 4), height: 12, color: rgb(0.6, 0.85, 0.65) });
     }
     const ax = ML + ((val.avg_price_m2 - val.min_price_m2) / m2R) * CW;
-    p3.drawRectangle({ x: ax - 1.5, y: y - 2, width: 3, height: 16, color: rgb(0.13, 0.55, 0.28) });
-    p3.drawText(fmtPm(val.min_price_m2), { x: ML, y: y - 16, size: 7, font: f, color: B.light });
-    p3.drawText(fmtPm(val.avg_price_m2), { x: ax - 25, y: y + 16, size: 8, font: fb, color: rgb(0.13, 0.55, 0.28) });
-    drawR(p3, fmtPm(val.max_price_m2), MR, y - 16, f, 7, B.light);
+    p2.drawRectangle({ x: ax - 1.5, y: y - 2, width: 3, height: 16, color: rgb(0.13, 0.55, 0.28) });
+    p2.drawText(fmtPm(val.min_price_m2), { x: ML, y: y - 16, size: 7, font: f, color: B.light });
+    p2.drawText(fmtPm(val.avg_price_m2), { x: ax - 25, y: y + 16, size: 8, font: fb, color: rgb(0.13, 0.55, 0.28) });
+    drawR(p2, fmtPm(val.max_price_m2), MR, y - 16, f, 7, B.light);
     y -= 40;
   }
 
-  y -= 15;
+  // ═══════════════════════════════════════════════════
+  // PAGE 3: AI Commentary + CTA
+  // ═══════════════════════════════════════════════════
+  const p3 = doc.addPage([W, H]);
+  p3.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: B.accent });
+  y = H - 50;
 
   // AI Commentary
   if (data.ai_commentary) {
