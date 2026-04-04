@@ -256,7 +256,7 @@ async function generatePDF(data: any): Promise<Buffer> {
   const fontBold = await pdfDoc.embedFont(fontBoldBytes);
 
   let logoImage = null;
-  try { logoImage = await pdfDoc.embedPng(await fs.readFile(path.join(process.cwd(), "public/branding/logo-dark.png"))); } catch { /* */ }
+  try { logoImage = await pdfDoc.embedPng(await fs.readFile(path.join(process.cwd(), "public/branding/nemovizor_logo.png"))); } catch { /* */ }
 
   const W = 595; const H = 842; // A4
   const ML = 45; const MR = 550; const CW = MR - ML;
