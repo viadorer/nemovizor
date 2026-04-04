@@ -264,7 +264,7 @@ export default function ValuationPage() {
       case 5: return true; // optional
       case 6: return form.floor.length > 0;
       case 7: return true; // optional
-      case 8: return form.propertyType === "land" ? form.landType.length > 0 : form.ownership.length > 0;
+      case 8: return form.propertyType === "land" ? form.landType.length > 0 : form.propertyType === "house" ? form.houseType.length > 0 : true;
       case 9: return form.name.length > 0 && form.lastName.length > 0 && form.email.length > 0 && form.phone.length > 0 && form.consent;
       default: return false;
     }
@@ -737,16 +737,43 @@ export default function ValuationPage() {
                     )}
                     <div className="valuation-field">
                       <label>{t.valuation.energyLabel}</label>
-                      <select
-                        className="valuation-input"
-                        value={form.energyRating}
-                        onChange={(e) => updateForm({ energyRating: e.target.value })}
-                      >
-                        <option value="">{t.valuation.energyNotSet}</option>
-                        {energyRatings.map((r) => (
-                          <option key={r} value={r}>{r}</option>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button
+                          className={`valuation-disposition-card ${!form.energyRating ? "valuation-disposition-card--selected" : ""}`}
+                          onClick={() => updateForm({ energyRating: "" })}
+                          style={{ fontSize: "0.8rem", padding: "8px 12px" }}
+                        >
+                          Nevím
+                        </button>
+                        {([
+                          { label: "A", color: "#00a651" },
+                          { label: "B", color: "#50b848" },
+                          { label: "C", color: "#bdd630" },
+                          { label: "D", color: "#fff200" },
+                          { label: "E", color: "#fcb814" },
+                          { label: "F", color: "#f26522" },
+                          { label: "G", color: "#ed1c24" },
+                        ] as const).map((r) => (
+                          <button
+                            key={r.label}
+                            onClick={() => updateForm({ energyRating: r.label })}
+                            style={{
+                              padding: "8px 16px",
+                              borderRadius: 8,
+                              border: form.energyRating === r.label ? "2px solid var(--text)" : "2px solid transparent",
+                              background: r.color,
+                              color: ["D", "E"].includes(r.label) ? "#333" : "#fff",
+                              fontWeight: 700,
+                              fontSize: "0.9rem",
+                              cursor: "pointer",
+                              minWidth: 44,
+                              textAlign: "center" as const,
+                            }}
+                          >
+                            {r.label}
+                          </button>
                         ))}
-                      </select>
+                      </div>
                     </div>
                   </>
                 )}
