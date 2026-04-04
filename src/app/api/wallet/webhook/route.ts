@@ -52,15 +52,20 @@ export async function POST(req: NextRequest) {
           console.error("[stripe webhook] Report generation error:", e);
         }
         // Mark as paid
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const db = getSupabase() as any;
-        if (db) {
-          await db.from("valuation_reports").update({
-            paid: true,
-            amount_paid: 99,
-            payment_method: "stripe",
-            payment_ref: session.id,
-          }).eq("id", valuationId).catch(() => {});
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const db = getSupabase() as any;
+          if (db) {
+            const { error: upErr } = await db.from("valuation_reports").update({
+              paid: true,
+              amount_paid: 99,
+              payment_method: "stripe",
+              payment_ref: session.id,
+            }).eq("id", valuationId);
+            if (upErr) console.error("[stripe webhook] DB update error:", upErr.message);
+          }
+        } catch (dbErr) {
+          console.error("[stripe webhook] DB error:", dbErr);
         }
       }
       return NextResponse.json({ received: true });
