@@ -191,7 +191,15 @@ async function generateGeminiCommentary(
   const completionYear = building.completionDate ? new Date(String(building.completionDate)).getFullYear() : null;
   const buildingAge = completionYear ? new Date().getFullYear() - completionYear : null;
 
-  const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro koncového klienta (vlastníka), který zvažuje prodej. Piš v češtině, formálně ale srozumitelně. Nepoužívej emotikony ani markdown formátování.
+  const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro koncového klienta (vlastníka nemovitosti), který zvažuje prodej.
+
+DŮLEŽITÁ PRAVIDLA:
+- Piš v češtině, formálně ale srozumitelně pro laika
+- NEPOUŽÍVEJ emotikony, markdown, hvězdičky ani jiné formátování
+- NEVYMÝŠLEJ SI žádné informace — používej VÝHRADNĚ data uvedená níže
+- Pokud nemáš informaci, napiš "tato informace nebyla poskytnuta" — NIKDY si nevymýšlej
+- Všechna čísla a fakta musí odpovídat dodaným datům
+- Minimální délka: 800 slov (5 strukturovaných odstavců)
 
 NEMOVITOST:
 - Typ: ${typeMap[String(params.propertyType)] || String(params.propertyType)}
@@ -225,30 +233,35 @@ ${buildingAge ? `ÚDAJE Z KATASTRU (RÚIAN):
 - Počet bytů v budově: ${building.units || "neuvedeno"}
 - Konstrukce: ${building.construction || "neuvedeno"}` : ""}
 
-POŽADOVANÁ STRUKTURA KOMENTÁŘE (min. 300 slov):
+POŽADOVANÁ STRUKTURA KOMENTÁŘE (min. 800 slov, 5 odstavců):
 
-1. ÚVODNÍ ZHODNOCENÍ
-Shrň výsledek ocenění ve vztahu k lokalitě a aktuálnímu trhu. Uveď konkrétní čísla.
+1. ÚVODNÍ ZHODNOCENÍ (min. 150 slov)
+Shrň výsledek ocenění. Uveď konkrétní odhadovanou cenu, cenový rozsah a cenu za m². Porovnej s cenovým pásmem (25.–75. percentil). Vysvětli co znamená kvalita odhadu ${Math.round(n("avg_score") * 100)}% a že odhad je založen na ${n("keep_ids_count")} porovnatelných prodejích v okruhu ${n("distance")} m.
 
-2. ANALÝZA LOKALITY
-Zhodnoť lokalitu ${params.city || ""} z hlediska atraktivity pro bydlení — dopravní dostupnost, občanská vybavenost, charakter okolí. Buď konkrétní pro danou adresu.
+2. ANALÝZA NEMOVITOSTI A LOKALITY (min. 200 slov)
+Zhodnoť konkrétní parametry nemovitosti: dispozici ${params.localType || params.disposition || ""}, plochu ${params.floorArea || ""} m², stav "${condMap[String(params.rating)] || String(params.rating || "")}", vlastnictví, energetický štítek ${params.energyPerformance || "neuvedeno"}.
+${buildingAge ? `Budova byla dokončena v roce ${completionYear} (stáří ${buildingAge} let), má ${building.floors || "?"} podlaží a ${building.units || "?"} bytových jednotek. Konstrukce: ${building.construction || "neuvedeno"}. Zhodnoť dopad stáří a konstrukce na hodnotu a budoucí náklady.` : ""}
+Zhodnoť lokalitu "${params.city || ""}" — obecnou atraktivitu, dopravní dostupnost, charakter okolí. Používej POUZE informace, které vyplývají z dat (adresa, město). NEVYMÝŠLEJ si konkrétní školy, obchody ani zastávky, pokud je neznáš.
 
-3. FAKTORY OVLIVŇUJÍCÍ CENU
-Rozeber pozitivní a negativní faktory:
-- Pozitivní: co zvyšuje hodnotu (lokalita, dispozice, stav, plocha...)
-- Negativní/rizika: co může snižovat hodnotu (stáří budovy, energetická náročnost, stav...)
-${buildingAge ? `- Zohledni stáří budovy (${buildingAge} let) a konstrukci (${building.construction || "neuvedeno"})` : ""}
-${params.energyPerformance ? `- Zohledni energetický štítek ${params.energyPerformance} a jeho dopad na provozní náklady` : ""}
+3. CENOVÉ SROVNÁNÍ A TRŽNÍ KONTEXT (min. 200 slov)
+Cena za m² ${n("avg_price_m2").toLocaleString("cs")} Kč/m² — jak se řadí v rozsahu ${n("min_price_m2").toLocaleString("cs")} – ${n("max_price_m2").toLocaleString("cs")} Kč/m² (směrodatná odchylka ${n("std_price_m2").toLocaleString("cs")} Kč/m²).
+Průměrná doba inzerce v okolí je ${Math.round(n("avg_duration"))} dní — vysvětli co to znamená pro prodávajícího (rychlý/pomalý trh). Průměrné stáří porovnávaných dat je ${Math.round(n("avg_age"))} dní — zhodnoť aktuálnost odhadu.
+Porovnávané nemovitosti byly v průměrné vzdálenosti ${Math.round(n("avg_distance"))} m — zhodnoť relevanci porovnání.
 
-4. TRŽNÍ KONTEXT
-Jak se nemovitost umisťuje v kontextu trhu — průměrná doba inzerce ${Math.round(n("avg_duration"))} dní naznačuje jakou poptávku/nabídku. Zhodnoť jestli je aktuální doba příznivá pro prodej.
+4. POZITIVNÍ A NEGATIVNÍ FAKTORY (min. 150 slov)
+Rozděl na dvě části:
+POZITIVNÍ FAKTORY: co zvyšuje hodnotu (vycházej POUZE z dodaných dat — typ, plocha, dispozice, stav, lokalita, vlastnictví)
+RIZIKOVÉ FAKTORY: co může snižovat hodnotu nebo představovat riziko
+${buildingAge && buildingAge > 30 ? `- Stáří budovy ${buildingAge} let může znamenat vyšší náklady na údržbu` : ""}
+${params.energyPerformance && ["E", "F", "G"].includes(String(params.energyPerformance)) ? `- Energetický štítek ${params.energyPerformance} znamená vyšší provozní náklady — zvaž zateplení` : ""}
 
-5. DOPORUČENÍ PRO PRODÁVAJÍCÍHO
-Konkrétní doporučení:
-- Doporučená nabídková cena (v rámci rozsahu)
-- Tipy pro maximalizaci prodejní ceny (co zlepšit, jak prezentovat)
-- Odhad doby prodeje
-- Zda doporučuješ spolupráci s realitní kanceláří`;
+5. DOPORUČENÍ PRO VLASTNÍKA (min. 150 slov)
+Konkrétní a praktická doporučení:
+- Doporučená nabídková cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč a proč
+- Jak maximalizovat prodejní cenu (konkrétní tipy vycházející ze stavu nemovitosti)
+- Realistický odhad doby prodeje na základě průměrné doby inzerce ${Math.round(n("avg_duration"))} dní
+- Zda je aktuální doba vhodná pro prodej
+- Doporučení ohledně spolupráce s odborníkem`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
