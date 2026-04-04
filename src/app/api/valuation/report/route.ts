@@ -199,10 +199,22 @@ async function generateGeminiCommentary(
     other: "osoba, která se zajímá o hodnotu nemovitosti",
   };
   const clientContext = intentMap[String(params.intent)] || intentMap.other;
+  const firstName = String(params.name || "").trim();
+  const lastName = String(params.lastName || "").trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+  const salutation = lastName
+    ? `Vážený pane/paní ${lastName}`
+    : fullName
+    ? `Vážený/á ${fullName}`
+    : "Vážený kliente";
 
   const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro klienta: ${clientContext}.
 
+Klient: ${fullName || "neuvedeno"}
+Oslovení v textu: "${salutation}"
+
 DŮLEŽITÁ PRAVIDLA:
+- Začni komentář oslovením "${salutation},"
 - Piš v češtině, formálně ale srozumitelně pro laika
 - NEPOUŽÍVEJ emotikony, markdown, hvězdičky ani jiné formátování
 - NEVYMÝŠLEJ SI žádné informace — používej VÝHRADNĚ data uvedená níže
