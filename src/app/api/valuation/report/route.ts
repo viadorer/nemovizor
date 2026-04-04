@@ -191,7 +191,16 @@ async function generateGeminiCommentary(
   const completionYear = building.completionDate ? new Date(String(building.completionDate)).getFullYear() : null;
   const buildingAge = completionYear ? new Date().getFullYear() - completionYear : null;
 
-  const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro koncového klienta (vlastníka nemovitosti), který zvažuje prodej.
+  const intentMap: Record<string, string> = {
+    sell: "vlastník, který zvažuje prodej nemovitosti",
+    buy: "zájemce o koupi nemovitosti, který chce vědět zda je cena férová",
+    value_check: "vlastník, který chce znát aktuální tržní hodnotu svého majetku",
+    inheritance: "osoba řešící dědictví nebo majetkové vypořádání",
+    other: "osoba, která se zajímá o hodnotu nemovitosti",
+  };
+  const clientContext = intentMap[String(params.intent)] || intentMap.other;
+
+  const prompt = `Jsi certifikovaný odhadce nemovitostí v České republice s 20letou praxí. Připrav profesionální písemný komentář k ocenění nemovitosti pro klienta: ${clientContext}.
 
 DŮLEŽITÁ PRAVIDLA:
 - Piš v češtině, formálně ale srozumitelně pro laika
@@ -255,13 +264,25 @@ RIZIKOVÉ FAKTORY: co může snižovat hodnotu nebo představovat riziko
 ${buildingAge && buildingAge > 30 ? `- Stáří budovy ${buildingAge} let může znamenat vyšší náklady na údržbu` : ""}
 ${params.energyPerformance && ["E", "F", "G"].includes(String(params.energyPerformance)) ? `- Energetický štítek ${params.energyPerformance} znamená vyšší provozní náklady — zvaž zateplení` : ""}
 
-5. DOPORUČENÍ PRO VLASTNÍKA (min. 150 slov)
-Konkrétní a praktická doporučení:
-- Doporučená nabídková cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč a proč
+5. DOPORUČENÍ (min. 150 slov)
+Přizpůsob doporučení záměru klienta (${clientContext}):
+${String(params.intent) === "sell" ? `- Doporučená nabídková cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč a proč
 - Jak maximalizovat prodejní cenu (konkrétní tipy vycházející ze stavu nemovitosti)
 - Realistický odhad doby prodeje na základě průměrné doby inzerce ${Math.round(n("avg_duration"))} dní
 - Zda je aktuální doba vhodná pro prodej
-- Doporučení ohledně spolupráce s odborníkem`;
+- Doporučení ohledně spolupráce s realitní kanceláří` :
+String(params.intent) === "buy" ? `- Zhodnoť zda je požadovaná cena férová ve srovnání s odhadem
+- Na co si dát pozor při prohlídce (s ohledem na stav a stáří budovy)
+- Tipy pro vyjednávání o ceně — jaký je prostor pro slevu
+- Doporučení ohledně financování a dalších kroků` :
+String(params.intent) === "inheritance" ? `- Vysvětli význam ocenění pro účely dědického řízení
+- Doporuč další kroky (znalecký posudek pro soud/notáře)
+- Upozorni na daňové aspekty (daň z nabytí, příjem z prodeje)
+- Možnosti: ponechat, prodat, pronajmout — stručné zhodnocení` :
+`- Doporučená tržní cena v rámci cenového pásma ${(valuation.range_price as number[] || [0, 0])[0]?.toLocaleString("cs") || "?"} – ${(valuation.range_price as number[] || [0, 0])[1]?.toLocaleString("cs") || "?"} Kč
+- Jak tuto informaci využít pro další rozhodování
+- Zda doporučuješ nechat zpracovat znalecký posudek
+- Doporučení dalších kroků`}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 

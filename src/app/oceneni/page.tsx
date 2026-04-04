@@ -63,6 +63,7 @@ type FormData = {
   energyRating: string;
   houseType: string;
   landType: string;
+  intent: string;
   name: string;
   lastName: string;
   email: string;
@@ -206,6 +207,7 @@ export default function ValuationPage() {
     energyRating: "",
     houseType: "family_house",
     landType: "",
+    intent: "",
     name: "",
     lastName: "",
     email: "",
@@ -265,7 +267,7 @@ export default function ValuationPage() {
       case 6: return form.floor.length > 0;
       case 7: return true; // optional
       case 8: return form.propertyType === "land" ? form.landType.length > 0 : form.propertyType === "house" ? form.houseType.length > 0 : true;
-      case 9: return form.name.length > 0 && form.lastName.length > 0 && form.email.length > 0 && form.phone.length > 0 && form.consent;
+      case 9: return form.intent.length > 0 && form.name.length > 0 && form.lastName.length > 0 && form.email.length > 0 && form.phone.length > 0 && form.consent;
       default: return false;
     }
   }
@@ -340,6 +342,7 @@ export default function ValuationPage() {
           name: form.name,
           lastName: form.lastName,
           phone: form.phone,
+          intent: form.intent,
           userId: user?.id || null,
           address: form.address,
           city: form.city,
@@ -781,10 +784,32 @@ export default function ValuationPage() {
               </div>
             )}
 
-            {/* Step 10: Contact */}
+            {/* Step 10: Contact + Intent */}
             {stepId === 9 && (
               <div className="valuation-step">
                 <h2 className="valuation-step-title">{t.valuation.whereToSend}</h2>
+
+                <div className="valuation-field" style={{ marginBottom: 20 }}>
+                  <label style={{ fontWeight: 600, marginBottom: 8, display: "block" }}>Jaký je váš záměr?</label>
+                  <div className="valuation-disposition-grid">
+                    {[
+                      { value: "sell", label: "Chci prodat" },
+                      { value: "buy", label: "Zvažuji koupi" },
+                      { value: "value_check", label: "Chci znát hodnotu" },
+                      { value: "inheritance", label: "Dědictví / vypořádání" },
+                      { value: "other", label: "Jiný důvod" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        className={`valuation-disposition-card ${form.intent === opt.value ? "valuation-disposition-card--selected" : ""}`}
+                        onClick={() => updateForm({ intent: opt.value })}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div className="valuation-field">
                     <label>Jméno *</label>
