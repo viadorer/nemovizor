@@ -271,21 +271,8 @@ async function generatePDF(data: any): Promise<Buffer> {
   const condLabels: Record<string, string> = { excellent: "Luxusní/novostavba", very_good: "Po rekonstrukci", good: "Průměrný", nothing_much: "Před rekonstrukcí", bad: "Neobyvatelný", new: "Novostavba" };
   const ownLabels: Record<string, string> = { private: "Osobní", cooperative: "Družstevní", council: "Státní/obecní" };
 
-  // ── Fetch static map image ──
-  let mapImage = null;
-  if (prop.lat && prop.lng) {
-    try {
-      const mapUrl = `https://api.mapy.cz/v1/static?lon=${prop.lng}&lat=${prop.lat}&zoom=15&width=500&height=200&marker=true&apikey=${process.env.NEXT_PUBLIC_MAPY_API_KEY || ""}`;
-      const mapResp = await fetch(mapUrl, { signal: AbortSignal.timeout(8000) });
-      if (mapResp.ok) {
-        const mapBuf = Buffer.from(await mapResp.arrayBuffer());
-        if (mapBuf.length > 1000) {
-          mapImage = await pdfDoc.embedPng(mapBuf).catch(() => null);
-          if (!mapImage) mapImage = await pdfDoc.embedJpg(mapBuf).catch(() => null);
-        }
-      }
-    } catch { /* map optional */ }
-  }
+  // Map image intentionally omitted — static map APIs require separate keys
+  // GPS coordinates are shown in property info section instead
 
   // ── Price scale visualization helper ──
   const drawPriceScale = (pg: typeof page2, x: number, yy: number, w: number) => {
@@ -389,15 +376,6 @@ async function generatePDF(data: any): Promise<Buffer> {
   }
 
   y -= 12;
-
-  // ── MAP IMAGE ──
-  if (mapImage && y > 220) {
-    const mapW = CW;
-    const mapH = Math.min(mapW * (200 / 500), 160);
-    page.drawRectangle({ x: ML, y: y - mapH - 2, width: mapW, height: mapH + 4, color: BRAND.border }); // border
-    page.drawImage(mapImage, { x: ML + 2, y: y - mapH, width: mapW - 4, height: mapH });
-    y -= mapH + 12;
-  }
 
   // ── VALUATION BOX ──
   const vBoxH = 110;
