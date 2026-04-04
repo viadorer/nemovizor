@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     if (parkingSpaces) valuoRequest.parking_spaces = parkingSpaces;
 
     // ── Call RealVisor API (proxies to Valuo) ──
-    const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://api.realvisor.cz";
+    const REALVISOR_API_URL = process.env.REALVISOR_API_URL || "https://realvisor.com";
     const REALVISOR_FORM_CODE = process.env.REALVISOR_FORM_CODE || "nemovizor";
     const VALUO_API_KEY = process.env.VALUO_API_KEY;
 
@@ -174,34 +174,37 @@ export async function POST(req: NextRequest) {
       valuoResult = await getDbEstimate(body);
     }
 
-    // ── Save to DB ──
-    const { getSupabase } = await import("@/lib/supabase");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = getSupabase() as any;
-    if (client) {
-      await client.from("valuation_reports").insert({
-        email,
-        property_params: body,
-        valuo_request: valuoRequest,
-        valuo_response: valuoResult,
-        estimated_price: valuoResult?.avg_price || 0,
-        price_range_min: valuoResult?.min_price || valuoResult?.range_price?.[0] || 0,
-        price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
-        price_per_m2: valuoResult?.avg_price_m2 || 0,
-        used_fallback: usedFallback,
-      });
+    // ── Save to DB (non-blocking — don't fail if tables missing) ──
+    try {
+      const { getSupabase } = await import("@/lib/supabase");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = getSupabase() as any;
+      if (client) {
+        await client.from("valuation_reports").insert({
+          email,
+          property_params: body,
+          valuo_request: valuoRequest,
+          valuo_response: valuoResult,
+          estimated_price: valuoResult?.avg_price || 0,
+          price_range_min: valuoResult?.min_price || valuoResult?.range_price?.[0] || 0,
+          price_range_max: valuoResult?.max_price || valuoResult?.range_price?.[1] || 0,
+          price_per_m2: valuoResult?.avg_price_m2 || 0,
+          used_fallback: usedFallback,
+        }).catch((e: unknown) => console.error("[valuation] DB insert error:", e));
 
-      // Also save as lead
-      await client.from("leads").insert({
-        name: name || "",
-        email,
-        phone: phone || "",
-        property_type: propertyType,
-        intent: "odhad",
-        address: body.address || `${lat}, ${lng}`,
-        note: `Ocenění: ${valuoResult?.avg_price?.toLocaleString("cs")} Kč`,
-        source: "nemovizor-oceneni",
-      }).catch(() => {});
+        await client.from("leads").insert({
+          name: name || "",
+          email,
+          phone: phone || "",
+          property_type: propertyType,
+          intent: "odhad",
+          address: body.address || `${lat}, ${lng}`,
+          note: `Ocenění: ${valuoResult?.avg_price?.toLocaleString("cs")} Kč`,
+          source: "nemovizor-oceneni",
+        }).catch(() => {});
+      }
+    } catch (dbErr) {
+      console.error("[valuation] DB save error:", dbErr);
     }
 
     return NextResponse.json({
