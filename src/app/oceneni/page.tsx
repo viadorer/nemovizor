@@ -321,7 +321,7 @@ export default function ValuationPage() {
           rating: conditionMap[form.condition] || "good",
           kind: "sale",
           localType: form.disposition || undefined,
-          ownership: ownershipMap[form.ownership] || form.ownership || "private",
+          ownership: "private",
           landType: landTypeMap[form.landType] || form.landType || undefined,
           houseType: form.propertyType === "house" ? "family_house" : undefined,
           floor: form.floor ? Number(form.floor) : undefined,
