@@ -313,12 +313,25 @@ async function main() {
             const { data: dup } = await sb.from("properties").select("id").eq("slug", slug).maybeSingle();
             if (dup) { state.seen[stateKey] = true; skipped++; totalSkipped++; continue; }
 
-            // Geocode using Nominatim
+            // Geocode — use most specific location available
             let lat = 0, lon = 0;
-            const geoQuery = town || city || search.cityName;
-            if (geoQuery) {
-              const geoResult = await geocodeCity(geoQuery);
-              if (geoResult) { lat = geoResult.lat; lon = geoResult.lon; }
+            // Try town+city first (more specific), then city only
+            const specificQuery = town && city ? `${town}, ${city}` : town || city || search.cityName;
+            const geoResult = await geocodeCity(specificQuery);
+            if (geoResult) {
+              lat = geoResult.lat;
+              lon = geoResult.lon;
+            } else if (town && city) {
+              // Fallback to city only
+              const cityResult = await geocodeCity(city || search.cityName);
+              if (cityResult) { lat = cityResult.lat; lon = cityResult.lon; }
+            }
+            // Add small random offset to avoid exact stacking (±0.003° ≈ ±300m)
+            if (lat && lon) {
+              lat += (Math.random() - 0.5) * 0.006;
+              lon += (Math.random() - 0.5) * 0.006;
+              lat = Math.round(lat * 100000) / 100000;
+              lon = Math.round(lon * 100000) / 100000;
             }
 
             // Upload images to R2
