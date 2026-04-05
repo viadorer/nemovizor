@@ -13,6 +13,7 @@ import { PointsOfInterest } from "./points-of-interest";
 import { AutoSaveSearch } from "./auto-save-search";
 import { TrackView } from "./track-view";
 import { TrackDetail } from "./track-detail";
+import { BackButton } from "./back-button";
 import { TrackPhoneLink, TrackEmailLink, TrackContactButton } from "./track-contact";
 import { MortgageCalculator } from "./mortgage-calculator";
 import { EditPropertyButton } from "./edit-button";
@@ -189,12 +190,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         >
         <div className="detail-split-content">
           <div className="detail-top-nav" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Link href="/nabidky" className="detail-back">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              <span>{t.detail.backToListings}</span>
-            </Link>
+            <BackButton label={t.detail.backToListings} />
             <EditPropertyButton propertyId={property.id} />
           </div>
 

@@ -530,6 +530,37 @@ export function ListingsContent({ brokerId, agencyId, embedded }: ListingsConten
   const [promobroker, setPromoBroker] = useState<Broker | null>(null);
   const promoSeedRef = useRef(Math.floor(Math.random() * 100));
 
+  // ── Scroll position save/restore ──
+  useEffect(() => {
+    if (embedded) return;
+    // Restore scroll position on mount (when returning from detail via back)
+    const saved = sessionStorage.getItem("nv_listings_scroll");
+    if (saved) {
+      const pos = parseInt(saved, 10);
+      if (pos > 0) {
+        requestAnimationFrame(() => {
+          setTimeout(() => window.scrollTo(0, pos), 100);
+        });
+      }
+      sessionStorage.removeItem("nv_listings_scroll");
+    }
+    // Save scroll position before navigating away
+    const saveScroll = () => {
+      sessionStorage.setItem("nv_listings_scroll", String(window.scrollY));
+    };
+    window.addEventListener("beforeunload", saveScroll);
+    // Also save on any click that navigates to a property detail
+    const handleClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest("a[href*='/nemovitost/']");
+      if (link) sessionStorage.setItem("nv_listings_scroll", String(window.scrollY));
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", saveScroll);
+      document.removeEventListener("click", handleClick, true);
+    };
+  }, [embedded]);
+
   // Track TIP impressions (fire once per set of tip IDs)
   const trackedTipIdsRef = useRef<string>("");
   const trackViews = useCallback((propertyIds: string[], viewType: string) => {
