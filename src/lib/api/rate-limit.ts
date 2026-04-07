@@ -250,4 +250,10 @@ export const TIER1_RATE_LIMITS: Record<string, RateLimitConfig> = {
   "analytics-track": { name: "analytics-track", windowMs: WINDOW_MS, max: 2000 },
   /** Broker analytics dashboard auto-refreshes. */
   "broker-analytics": { name: "broker-analytics", windowMs: WINDOW_MS, max: 120 },
+  /**
+   * Broker PII contact endpoint. Strict per-IP cap (10/min) is the primary
+   * anti-harvesting defense; with an API key, callers get the per-key
+   * ceiling from `api_keys.rate_limit_per_min` instead.
+   */
+  "broker-contact": { name: "broker-contact", windowMs: WINDOW_MS, max: 10 },
 };

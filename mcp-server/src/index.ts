@@ -178,6 +178,28 @@ const aiSearchShape = {
     ),
 } as const;
 
+const propertyByIdShape = {
+  id: z
+    .string()
+    .uuid()
+    .describe("Property UUID returned in list responses or AI search results."),
+} as const;
+
+const propertyBySlugShape = {
+  slug: z
+    .string()
+    .min(1)
+    .max(300)
+    .describe("Property slug, e.g. `prodej-bytu-3-kk-praha-vinohrady`."),
+} as const;
+
+const brokerContactShape = {
+  id: z
+    .string()
+    .uuid()
+    .describe("Broker UUID. Returned in property responses as `brokers.id`."),
+} as const;
+
 // ─── Server ────────────────────────────────────────────────────────────────
 
 const server = new McpServer(
@@ -230,6 +252,36 @@ server.tool(
   aiSearchShape,
   async (args) => {
     const data = await nemovizorPost("/api/ai-search", args);
+    return asToolResult(data);
+  },
+);
+
+server.tool(
+  "nemovizor_property_detail",
+  "Fetch full details of a single property by its UUID. Returns the same camelCase shape as `nemovizor_search_properties` rows but for a single listing. Broker contact info (phone, email) is intentionally NOT included — call `nemovizor_broker_contact` separately if needed.",
+  propertyByIdShape,
+  async (args) => {
+    const data = await nemovizorGet(`/api/v1/properties/${args.id}`, {});
+    return asToolResult(data);
+  },
+);
+
+server.tool(
+  "nemovizor_property_detail_by_slug",
+  "Fetch full details of a single property by its URL slug (the SEO-friendly identifier visible in Nemovizor URLs).",
+  propertyBySlugShape,
+  async (args) => {
+    const data = await nemovizorGet(`/api/v1/properties/by-slug/${encodeURIComponent(args.slug)}`, {});
+    return asToolResult(data);
+  },
+);
+
+server.tool(
+  "nemovizor_broker_contact",
+  "Retrieve a single broker's contact info (phone, email) explicitly. This is the ONLY way to get broker contact data — listing endpoints intentionally omit it for privacy. Rate-limited to 10 requests/minute per IP without an API key.",
+  brokerContactShape,
+  async (args) => {
+    const data = await nemovizorGet(`/api/v1/brokers/${args.id}/contact`, {});
     return asToolResult(data);
   },
 );

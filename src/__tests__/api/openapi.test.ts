@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GET } from "@/app/api/openapi/route";
 
 describe("GET /api/openapi", () => {
-  it("returns a valid OpenAPI 3.1 document with all 9 public paths", async () => {
+  it("returns a valid OpenAPI 3.1 document with all public paths", async () => {
     const res = await GET();
     expect(res.status).toBe(200);
 
@@ -31,10 +31,17 @@ describe("GET /api/openapi", () => {
     expect(doc.paths["/api/analytics/track"].post).toBeDefined();
     expect(doc.paths["/api/broker/analytics-behavior"].get).toBeDefined();
 
+    // Phase 2 — detail endpoints + broker contact
+    expect(doc.paths["/api/v1/properties/{id}"].get).toBeDefined();
+    expect(doc.paths["/api/v1/properties/by-slug/{slug}"].get).toBeDefined();
+    expect(doc.paths["/api/v1/brokers/{id}/contact"].get).toBeDefined();
+
     // Component schemas were registered
     const schemas = doc.components?.schemas ?? {};
     expect(schemas.ApiError).toBeDefined();
     expect(schemas.PropertiesResponse).toBeDefined();
+    expect(schemas.PropertyDetailResponse).toBeDefined();
+    expect(schemas.BrokerContactResponse).toBeDefined();
     expect(schemas.ValuationEstimateResponse).toBeDefined();
     expect(schemas.ValuationStatusResponse).toBeDefined();
     expect(schemas.LeadsResponse).toBeDefined();

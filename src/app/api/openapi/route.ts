@@ -8,7 +8,9 @@ import { ApiErrorSchema } from "@/lib/api/schemas/common";
 import {
   PropertiesQuerySchema,
   PropertiesResponseSchema,
+  PropertyDetailResponseSchema,
 } from "@/lib/api/schemas/properties";
+import { z } from "zod";
 import {
   MapPointsQuerySchema,
   MapPointsResponseSchema,
@@ -63,6 +65,120 @@ function buildSpec() {
       },
       503: {
         description: "Supabase not configured",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
+  // ── v1 detail endpoints (Phase 2: white-label readiness) ───────────────
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/properties/{id}",
+    summary: "Fetch a single property by UUID (camelCase, v1)",
+    description:
+      "Returns one active property by its UUID. Response is camelCase, business-sensitive fields (commission, mortgagePercent, …) and broker PII (phone, email) are excluded. Use `GET /api/v1/brokers/{id}/contact` for explicit broker contact retrieval.",
+    tags: ["Listings"],
+    request: {
+      params: z.object({
+        id: z
+          .string()
+          .uuid()
+          .openapi({ description: "Property UUID returned in list responses." }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: PropertyDetailResponseSchema } },
+      },
+      400: {
+        description: "Invalid UUID",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      404: {
+        description: "Not found or inactive",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      429: {
+        description: "Rate limit exceeded",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/properties/by-slug/{slug}",
+    summary: "Fetch a single property by slug (camelCase, v1)",
+    description:
+      "Same shape as `/api/v1/properties/{id}` but resolves by URL slug instead of UUID. Useful for SEO-friendly external URLs.",
+    tags: ["Listings"],
+    request: {
+      params: z.object({
+        slug: z.string().min(1).max(300).openapi({ description: "Property slug." }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: PropertyDetailResponseSchema } },
+      },
+      400: {
+        description: "Invalid slug",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      404: {
+        description: "Not found or inactive",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      429: {
+        description: "Rate limit exceeded",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/brokers/{id}/contact",
+    summary: "Get a single broker's contact info (PII)",
+    description:
+      "Explicit, rate-limited PII access. Returns the broker's `phone` and `email`. Anonymous callers are limited to 10 requests/min/IP (anti-harvesting). API key callers get the per-key ceiling. Listing responses do NOT include this data — call this endpoint only when displaying a single broker after a meaningful user action.",
+    tags: ["Brokers"],
+    request: {
+      params: z.object({
+        id: z.string().uuid().openapi({ description: "Broker UUID." }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "OK",
+        content: {
+          "application/json": {
+            schema: z
+              .object({
+                data: z.object({
+                  id: z.string().uuid(),
+                  name: z.string(),
+                  slug: z.string().nullable(),
+                  phone: z.string().nullable(),
+                  email: z.string().nullable(),
+                }),
+              })
+              .openapi("BrokerContactResponse"),
+          },
+        },
+      },
+      400: {
+        description: "Invalid UUID",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      404: {
+        description: "Broker not found",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+      429: {
+        description: "Rate limit exceeded",
         content: { "application/json": { schema: ApiErrorSchema } },
       },
     },
@@ -328,7 +444,8 @@ function buildSpec() {
       { url: "http://localhost:3000", description: "Local development" },
     ],
     tags: [
-      { name: "Listings", description: "Public property search and filters." },
+      { name: "Listings", description: "Public property search, filters, detail and pagination." },
+      { name: "Brokers", description: "Broker contact (PII access, rate-limited)." },
       { name: "AI", description: "AI-powered endpoints." },
       { name: "Valuation", description: "Property valuation via RealVisor/Valuo." },
       { name: "Leads", description: "Lead capture." },

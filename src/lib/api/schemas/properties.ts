@@ -57,20 +57,40 @@ export const PropertiesQuerySchema = z
     ne_lon: qNumber().optional(),
 
     sort: SortSchema.optional(),
+
+    // Cursor pagination — when present, takes precedence over `page`.
+    cursor: z
+      .string()
+      .min(1)
+      .optional()
+      .openapi({
+        description:
+          "Opaque pagination cursor returned in the previous response's `next_cursor`/`nextCursor` field. When present, the response is sorted by `(created_at desc, id desc)` and `page`/`sort` are ignored.",
+      }),
   })
   .passthrough()
   .openapi("PropertiesQuery");
 
 // ─── Response DTOs ─────────────────────────────────────────────────────────
 
+/**
+ * Public broker summary embedded in property responses.
+ *
+ * SECURITY: Does NOT include `phone` / `email`. Those PII fields are
+ * available only via the explicit `GET /api/v1/brokers/{id}/contact`
+ * endpoint which has its own per-IP anti-harvesting rate limit.
+ */
 export const BrokerSummarySchema = z
   .object({
     id: z.string().uuid(),
     name: z.string(),
-    phone: z.string().nullable(),
-    photo: z.string().nullable(),
     slug: z.string().nullable(),
+    photo: z.string().nullable(),
     agency_name: z.string().nullable(),
+    rating: z.number().nullable().optional(),
+    bio: z.string().nullable().optional(),
+    active_listings: z.number().int().nonnegative().nullable().optional(),
+    specialization: z.string().nullable().optional(),
   })
   .passthrough()
   .openapi("BrokerSummary");
@@ -148,10 +168,29 @@ export const PropertiesResponseSchema = z
     page: z.number().int().positive(),
     pages: z.number().int().nonnegative(),
     limit: z.number().int().positive(),
+    next_cursor: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "Opaque cursor for the next page when iterating with cursor pagination. `null` on the last page; absent when offset pagination was used.",
+      }),
   })
   .openapi("PropertiesResponse");
+
+/**
+ * Single-property detail response (used by /api/v1/properties/{id} and
+ * /api/v1/properties/by-slug/{slug}).
+ */
+export const PropertyDetailResponseSchema = z
+  .object({
+    data: PropertyDtoSchema,
+  })
+  .openapi("PropertyDetailResponse");
 
 registry.register("BrokerSummary", BrokerSummarySchema);
 registry.register("PropertyDto", PropertyDtoSchema);
 registry.register("PropertiesQuery", PropertiesQuerySchema);
 registry.register("PropertiesResponse", PropertiesResponseSchema);
+registry.register("PropertyDetailResponse", PropertyDetailResponseSchema);
