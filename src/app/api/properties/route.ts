@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase";
+import { apiError } from "@/lib/api/response";
+import { parseQuery } from "@/lib/api/validate";
+import { PropertiesQuerySchema } from "@/lib/api/schemas/properties";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+// Ensure the handler runs on every request so the in-memory rate limiter
+// actually sees traffic (otherwise Next.js may cache the response).
+export const dynamic = "force-dynamic";
 
 function getClient() {
   return supabaseAdmin ?? supabaseServer;
@@ -8,23 +22,24 @@ function getClient() {
 /**
  * GET /api/properties – paginated, server-side filtered property list
  *
- * Query params:
- *   page (default 1), limit (default 24)
- *   listing_type, category, subtype, city
- *   price_min, price_max, area_min, area_max
- *   sort: price_asc | price_desc | newest | area_desc (default: featured)
- *
- * Returns: { data, total, page, pages, limit }
+ * Full query/response contract: see OpenAPI at /api/openapi (PropertiesQuery / PropertiesResponse).
  */
 export async function GET(req: NextRequest) {
+  const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS.properties);
+  const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+  if (!rl.ok) return rateLimitResponse(rl);
+
   const client = getClient();
   if (!client) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
   }
 
-  const sp = req.nextUrl.searchParams;
-  const page = Math.max(1, Number(sp.get("page") ?? "1"));
-  const limit = Math.min(100, Math.max(1, Number(sp.get("limit") ?? "24")));
+  const parsed = parseQuery(req.nextUrl.searchParams, PropertiesQuerySchema);
+  if (!parsed.ok) return parsed.response;
+  const q = parsed.data;
+
+  const page = q.page ?? 1;
+  const limit = q.limit ?? 24;
   const offset = (page - 1) * limit;
 
   // Build query with server-side filters
@@ -33,39 +48,26 @@ export async function GET(req: NextRequest) {
     .select("*, brokers(id, name, phone, photo, slug, agency_name)", { count: "exact" })
     .eq("active", true);
 
-  // Apply filters
-  const listingType = sp.get("listing_type");
-  const category = sp.get("category");
-  const subtype = sp.get("subtype");
-  const city = sp.get("city");
-
-  if (listingType) query = query.eq("listing_type", listingType);
-  if (category) {
-    const cats = category.split(",");
-    query = cats.length === 1 ? query.eq("category", cats[0]) : query.in("category", cats);
+  if (q.listing_type) query = query.eq("listing_type", q.listing_type);
+  if (q.category) {
+    query = q.category.length === 1 ? query.eq("category", q.category[0]) : query.in("category", q.category);
   }
-  if (subtype) {
-    const subs = subtype.split(",");
-    query = subs.length === 1 ? query.eq("subtype", subs[0]) : query.in("subtype", subs);
+  if (q.subtype) {
+    query = q.subtype.length === 1 ? query.eq("subtype", q.subtype[0]) : query.in("subtype", q.subtype);
   }
-  if (city) query = query.eq("city", city);
-
-  const country = sp.get("country");
-  if (country) {
-    const countries = country.split(",");
-    query = countries.length === 1 ? query.eq("country", countries[0]) : query.in("country", countries);
+  if (q.city) query = query.eq("city", q.city);
+  if (q.country) {
+    query = q.country.length === 1 ? query.eq("country", q.country[0]) : query.in("country", q.country);
   }
 
   // Broker / Agency filter
-  const brokerId = sp.get("broker_id");
-  const agencyId = sp.get("agency_id");
-  if (brokerId) {
-    query = query.eq("broker_id", brokerId);
-  } else if (agencyId) {
+  if (q.broker_id) {
+    query = query.eq("broker_id", q.broker_id);
+  } else if (q.agency_id) {
     const { data: agencyBrokers } = await client
       .from("brokers")
       .select("id")
-      .eq("agency_id", agencyId);
+      .eq("agency_id", q.agency_id);
     if (agencyBrokers && agencyBrokers.length > 0) {
       const ids = agencyBrokers.map((b: { id: string }) => b.id);
       query = query.in("broker_id", ids);
@@ -75,21 +77,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (sp.get("price_min")) query = query.gte("price", Number(sp.get("price_min")));
-  if (sp.get("price_max")) query = query.lte("price", Number(sp.get("price_max")));
-  if (sp.get("area_min")) query = query.gte("area", Number(sp.get("area_min")));
-  if (sp.get("area_max")) query = query.lte("area", Number(sp.get("area_max")));
+  if (q.price_min !== undefined) query = query.gte("price", q.price_min);
+  if (q.price_max !== undefined) query = query.lte("price", q.price_max);
+  if (q.area_min !== undefined) query = query.gte("area", q.area_min);
+  if (q.area_max !== undefined) query = query.lte("area", q.area_max);
 
   // Bounds filter (map viewport)
-  if (sp.get("sw_lat")) {
-    query = query.gte("latitude", Number(sp.get("sw_lat")));
-    query = query.lte("latitude", Number(sp.get("ne_lat")));
-    query = query.gte("longitude", Number(sp.get("sw_lon")));
-    query = query.lte("longitude", Number(sp.get("ne_lon")));
+  if (q.sw_lat !== undefined && q.ne_lat !== undefined && q.sw_lon !== undefined && q.ne_lon !== undefined) {
+    query = query.gte("latitude", q.sw_lat);
+    query = query.lte("latitude", q.ne_lat);
+    query = query.gte("longitude", q.sw_lon);
+    query = query.lte("longitude", q.ne_lon);
   }
 
   // Sort
-  const sort = sp.get("sort") || "featured";
+  const sort = q.sort ?? "featured";
   switch (sort) {
     case "price_asc":
       query = query.gt("price", 0).order("price", { ascending: true });
@@ -119,7 +121,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError("INTERNAL_ERROR", error.message, 500);
   }
 
   const total = count ?? 0;
@@ -139,7 +141,12 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { data: rows, total, page, pages: Math.ceil(total / limit), limit },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        ...rateLimitHeaders(rl),
+      },
+    },
   );
 }
 

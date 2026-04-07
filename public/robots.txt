@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /api/properties
+Allow: /api/map-points
+Allow: /api/filter-options
+Allow: /api/ai-search
+Allow: /api/openapi
+Allow: /llms.txt
+Allow: /.well-known/
+
+Disallow: /dashboard/
+Disallow: /api/admin/
+Disallow: /api/broker/
+Disallow: /api/wallet/
+Disallow: /api/upload/
+Disallow: /api/billing/
+Disallow: /api/analytics/
+Disallow: /api/leads
+Disallow: /api/valuation/checkout
+Disallow: /api/valuation/report
+
+Sitemap: https://nemovizor.cz/sitemap.xml

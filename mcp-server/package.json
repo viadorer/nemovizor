@@ -1,0 +1,41 @@
+{
+  "name": "nemovizor-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for Nemovizor — real-estate search, map points, filter options, and natural-language query parsing for AI agents.",
+  "type": "module",
+  "bin": {
+    "nemovizor-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "smoke": "node smoke-test.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "real-estate",
+    "nemovizor",
+    "agents",
+    "claude"
+  ],
+  "author": "Nemovizor",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

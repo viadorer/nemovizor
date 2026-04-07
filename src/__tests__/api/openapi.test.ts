@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import { GET } from "@/app/api/openapi/route";
+
+describe("GET /api/openapi", () => {
+  it("returns a valid OpenAPI 3.1 document with all 9 public paths", async () => {
+    const res = await GET();
+    expect(res.status).toBe(200);
+
+    type OpenApiDoc = {
+      openapi: string;
+      info: { title: string; version: string };
+      paths: Record<string, Record<string, unknown>>;
+      components?: { schemas?: Record<string, unknown> };
+    };
+    const doc = (await res.json()) as OpenApiDoc;
+
+    expect(doc.openapi).toBe("3.1.0");
+    expect(doc.info.title).toBe("Nemovizor API");
+    expect(typeof doc.info.version).toBe("string");
+
+    // Tier-1 paths (step 1-2)
+    expect(doc.paths["/api/properties"].get).toBeDefined();
+    expect(doc.paths["/api/map-points"].get).toBeDefined();
+    expect(doc.paths["/api/filter-options"].get).toBeDefined();
+    expect(doc.paths["/api/ai-search"].post).toBeDefined();
+
+    // Tier-2 paths (step 4)
+    expect(doc.paths["/api/valuation/estimate"].post).toBeDefined();
+    expect(doc.paths["/api/valuation/status"].get).toBeDefined();
+    expect(doc.paths["/api/leads"].post).toBeDefined();
+    expect(doc.paths["/api/analytics/track"].post).toBeDefined();
+    expect(doc.paths["/api/broker/analytics-behavior"].get).toBeDefined();
+
+    // Component schemas were registered
+    const schemas = doc.components?.schemas ?? {};
+    expect(schemas.ApiError).toBeDefined();
+    expect(schemas.PropertiesResponse).toBeDefined();
+    expect(schemas.ValuationEstimateResponse).toBeDefined();
+    expect(schemas.ValuationStatusResponse).toBeDefined();
+    expect(schemas.LeadsResponse).toBeDefined();
+    expect(schemas.AnalyticsTrackBody).toBeDefined();
+    expect(schemas.BrokerAnalyticsResponse).toBeDefined();
+  });
+});

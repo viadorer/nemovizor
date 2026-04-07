@@ -1,0 +1,37 @@
+# Nemovizor
+
+> Nemovizor is a real-estate platform for the Czech and Slovak market with AI-powered search, map discovery and property valuations. It exposes a public, machine-readable API designed for consumption by AI agents.
+
+All endpoints return JSON and use stable UUID identifiers and ISO 8601 timestamps.
+
+## API
+
+- [OpenAPI 3.1 specification](https://nemovizor.cz/api/openapi): Full machine-readable description of public endpoints.
+- [AI plugin manifest](https://nemovizor.cz/.well-known/ai-plugin.json): Plugin discovery manifest.
+
+## Public endpoints
+
+- [GET /api/properties](https://nemovizor.cz/api/properties): Paginated, filterable property search (listing type, category, subtype, city/country, price/area range, bounding box, sort).
+- [GET /api/map-points](https://nemovizor.cz/api/map-points): Lightweight geo-points for map markers (cluster-friendly, zoom-aware).
+- [GET /api/filter-options](https://nemovizor.cz/api/filter-options): Faceted metadata — available categories, subtypes, cities, price/area ranges with counts.
+- [POST /api/ai-search](https://nemovizor.cz/api/ai-search): Convert a natural-language query in any supported language to structured filters usable with the search endpoints.
+- [POST /api/valuation/estimate](https://nemovizor.cz/api/valuation/estimate): Request a property valuation (RealVisor/Valuo backend). Rate-limited to 30/min.
+- [GET /api/valuation/status](https://nemovizor.cz/api/valuation/status): Poll whether a valuation PDF is ready.
+- [POST /api/leads](https://nemovizor.cz/api/leads): Public lead capture. Rate-limited to 10/min.
+- [POST /api/analytics/track](https://nemovizor.cz/api/analytics/track): Client-side event tracking (single event or array).
+- [GET /api/broker/analytics-behavior](https://nemovizor.cz/api/broker/analytics-behavior): 7-day behavioral dashboard for a broker or agency.
+
+## Conventions
+
+- **Two parallel surfaces:** `/api/*` (legacy, snake_case both ways) and `/api/v1/*` (recommended, camelCase both ways). v1 is a thin proxy over the legacy paths — same semantics, same rate limits, same auth.
+- All timestamps are ISO 8601 with timezone.
+- All identifiers are UUID v4 strings.
+- Enum values are stable lowercase codes (e.g. `sale`, `rent`, `apartment`, `house`).
+- Monetary values are raw numbers accompanied by a lowercase currency code (`czk`, `eur`, ...).
+- Errors use a consistent envelope: `{ "error": { "code": "VALIDATION_ERROR", "message": "...", "details": ... } }`.
+- Comma-separated lists are accepted in query parameters such as `category`, `subtype`, `country`.
+
+## Contact
+
+- Website: https://nemovizor.cz
+- Email: info@nemovizor.cz

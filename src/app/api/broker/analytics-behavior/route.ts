@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { apiError } from "@/lib/api/response";
+import { parseQuery } from "@/lib/api/validate";
+import { BrokerAnalyticsQuerySchema } from "@/lib/api/schemas/broker-analytics";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
@@ -7,17 +19,23 @@ type Ev = { event_type: string; session_id: string; properties: Record<string, u
 
 /**
  * GET /api/broker/analytics-behavior?broker_id=xxx  OR  ?agency_id=xxx
- * Returns behavioral analytics scoped to a broker's or agency's properties.
- * Uses pre-aggregated summary tables when available; falls back to raw events.
+ * Full contract: see OpenAPI at /api/openapi (BrokerAnalyticsQuery / BrokerAnalyticsResponse).
  */
 export async function GET(req: NextRequest) {
+  const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["broker-analytics"]);
+  const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+  if (!rl.ok) return rateLimitResponse(rl);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = getSupabase() as any;
-  if (!client) return NextResponse.json({ error: "No DB" }, { status: 503 });
+  if (!client) return apiError("SERVICE_UNAVAILABLE", "No DB", 503);
 
-  const brokerId = req.nextUrl.searchParams.get("broker_id");
-  const agencyId = req.nextUrl.searchParams.get("agency_id");
-  if (!brokerId && !agencyId) return NextResponse.json({ error: "broker_id or agency_id required" }, { status: 400 });
+  const parsed = parseQuery(req.nextUrl.searchParams, BrokerAnalyticsQuerySchema);
+  if (!parsed.ok) return parsed.response;
+  const { broker_id: brokerId = null, agency_id: agencyId = null } = parsed.data as {
+    broker_id?: string;
+    agency_id?: string;
+  };
 
   // ── Get property count ──
   let totalProperties = 0;
@@ -56,11 +74,11 @@ export async function GET(req: NextRequest) {
   const hasSummaries = statsData && statsData.length > 0;
 
   if (hasSummaries) {
-    return buildResponseFromSummaries(client, statsData, scopeFilter, date7dAgo, date14dAgo, today, totalProperties, brokerId, agencyId);
+    return buildResponseFromSummaries(client, statsData, scopeFilter, date7dAgo, date14dAgo, today, totalProperties, brokerId, agencyId, rateLimitHeaders(rl));
   }
 
   // ── Fallback: raw events (same as original implementation) ──
-  return buildResponseFromRawEvents(client, brokerId, agencyId, totalProperties);
+  return buildResponseFromRawEvents(client, brokerId, agencyId, totalProperties, rateLimitHeaders(rl));
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -78,6 +96,7 @@ async function buildResponseFromSummaries(
   totalProperties: number,
   brokerId: string | null,
   agencyId: string | null,
+  extraHeaders: Record<string, string> = {},
 ) {
   // ── KPIs from stats ──
   const eventCounts: Record<string, number> = {};
@@ -271,7 +290,7 @@ async function buildResponseFromSummaries(
     contactRequests,
     newContactRequests,
   }, {
-    headers: { "Cache-Control": "private, max-age=60" },
+    headers: { "Cache-Control": "private, max-age=60", ...extraHeaders },
   });
 }
 
@@ -284,6 +303,7 @@ async function buildResponseFromRawEvents(
   brokerId: string | null,
   agencyId: string | null,
   totalProperties: number,
+  extraHeaders: Record<string, string> = {},
 ) {
   // ── Get property IDs ──
   let propIds: string[] = [];
@@ -484,6 +504,6 @@ async function buildResponseFromRawEvents(
     contactRequests,
     newContactRequests,
   }, {
-    headers: { "Cache-Control": "private, max-age=60" },
+    headers: { "Cache-Control": "private, max-age=60", ...extraHeaders },
   });
 }

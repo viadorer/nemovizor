@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/api/response";
+import { parseBody } from "@/lib/api/validate";
+import { ValuationEstimateBodySchema } from "@/lib/api/schemas/valuation";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/valuation/estimate
  * Proxy to RealVisor → Valuo API for property valuation.
- * Falls back to own DB-based estimate if external API unavailable.
  *
- * Body: { propertyType, lat, lng, floorArea, rating, kind, email, name, phone, ...optional }
- * Returns: { avg_price, min_price, max_price, avg_price_m2, range_price, success }
+ * Full contract: see OpenAPI at /api/openapi (ValuationEstimateBody / ValuationEstimateResponse).
  */
 
 type ValuoResult = {
@@ -32,7 +42,20 @@ type ValuoResult = {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["valuation-estimate"]);
+    const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+    if (!rl.ok) return rateLimitResponse(rl);
+
+    const parsed = await parseBody(req, ValuationEstimateBodySchema);
+    if (!parsed.ok) return parsed.response;
+    // Cast to loose shape so the existing destructuring pattern keeps working
+    // without narrowing the rest of the ~200-line handler.
+    const body = parsed.data as Record<string, unknown> & {
+      propertyType: "flat" | "house" | "land";
+      lat: number;
+      lng: number;
+      email: string;
+    };
     const {
       propertyType, lat, lng, floorArea, lotArea, rating, kind,
       email, name, phone,
@@ -42,18 +65,38 @@ export async function POST(req: NextRequest) {
       equipment, easyAccess,
       loggiaArea, balconyArea, terraceArea, cellarArea, gardenArea,
       rooms, bathrooms, garages, parkingSpaces,
-    } = body;
-
-    // Validate required fields
-    if (!email || !email.includes("@")) {
-      return NextResponse.json({ error: "Platný email je povinný" }, { status: 400 });
-    }
-    if (!propertyType || !lat || !lng) {
-      return NextResponse.json({ error: "Typ nemovitosti a adresa jsou povinné" }, { status: 400 });
-    }
-    if (propertyType !== "land" && !floorArea) {
-      return NextResponse.json({ error: "Plocha je povinná" }, { status: 400 });
-    }
+    } = body as Record<string, unknown> as {
+      propertyType: "flat" | "house" | "land";
+      lat: number;
+      lng: number;
+      floorArea?: number;
+      lotArea?: number;
+      rating?: number;
+      kind?: "sale" | "rent";
+      email: string;
+      name?: string;
+      phone?: string;
+      localType?: string;
+      ownership?: string;
+      houseType?: string;
+      landType?: string;
+      construction?: string;
+      floor?: number;
+      totalFloors?: number;
+      elevator?: boolean;
+      energyPerformance?: string;
+      equipment?: boolean;
+      easyAccess?: boolean;
+      loggiaArea?: number;
+      balconyArea?: number;
+      terraceArea?: number;
+      cellarArea?: number;
+      gardenArea?: number;
+      rooms?: number;
+      bathrooms?: number;
+      garages?: number;
+      parkingSpaces?: number;
+    };
 
     // ── Build Valuo API request ──
     const valuoRequest: Record<string, unknown> = {
@@ -105,18 +148,18 @@ export async function POST(req: NextRequest) {
     // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
     if (!REALVISOR_API_KEY) {
       console.error("[valuation/estimate] REALVISOR_API_KEY not configured");
-      return NextResponse.json({ error: "Služba ocenění není nakonfigurována." }, { status: 503 });
+      return apiError("SERVICE_UNAVAILABLE", "Služba ocenění není nakonfigurována.", 503);
     }
     {
       try {
         const valuoBody = {
           firstName: (name || "Návštěvník").trim(),
-          lastName: (body.lastName || "Nemovizor").trim(),
+          lastName: (String(body.lastName || "Nemovizor")).trim(),
           email,
           phone: phone || "",
           kind: kind || "sale",
           propertyType,
-          address: body.address || "",
+          address: String(body.address || ""),
           lat, lng,
           floorArea: floorArea || undefined,
           lotArea: lotArea || undefined,
@@ -180,7 +223,7 @@ export async function POST(req: NextRequest) {
 
     // No fallback — RealVisor is the only source
     if (!valuoResult) {
-      return NextResponse.json({ error: "Ocenění se nepodařilo. Zkuste to prosím znovu." }, { status: 502 });
+      return apiError("INTERNAL_ERROR", "Ocenění se nepodařilo. Zkuste to prosím znovu.", 502);
     }
 
     // ── Save to DB (non-blocking — don't fail if tables missing) ──
@@ -239,23 +282,26 @@ export async function POST(req: NextRequest) {
       }).catch((e) => console.error("[valuation] PDF pre-generation error:", e));
     }
 
-    return NextResponse.json({
-      success: true,
-      valuationId,
-      result: {
-        avg_price: valuoResult?.avg_price || 0,
-        min_price: valuoResult?.min_price || 0,
-        max_price: valuoResult?.max_price || 0,
-        avg_price_m2: valuoResult?.avg_price_m2 || 0,
-        range_price: valuoResult?.range_price || [0, 0],
-        currency: valuoResult?.currency || "CZK",
-        calc_area: valuoResult?.calc_area || floorArea || 0,
-        as_of: valuoResult?.as_of || new Date().toISOString().slice(0, 10),
+    return NextResponse.json(
+      {
+        success: true,
+        valuationId,
+        result: {
+          avg_price: valuoResult?.avg_price || 0,
+          min_price: valuoResult?.min_price || 0,
+          max_price: valuoResult?.max_price || 0,
+          avg_price_m2: valuoResult?.avg_price_m2 || 0,
+          range_price: valuoResult?.range_price || [0, 0],
+          currency: valuoResult?.currency || "CZK",
+          calc_area: valuoResult?.calc_area || floorArea || 0,
+          as_of: valuoResult?.as_of || new Date().toISOString().slice(0, 10),
+        },
       },
-    });
+      { headers: rateLimitHeaders(rl) },
+    );
   } catch (e) {
     console.error("[valuation/estimate] Error:", e);
-    return NextResponse.json({ error: "Chyba při ocenění" }, { status: 500 });
+    return apiError("INTERNAL_ERROR", "Chyba při ocenění", 500);
   }
 }
 

@@ -1,60 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { apiError } from "@/lib/api/response";
+import { parseQuery } from "@/lib/api/validate";
+import { FilterOptionsQuerySchema } from "@/lib/api/schemas/filter-options";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+  type RateLimitResult,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/filter-options — aggregate counts for filter dropdowns
- * Returns available filter values with counts, optionally filtered by current selections
+ * Returns available filter values with counts, optionally filtered by current selections.
+ * Full contract: see OpenAPI at /api/openapi (FilterOptionsQuery / FilterOptionsResponse).
  */
 export async function GET(req: NextRequest) {
+  const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["filter-options"]);
+  const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+  if (!rl.ok) return rateLimitResponse(rl);
+
   const client = getSupabase();
   if (!client) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
   }
 
-  const sp = req.nextUrl.searchParams;
-  const listingType = sp.get("listing_type") || null;
-  const category = sp.get("category") || null;
-  const brokerId = sp.get("broker_id") || null;
-  const agencyId = sp.get("agency_id") || null;
-  const swLat = sp.get("sw_lat") ? Number(sp.get("sw_lat")) : null;
-  const swLon = sp.get("sw_lon") ? Number(sp.get("sw_lon")) : null;
-  const neLat = sp.get("ne_lat") ? Number(sp.get("ne_lat")) : null;
-  const neLon = sp.get("ne_lon") ? Number(sp.get("ne_lon")) : null;
-  const hasBounds = swLat !== null && swLon !== null && neLat !== null && neLon !== null;
+  const parsed = parseQuery(req.nextUrl.searchParams, FilterOptionsQuerySchema);
+  if (!parsed.ok) return parsed.response;
+  const qp = parsed.data;
+
+  const listingType = qp.listing_type ?? null;
+  const category = qp.category ?? null;
+  const hasBounds =
+    qp.sw_lat !== undefined && qp.sw_lon !== undefined && qp.ne_lat !== undefined && qp.ne_lon !== undefined;
 
   // Resolve broker IDs for agency filter
   let brokerIds: string[] | null = null;
-  if (brokerId) {
-    brokerIds = [brokerId];
-  } else if (agencyId) {
+  if (qp.broker_id) {
+    brokerIds = [qp.broker_id];
+  } else if (qp.agency_id) {
     const { data: agencyBrokers } = await client
       .from("brokers")
       .select("id")
-      .eq("agency_id", agencyId);
+      .eq("agency_id", qp.agency_id);
     if (agencyBrokers && agencyBrokers.length > 0) {
       brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
     } else {
-      return NextResponse.json({
-        categories: [], cities: [], subtypes: [], listingTypes: [],
-        priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
-      });
+      return NextResponse.json(
+        {
+          categories: [], cities: [], subtypes: [], listingTypes: [],
+          priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
+        },
+        { headers: rateLimitHeaders(rl) },
+      );
     }
   }
 
-  // Use fallback approach (standard Supabase queries, no custom RPC needed)
-  const bounds = hasBounds ? { swLat: swLat!, swLon: swLon!, neLat: neLat!, neLon: neLon! } : null;
-  return await fallbackFilterOptions(client, listingType, category, brokerIds, bounds);
+  const bounds = hasBounds
+    ? { swLat: qp.sw_lat!, swLon: qp.sw_lon!, neLat: qp.ne_lat!, neLon: qp.ne_lon! }
+    : null;
+  return await fallbackFilterOptions(client, listingType, category, brokerIds, bounds, rl);
 }
 
 /** Fallback using standard Supabase queries (no custom RPC needed) */
 async function fallbackFilterOptions(
   client: ReturnType<typeof getSupabase>,
   listingType: string | null,
-  category: string | null,
+  category: string[] | null,
   brokerIds: string[] | null = null,
   bounds: { swLat: number; swLon: number; neLat: number; neLon: number } | null = null,
+  rl: RateLimitResult | null = null,
 ) {
-  if (!client) return NextResponse.json({ error: "No client" }, { status: 503 });
+  if (!client) return apiError("SERVICE_UNAVAILABLE", "No client", 503);
 
   // Fetch all active properties in pages (Supabase caps at 1000 per request)
   function buildQuery() {
@@ -62,10 +83,9 @@ async function fallbackFilterOptions(
       .from("properties")
       .select("listing_type, category, subtype, city, country, price, area, price_currency")
       .eq("active", true);
-    if (listingType) q = q.eq("listing_type", listingType as string);
+    if (listingType) q = q.eq("listing_type", listingType);
     if (category) {
-      const cats = category.split(",");
-      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+      q = category.length === 1 ? q.eq("category", category[0]) : q.in("category", category);
     }
     if (brokerIds) {
       q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
@@ -81,7 +101,7 @@ async function fallbackFilterOptions(
   const allData: Record<string, unknown>[] = [];
   for (let offset = 0; ; offset += pageSize) {
     const { data: page, error } = await buildQuery().range(offset, offset + pageSize - 1);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return apiError("INTERNAL_ERROR", error.message, 500);
     if (!page || page.length === 0) break;
     allData.push(...page);
     if (page.length < pageSize) break;
@@ -125,6 +145,11 @@ async function fallbackFilterOptions(
       priceRange: { min: priceMin === Infinity ? 0 : priceMin, max: priceMax },
       areaRange: { min: areaMin === Infinity ? 0 : areaMin, max: areaMax },
     },
-    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } }
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+        ...(rl ? rateLimitHeaders(rl) : {}),
+      },
+    }
   );
 }

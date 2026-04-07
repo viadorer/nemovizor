@@ -11,8 +11,8 @@ const sessionStorageMock = {
 };
 Object.defineProperty(globalThis, "sessionStorage", { value: sessionStorageMock, writable: true });
 
-// Mock navigator.sendBeacon
-const sendBeaconMock = vi.fn(() => true);
+// Mock navigator.sendBeacon — type the mock so .mock.calls[n] is [url, data]
+const sendBeaconMock = vi.fn<(url: string, data?: BodyInit | null) => boolean>(() => true);
 Object.defineProperty(globalThis.navigator, "sendBeacon", { value: sendBeaconMock, writable: true });
 
 describe("analytics", () => {

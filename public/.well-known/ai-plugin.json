@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Nemovizor",
+  "name_for_model": "nemovizor",
+  "description_for_human": "Search real estate listings, explore a map of properties, and parse natural-language real estate queries in Czech, Slovak and other languages on Nemovizor.",
+  "description_for_model": "Use Nemovizor to search Czech, Slovak and European real estate listings via /api/properties, retrieve map points via /api/map-points, fetch faceted filter metadata via /api/filter-options, and convert natural-language user queries into structured filters via /api/ai-search. Combine /api/ai-search output with /api/properties query parameters to answer real estate questions. See OpenAPI spec at /api/openapi for exact contracts.",
+  "auth": { "type": "none" },
+  "api": {
+    "type": "openapi",
+    "url": "https://nemovizor.cz/api/openapi",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://nemovizor.cz/branding/logo.png",
+  "contact_email": "info@nemovizor.cz",
+  "legal_info_url": "https://nemovizor.cz/gdpr"
+}

@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { apiError } from "@/lib/api/response";
+import { parseBody } from "@/lib/api/validate";
+import { AiSearchBodySchema } from "@/lib/api/schemas/ai-search";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `Jsi asistent realitního portálu. Uživatel popíše vlastními slovy, jakou nemovitost hledá — kdekoliv v Evropě. Tvým úkolem je extrahovat strukturované filtry pro vyhledávání.
 
@@ -44,30 +56,18 @@ Příklady:
 
 export async function POST(request: NextRequest) {
   try {
+    const authCtx = await resolveAuthContext(request, TIER1_RATE_LIMITS["ai-search"]);
+    const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+    if (!rl.ok) return rateLimitResponse(rl);
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured" },
-        { status: 503 }
-      );
+      return apiError("SERVICE_UNAVAILABLE", "GEMINI_API_KEY is not configured", 503);
     }
 
-    const body = await request.json();
-    const query = body.query?.trim();
-
-    if (!query || query.length < 3) {
-      return NextResponse.json(
-        { error: "Query too short" },
-        { status: 400 }
-      );
-    }
-
-    if (query.length > 500) {
-      return NextResponse.json(
-        { error: "Query too long" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, AiSearchBodySchema);
+    if (!parsed.ok) return parsed.response;
+    const { query } = parsed.data;
 
     const ai = new GoogleGenAI({ apiKey });
 
@@ -86,14 +86,11 @@ export async function POST(request: NextRequest) {
 
     const text = response.text || "";
 
-    let parsed;
+    let aiJson: Record<string, unknown>;
     try {
-      parsed = JSON.parse(text);
+      aiJson = JSON.parse(text);
     } catch {
-      return NextResponse.json(
-        { error: "Failed to parse AI response", raw: text },
-        { status: 500 }
-      );
+      return apiError("INTERNAL_ERROR", "Failed to parse AI response", 500, { raw: text });
     }
 
     // Validate and clean the response
@@ -102,43 +99,43 @@ export async function POST(request: NextRequest) {
 
     const filters: Record<string, unknown> = {};
 
-    if (parsed.listingType && validListingTypes.includes(parsed.listingType)) {
-      filters.listingType = parsed.listingType;
+    if (typeof aiJson.listingType === "string" && validListingTypes.includes(aiJson.listingType)) {
+      filters.listingType = aiJson.listingType;
     }
-    if (parsed.category && validCategories.includes(parsed.category)) {
-      filters.category = parsed.category;
+    if (typeof aiJson.category === "string" && validCategories.includes(aiJson.category)) {
+      filters.category = aiJson.category;
     }
-    if (parsed.subtypes && Array.isArray(parsed.subtypes) && parsed.subtypes.length > 0) {
-      filters.subtypes = parsed.subtypes.filter((s: unknown) => typeof s === "string");
+    if (Array.isArray(aiJson.subtypes) && aiJson.subtypes.length > 0) {
+      filters.subtypes = aiJson.subtypes.filter((s: unknown) => typeof s === "string");
     }
-    if (parsed.city && typeof parsed.city === "string") {
-      filters.city = parsed.city;
+    if (typeof aiJson.city === "string") {
+      filters.city = aiJson.city;
     }
-    if (parsed.country && typeof parsed.country === "string") {
-      filters.country = parsed.country;
+    if (typeof aiJson.country === "string") {
+      filters.country = aiJson.country;
     }
-    if (parsed.priceMin && typeof parsed.priceMin === "number" && parsed.priceMin > 0) {
-      filters.priceMin = parsed.priceMin;
+    if (typeof aiJson.priceMin === "number" && aiJson.priceMin > 0) {
+      filters.priceMin = aiJson.priceMin;
     }
-    if (parsed.priceMax && typeof parsed.priceMax === "number" && parsed.priceMax > 0) {
-      filters.priceMax = parsed.priceMax;
+    if (typeof aiJson.priceMax === "number" && aiJson.priceMax > 0) {
+      filters.priceMax = aiJson.priceMax;
     }
-    if (parsed.areaMin && typeof parsed.areaMin === "number" && parsed.areaMin > 0) {
-      filters.areaMin = parsed.areaMin;
+    if (typeof aiJson.areaMin === "number" && aiJson.areaMin > 0) {
+      filters.areaMin = aiJson.areaMin;
     }
-    if (parsed.areaMax && typeof parsed.areaMax === "number" && parsed.areaMax > 0) {
-      filters.areaMax = parsed.areaMax;
+    if (typeof aiJson.areaMax === "number" && aiJson.areaMax > 0) {
+      filters.areaMax = aiJson.areaMax;
     }
 
-    return NextResponse.json({
-      filters,
-      explanation: parsed.explanation || "",
-    });
+    return NextResponse.json(
+      {
+        filters,
+        explanation: typeof aiJson.explanation === "string" ? aiJson.explanation : "",
+      },
+      { headers: rateLimitHeaders(rl) },
+    );
   } catch (err) {
     console.error("AI search error:", err);
-    return NextResponse.json(
-      { error: "AI search failed" },
-      { status: 500 }
-    );
+    return apiError("INTERNAL_ERROR", "AI search failed", 500);
   }
 }

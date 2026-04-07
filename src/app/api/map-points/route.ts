@@ -1,41 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { apiError } from "@/lib/api/response";
+import { parseQuery } from "@/lib/api/validate";
+import { MapPointsQuerySchema } from "@/lib/api/schemas/map-points";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/map-points — lightweight endpoint for map markers
  * Returns real property pins for Leaflet markerClusterGroup
  * At low zoom: up to 2000 pins from bbox (or global if no bbox)
  * At high zoom (≥13): up to 500 pins from bbox
+ *
+ * Full contract: see OpenAPI at /api/openapi (MapPointsQuery / MapPointsResponse).
  */
 export async function GET(req: NextRequest) {
+  const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["map-points"]);
+  const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+  if (!rl.ok) return rateLimitResponse(rl);
+
   const client = getSupabase();
   if (!client) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
   }
 
-  const sp = req.nextUrl.searchParams;
-  const zoom = Math.min(20, Math.max(1, parseInt(sp.get("zoom") || "7", 10)));
+  const parsed = parseQuery(req.nextUrl.searchParams, MapPointsQuerySchema);
+  if (!parsed.ok) return parsed.response;
+  const qp = parsed.data;
+
+  const zoom = qp.zoom ?? 7;
   const isPinMode = zoom >= 13;
   const maxPoints = isPinMode ? 500 : 2000;
 
-  // ── Direct SELECT (RPC get_map_points disabled — price_currency enum/text mismatch) ──
-  const listingType = sp.get("listing_type");
-  const category = sp.get("category");
-  const subtype = sp.get("subtype");
-  const city = sp.get("city");
-  const countryParam = sp.get("country");
-
   // Broker / Agency filter
   let brokerIds: string[] | null = null;
-  const brokerId = sp.get("broker_id");
-  const agencyId = sp.get("agency_id");
-  if (brokerId) {
-    brokerIds = [brokerId];
-  } else if (agencyId) {
+  if (qp.broker_id) {
+    brokerIds = [qp.broker_id];
+  } else if (qp.agency_id) {
     const { data: agencyBrokers } = await client
       .from("brokers")
       .select("id")
-      .eq("agency_id", agencyId);
+      .eq("agency_id", qp.agency_id);
     if (agencyBrokers && agencyBrokers.length > 0) {
       brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
     } else {
@@ -53,30 +65,27 @@ export async function GET(req: NextRequest) {
       .neq("latitude", 0)
       .neq("longitude", 0);
 
-    if (listingType) q = q.eq("listing_type", listingType);
-    if (category) {
-      const cats = category.split(",");
-      q = cats.length === 1 ? q.eq("category", cats[0]) : q.in("category", cats);
+    if (qp.listing_type) q = q.eq("listing_type", qp.listing_type);
+    if (qp.category) {
+      q = qp.category.length === 1 ? q.eq("category", qp.category[0]) : q.in("category", qp.category);
     }
-    if (subtype) {
-      const subs = subtype.split(",");
-      q = subs.length === 1 ? q.eq("subtype", subs[0]) : q.in("subtype", subs);
+    if (qp.subtype) {
+      q = qp.subtype.length === 1 ? q.eq("subtype", qp.subtype[0]) : q.in("subtype", qp.subtype);
     }
-    if (city) q = q.eq("city", city);
-    if (countryParam) {
-      const countries = countryParam.split(",");
-      q = countries.length === 1 ? q.eq("country", countries[0]) : q.in("country", countries);
+    if (qp.city) q = q.eq("city", qp.city);
+    if (qp.country) {
+      q = qp.country.length === 1 ? q.eq("country", qp.country[0]) : q.in("country", qp.country);
     }
     if (brokerIds) q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
-    if (sp.get("price_min")) q = q.gte("price", Number(sp.get("price_min")));
-    if (sp.get("price_max")) q = q.lte("price", Number(sp.get("price_max")));
-    if (sp.get("area_min")) q = q.gte("area", Number(sp.get("area_min")));
-    if (sp.get("area_max")) q = q.lte("area", Number(sp.get("area_max")));
-    if (sp.get("sw_lat")) {
-      q = q.gte("latitude", Number(sp.get("sw_lat")));
-      q = q.lte("latitude", Number(sp.get("ne_lat")));
-      q = q.gte("longitude", Number(sp.get("sw_lon")));
-      q = q.lte("longitude", Number(sp.get("ne_lon")));
+    if (qp.price_min !== undefined) q = q.gte("price", qp.price_min);
+    if (qp.price_max !== undefined) q = q.lte("price", qp.price_max);
+    if (qp.area_min !== undefined) q = q.gte("area", qp.area_min);
+    if (qp.area_max !== undefined) q = q.lte("area", qp.area_max);
+    if (qp.sw_lat !== undefined && qp.ne_lat !== undefined && qp.sw_lon !== undefined && qp.ne_lon !== undefined) {
+      q = q.gte("latitude", qp.sw_lat);
+      q = q.lte("latitude", qp.ne_lat);
+      q = q.gte("longitude", qp.sw_lon);
+      q = q.lte("longitude", qp.ne_lon);
     }
     return q;
   }
@@ -92,7 +101,7 @@ export async function GET(req: NextRequest) {
   const pageResults = await Promise.all(pagePromises);
   const allRows: MapRow[] = [];
   for (const { data: pageData, error: pageError } of pageResults) {
-    if (pageError) return NextResponse.json({ error: pageError.message }, { status: 500 });
+    if (pageError) return apiError("INTERNAL_ERROR", pageError.message, 500);
     const rows = (pageData || []) as MapRow[];
     allRows.push(...rows);
     if (rows.length < pageSize) break;
@@ -117,6 +126,11 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { points, count: points.length, total: points.length, truncated: points.length >= maxPoints },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        ...rateLimitHeaders(rl),
+      },
+    }
   );
 }

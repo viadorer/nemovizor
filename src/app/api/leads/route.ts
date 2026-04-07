@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase";
 import type { Database } from "@/lib/supabase-types";
+import { apiError } from "@/lib/api/response";
+import { parseBody } from "@/lib/api/validate";
+import { LeadsBodySchema } from "@/lib/api/schemas/leads";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+  rateLimitResponse,
+  TIER1_RATE_LIMITS,
+} from "@/lib/api/rate-limit";
+import { resolveAuthContext } from "@/lib/api/auth-context";
+
+export const dynamic = "force-dynamic";
 
 type LeadInsert = Database["public"]["Tables"]["leads"]["Insert"];
 
@@ -10,9 +22,16 @@ function getClient() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS.leads);
+    const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
+    if (!rl.ok) return rateLimitResponse(rl);
+
+    const parsed = await parseBody(req, LeadsBodySchema);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
+
     const sb = getClient();
-    if (!sb) return NextResponse.json({ error: "DB not available" }, { status: 500 });
+    if (!sb) return apiError("SERVICE_UNAVAILABLE", "DB not available", 503);
 
     const lead: LeadInsert = {
       name: body.name || "",
@@ -30,12 +49,12 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Lead insert error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError("INTERNAL_ERROR", error.message, 500);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: rateLimitHeaders(rl) });
   } catch (e) {
     console.error("Lead API error:", e);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return apiError("INTERNAL_ERROR", "Internal error", 500);
   }
 }

@@ -2,10 +2,22 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "nemovizor-dev",
-      "runtimeExecutable": "/Users/davidchoc/.nvm/versions/node/v22.22.1/bin/npm",
-      "runtimeArgs": ["run", "dev"],
+      "name": "dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/davidchoc/.nvm/versions/node/v22.22.1/bin:$PATH && npm run dev"],
       "port": 3000
+    },
+    {
+      "name": "dev-3010",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/davidchoc/.nvm/versions/node/v22.22.1/bin:$PATH && npx next dev -p 3010"],
+      "port": 3010
+    },
+    {
+      "name": "vitalspace-crm",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/davidchoc/Downloads/Cascade/Vitalspacecrm && npx next dev -p 3002"],
+      "port": 3002
     }
   ]
 }
