@@ -10,6 +10,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -22,16 +23,19 @@ type Ev = { event_type: string; session_id: string; properties: Record<string, u
  * Full contract: see OpenAPI at /api/openapi (BrokerAnalyticsQuery / BrokerAnalyticsResponse).
  */
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["broker-analytics"]);
+  const tap = createAuditTap({ endpoint: "/api/broker/analytics-behavior", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = getSupabase() as any;
-  if (!client) return apiError("SERVICE_UNAVAILABLE", "No DB", 503);
+  if (!client) return tap(apiError("SERVICE_UNAVAILABLE", "No DB", 503));
 
   const parsed = parseQuery(req.nextUrl.searchParams, BrokerAnalyticsQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
   const { broker_id: brokerId = null, agency_id: agencyId = null } = parsed.data as {
     broker_id?: string;
     agency_id?: string;
@@ -74,11 +78,11 @@ export async function GET(req: NextRequest) {
   const hasSummaries = statsData && statsData.length > 0;
 
   if (hasSummaries) {
-    return buildResponseFromSummaries(client, statsData, scopeFilter, date7dAgo, date14dAgo, today, totalProperties, brokerId, agencyId, rateLimitHeaders(rl));
+    return tap(await buildResponseFromSummaries(client, statsData, scopeFilter, date7dAgo, date14dAgo, today, totalProperties, brokerId, agencyId, rateLimitHeaders(rl)));
   }
 
   // ── Fallback: raw events (same as original implementation) ──
-  return buildResponseFromRawEvents(client, brokerId, agencyId, totalProperties, rateLimitHeaders(rl));
+  return tap(await buildResponseFromRawEvents(client, brokerId, agencyId, totalProperties, rateLimitHeaders(rl)));
 }
 
 // ═══════════════════════════════════════════════════════════════════════

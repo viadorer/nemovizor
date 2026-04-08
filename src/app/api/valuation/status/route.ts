@@ -10,6 +10,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -18,17 +19,20 @@ export const dynamic = "force-dynamic";
  * Full contract: see OpenAPI at /api/openapi (ValuationStatusQuery / ValuationStatusResponse).
  */
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["valuation-status"]);
+  const tap = createAuditTap({ endpoint: "/api/valuation/status", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const parsed = parseQuery(req.nextUrl.searchParams, ValuationStatusQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
   const { id } = parsed.data;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = getSupabase() as any;
-  if (!client) return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+  if (!client) return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
 
   const { data } = await client
     .from("valuation_reports")
@@ -36,9 +40,9 @@ export async function GET(req: NextRequest) {
     .eq("id", id)
     .single();
 
-  if (!data) return apiError("NOT_FOUND", "Valuation report not found", 404);
+  if (!data) return tap(apiError("NOT_FOUND", "Valuation report not found", 404));
 
-  return NextResponse.json(
+  return tap(NextResponse.json(
     {
       id: data.id,
       pdf_url: data.pdf_url || null,
@@ -46,5 +50,5 @@ export async function GET(req: NextRequest) {
       ready: !!data.pdf_url,
     },
     { headers: rateLimitHeaders(rl) },
-  );
+  ));
 }

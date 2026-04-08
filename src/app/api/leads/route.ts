@@ -11,6 +11,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -21,17 +22,21 @@ function getClient() {
 }
 
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
+  let tap: ReturnType<typeof createAuditTap> = (r) => r;
   try {
     const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS.leads);
+    tap = createAuditTap({ endpoint: "/api/leads", method: "POST", authCtx, startedAt });
+
     const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-    if (!rl.ok) return rateLimitResponse(rl);
+    if (!rl.ok) return tap(rateLimitResponse(rl));
 
     const parsed = await parseBody(req, LeadsBodySchema);
-    if (!parsed.ok) return parsed.response;
+    if (!parsed.ok) return tap(parsed.response);
     const body = parsed.data;
 
     const sb = getClient();
-    if (!sb) return apiError("SERVICE_UNAVAILABLE", "DB not available", 503);
+    if (!sb) return tap(apiError("SERVICE_UNAVAILABLE", "DB not available", 503));
 
     const lead: LeadInsert = {
       name: body.name || "",
@@ -49,12 +54,12 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Lead insert error:", error);
-      return apiError("INTERNAL_ERROR", error.message, 500);
+      return tap(apiError("INTERNAL_ERROR", error.message, 500));
     }
 
-    return NextResponse.json({ ok: true }, { headers: rateLimitHeaders(rl) });
+    return tap(NextResponse.json({ ok: true }, { headers: rateLimitHeaders(rl) }));
   } catch (e) {
     console.error("Lead API error:", e);
-    return apiError("INTERNAL_ERROR", "Internal error", 500);
+    return tap(apiError("INTERNAL_ERROR", "Internal error", 500));
   }
 }

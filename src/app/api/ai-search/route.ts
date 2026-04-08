@@ -10,6 +10,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -55,18 +56,23 @@ Příklady:
 `;
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
+  let authCtx: Awaited<ReturnType<typeof resolveAuthContext>> | null = null;
+  let tap: ReturnType<typeof createAuditTap> = (r) => r;
   try {
-    const authCtx = await resolveAuthContext(request, TIER1_RATE_LIMITS["ai-search"]);
+    authCtx = await resolveAuthContext(request, TIER1_RATE_LIMITS["ai-search"]);
+    tap = createAuditTap({ endpoint: "/api/ai-search", method: "POST", authCtx, startedAt });
+
     const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-    if (!rl.ok) return rateLimitResponse(rl);
+    if (!rl.ok) return tap(rateLimitResponse(rl));
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return apiError("SERVICE_UNAVAILABLE", "GEMINI_API_KEY is not configured", 503);
+      return tap(apiError("SERVICE_UNAVAILABLE", "GEMINI_API_KEY is not configured", 503));
     }
 
     const parsed = await parseBody(request, AiSearchBodySchema);
-    if (!parsed.ok) return parsed.response;
+    if (!parsed.ok) return tap(parsed.response);
     const { query } = parsed.data;
 
     const ai = new GoogleGenAI({ apiKey });
@@ -90,7 +96,7 @@ export async function POST(request: NextRequest) {
     try {
       aiJson = JSON.parse(text);
     } catch {
-      return apiError("INTERNAL_ERROR", "Failed to parse AI response", 500, { raw: text });
+      return tap(apiError("INTERNAL_ERROR", "Failed to parse AI response", 500, { raw: text }));
     }
 
     // Validate and clean the response
@@ -127,15 +133,15 @@ export async function POST(request: NextRequest) {
       filters.areaMax = aiJson.areaMax;
     }
 
-    return NextResponse.json(
+    return tap(NextResponse.json(
       {
         filters,
         explanation: typeof aiJson.explanation === "string" ? aiJson.explanation : "",
       },
       { headers: rateLimitHeaders(rl) },
-    );
+    ));
   } catch (err) {
     console.error("AI search error:", err);
-    return apiError("INTERNAL_ERROR", "AI search failed", 500);
+    return tap(apiError("INTERNAL_ERROR", "AI search failed", 500));
   }
 }

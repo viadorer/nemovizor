@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
 import { fetchProperties } from "@/lib/api/properties-data";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 // Ensure the handler runs on every request so the in-memory rate limiter
 // actually sees traffic (otherwise Next.js may cache the response).
@@ -31,22 +32,25 @@ function getClient() {
  * Full query/response contract: see OpenAPI at /api/openapi (PropertiesQuery / PropertiesResponse).
  */
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS.properties);
+  const tap = createAuditTap({ endpoint: "/api/properties", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const client = getClient();
   if (!client) {
-    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+    return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
   }
 
   const parsed = parseQuery(req.nextUrl.searchParams, PropertiesQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
 
   const result = await fetchProperties(client, parsed.data, "legacy");
 
   if ("error" in result) {
-    return apiError("INTERNAL_ERROR", result.error, 500);
+    return tap(apiError("INTERNAL_ERROR", result.error, 500));
   }
 
   // Legacy response keeps offset fields but also includes `next_cursor` so
@@ -62,12 +66,12 @@ export async function GET(req: NextRequest) {
     next_cursor: result.next_cursor,
   };
 
-  return NextResponse.json(body, {
+  return tap(NextResponse.json(body, {
     headers: {
       "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
       ...rateLimitHeaders(rl),
     },
-  });
+  }));
 }
 
 /** POST /api/properties – vložit novou nemovitost */

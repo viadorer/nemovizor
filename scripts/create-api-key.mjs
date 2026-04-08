@@ -8,7 +8,12 @@
  *     --owner-id   00000000-0000-0000-0000-000000000000 \
  *     --name       "Claude Desktop - David" \
  *     [--rate-limit 300] \
- *     [--expires   2026-12-31]
+ *     [--expires   2026-12-31] \
+ *     [--scopes    read:public,write:broker]
+ *
+ * Default scope is `read:public` (every public read endpoint is accessible).
+ * Add `read:broker`, `write:broker`, `read:admin`, or `write:webhooks` to
+ * grant additional permissions. Unknown scopes cause the script to abort.
  *
  * Reads env vars:
  *   NEXT_PUBLIC_SUPABASE_URL     (required)
@@ -40,16 +45,38 @@ for (let i = 0; i < argv.length; i++) {
 
 if (!args["owner-type"] || !args["owner-id"] || !args.name) {
   console.error(
-    "Usage: node scripts/create-api-key.mjs --owner-type <broker|agency> --owner-id <uuid> --name <label> [--rate-limit 300] [--expires YYYY-MM-DD]",
+    "Usage: node scripts/create-api-key.mjs --owner-type <broker|agency> --owner-id <uuid> --name <label> [--rate-limit 300] [--expires YYYY-MM-DD] [--scopes read:public,write:broker]",
   );
   process.exit(2);
 }
+
+const KNOWN_SCOPES = [
+  "read:public",
+  "read:broker",
+  "write:broker",
+  "read:admin",
+  "write:webhooks",
+];
 
 const ownerType = String(args["owner-type"]);
 const ownerId = String(args["owner-id"]);
 const name = String(args.name);
 const rateLimit = args["rate-limit"] ? parseInt(String(args["rate-limit"]), 10) : 300;
 const expiresAt = args.expires ? new Date(String(args.expires)).toISOString() : null;
+
+const scopes = args.scopes
+  ? String(args.scopes)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : ["read:public"];
+
+const unknownScopes = scopes.filter((s) => !KNOWN_SCOPES.includes(s));
+if (unknownScopes.length > 0) {
+  console.error(`Unknown scope(s): ${unknownScopes.join(", ")}`);
+  console.error(`Allowed: ${KNOWN_SCOPES.join(", ")}`);
+  process.exit(2);
+}
 
 if (!["broker", "agency"].includes(ownerType)) {
   console.error(`Invalid --owner-type: ${ownerType} (expected 'broker' or 'agency')`);
@@ -92,7 +119,7 @@ const { data, error } = await supabase
     key_prefix: keyPrefix,
     owner_type: ownerType,
     owner_id: ownerId,
-    scopes: ["public:read"],
+    scopes,
     rate_limit_per_min: rateLimit,
     expires_at: expiresAt,
   })
@@ -109,6 +136,7 @@ console.log("   id            :", data.id);
 console.log("   name          :", name);
 console.log("   owner         :", `${ownerType}/${ownerId}`);
 console.log("   rate limit    :", `${rateLimit}/min`);
+console.log("   scopes        :", scopes.join(", "));
 console.log("   expires       :", expiresAt ?? "(never)");
 console.log("\n🔑  Raw key (shown ONCE — store it now):");
 console.log("   " + rawKey);

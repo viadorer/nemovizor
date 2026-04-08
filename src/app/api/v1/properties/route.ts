@@ -12,6 +12,7 @@ import {
 import { resolveAuthContext } from "@/lib/api/auth-context";
 import { fetchProperties } from "@/lib/api/properties-data";
 import { toCamelCase, toSnakeKey } from "@/lib/api/camelcase";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 /**
  * GET /api/v1/properties — public, recommended surface for external clients
@@ -45,22 +46,25 @@ function normaliseQueryKeys(searchParams: URLSearchParams): URLSearchParams {
 }
 
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS.properties);
+  const tap = createAuditTap({ endpoint: "/api/v1/properties", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const client = getClient();
   if (!client) {
-    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+    return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
   }
 
   const normalisedParams = normaliseQueryKeys(req.nextUrl.searchParams);
   const parsed = parseQuery(normalisedParams, PropertiesQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
 
   const result = await fetchProperties(client, parsed.data, "v1");
   if ("error" in result) {
-    return apiError("INTERNAL_ERROR", result.error, 500);
+    return tap(apiError("INTERNAL_ERROR", result.error, 500));
   }
 
   // Camelize the entire response (top-level keys + every row's nested keys).
@@ -73,10 +77,10 @@ export async function GET(req: NextRequest) {
     next_cursor: result.next_cursor,
   }) as Record<string, unknown>;
 
-  return NextResponse.json(camel, {
+  return tap(NextResponse.json(camel, {
     headers: {
       "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
       ...rateLimitHeaders(rl),
     },
-  });
+  }));
 }

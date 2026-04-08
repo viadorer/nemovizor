@@ -12,6 +12,47 @@ import { supabaseAdmin } from "@/lib/supabase";
 export const API_KEY_PREFIX = "nvz_";
 const RAW_BODY_LENGTH = 32; // characters after the prefix
 
+// ─── Scopes ────────────────────────────────────────────────────────────────
+
+/**
+ * Scope vocabulary used for API key permission checks.
+ *
+ *   • `read:public` — every key gets this implicitly. Grants access to all
+ *     /api/v1/* read endpoints (properties list, detail, map, filters,
+ *     ai-search, valuation status, broker-analytics, broker-contact).
+ *
+ *   • `read:broker` — read access to broker-scoped data the caller owns
+ *     (own properties, own analytics, own leads). Reserved for future
+ *     broker self-service endpoints.
+ *
+ *   • `write:broker` — mutate broker-scoped data the caller owns. Required
+ *     for future "submit a listing via API" / "update price" endpoints.
+ *
+ *   • `read:admin` — admin-tier read (currently unused; placeholder for
+ *     future cross-broker analytics endpoints accessible via API key).
+ *
+ *   • `write:webhooks` — manage webhook subscriptions (Phase D).
+ *
+ * The set is intentionally narrow. Adding new scopes requires updating
+ * `KNOWN_SCOPES`, the admin UI dropdown, and the CLI flag.
+ */
+export const KNOWN_SCOPES = [
+  "read:public",
+  "read:broker",
+  "write:broker",
+  "read:admin",
+  "write:webhooks",
+] as const;
+
+export type ApiScope = (typeof KNOWN_SCOPES)[number];
+
+export function isKnownScope(s: string): s is ApiScope {
+  return (KNOWN_SCOPES as readonly string[]).includes(s);
+}
+
+/** Default scopes assigned to a freshly created key when none specified. */
+export const DEFAULT_SCOPES: ApiScope[] = ["read:public"];
+
 /** Generate a fresh raw API key. Returns the full string to hand to the user. */
 export function generateApiKey(): string {
   // 24 random bytes → 32 chars of base64url after trimming padding.
@@ -116,3 +157,17 @@ export async function lookupApiKey(raw: string): Promise<ApiKeyRecord | null> {
     revokedAt: data.revoked_at,
   };
 }
+
+/**
+ * Check whether the given record has the required scope.
+ *
+ * Implicit grant: every API key has `read:public` even if not listed.
+ * This keeps existing keys (created before scopes were enforced) working
+ * for read endpoints, while allowing future write endpoints to require an
+ * explicit `write:broker` opt-in.
+ */
+export function hasScope(record: ApiKeyRecord, required: ApiScope): boolean {
+  if (required === "read:public") return true;
+  return record.scopes.includes(required);
+}
+

@@ -10,6 +10,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,20 @@ export const dynamic = "force-dynamic";
  * Full contract: see OpenAPI at /api/openapi (MapPointsQuery / MapPointsResponse).
  */
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["map-points"]);
+  const tap = createAuditTap({ endpoint: "/api/map-points", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const client = getSupabase();
   if (!client) {
-    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+    return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
   }
 
   const parsed = parseQuery(req.nextUrl.searchParams, MapPointsQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
   const qp = parsed.data;
 
   const zoom = qp.zoom ?? 7;
@@ -51,7 +55,7 @@ export async function GET(req: NextRequest) {
     if (agencyBrokers && agencyBrokers.length > 0) {
       brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
     } else {
-      return NextResponse.json({ points: [], count: 0, total: 0, truncated: false });
+      return tap(NextResponse.json({ points: [], count: 0, total: 0, truncated: false }));
     }
   }
 
@@ -101,7 +105,7 @@ export async function GET(req: NextRequest) {
   const pageResults = await Promise.all(pagePromises);
   const allRows: MapRow[] = [];
   for (const { data: pageData, error: pageError } of pageResults) {
-    if (pageError) return apiError("INTERNAL_ERROR", pageError.message, 500);
+    if (pageError) return tap(apiError("INTERNAL_ERROR", pageError.message, 500));
     const rows = (pageData || []) as MapRow[];
     allRows.push(...rows);
     if (rows.length < pageSize) break;
@@ -124,7 +128,7 @@ export async function GET(req: NextRequest) {
     district: p.district,
   }));
 
-  return NextResponse.json(
+  return tap(NextResponse.json(
     { points, count: points.length, total: points.length, truncated: points.length >= maxPoints },
     {
       headers: {
@@ -132,5 +136,5 @@ export async function GET(req: NextRequest) {
         ...rateLimitHeaders(rl),
       },
     }
-  );
+  ));
 }

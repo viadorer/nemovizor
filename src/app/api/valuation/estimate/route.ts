@@ -9,6 +9,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +42,17 @@ type ValuoResult = {
 };
 
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
+  let tap: ReturnType<typeof createAuditTap> = (r) => r;
   try {
     const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["valuation-estimate"]);
+    tap = createAuditTap({ endpoint: "/api/valuation/estimate", method: "POST", authCtx, startedAt });
+
     const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-    if (!rl.ok) return rateLimitResponse(rl);
+    if (!rl.ok) return tap(rateLimitResponse(rl));
 
     const parsed = await parseBody(req, ValuationEstimateBodySchema);
-    if (!parsed.ok) return parsed.response;
+    if (!parsed.ok) return tap(parsed.response);
     // Cast to loose shape so the existing destructuring pattern keeps working
     // without narrowing the rest of the ~200-line handler.
     const body = parsed.data as Record<string, unknown> & {
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
     // Try RealVisor API (POST /api/v1/public/api-leads/valuo)
     if (!REALVISOR_API_KEY) {
       console.error("[valuation/estimate] REALVISOR_API_KEY not configured");
-      return apiError("SERVICE_UNAVAILABLE", "Služba ocenění není nakonfigurována.", 503);
+      return tap(apiError("SERVICE_UNAVAILABLE", "Služba ocenění není nakonfigurována.", 503));
     }
     {
       try {
@@ -223,7 +228,7 @@ export async function POST(req: NextRequest) {
 
     // No fallback — RealVisor is the only source
     if (!valuoResult) {
-      return apiError("INTERNAL_ERROR", "Ocenění se nepodařilo. Zkuste to prosím znovu.", 502);
+      return tap(apiError("INTERNAL_ERROR", "Ocenění se nepodařilo. Zkuste to prosím znovu.", 502));
     }
 
     // ── Save to DB (non-blocking — don't fail if tables missing) ──
@@ -282,7 +287,7 @@ export async function POST(req: NextRequest) {
       }).catch((e) => console.error("[valuation] PDF pre-generation error:", e));
     }
 
-    return NextResponse.json(
+    return tap(NextResponse.json(
       {
         success: true,
         valuationId,
@@ -298,10 +303,10 @@ export async function POST(req: NextRequest) {
         },
       },
       { headers: rateLimitHeaders(rl) },
-    );
+    ));
   } catch (e) {
     console.error("[valuation/estimate] Error:", e);
-    return apiError("INTERNAL_ERROR", "Chyba při ocenění", 500);
+    return tap(apiError("INTERNAL_ERROR", "Chyba při ocenění", 500));
   }
 }
 

@@ -10,6 +10,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,15 @@ export const dynamic = "force-dynamic";
  * Full contract: see OpenAPI at /api/openapi (AnalyticsTrackBody / AnalyticsTrackResponse).
  */
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["analytics-track"]);
+  const tap = createAuditTap({ endpoint: "/api/analytics/track", method: "POST", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const client = getSupabase();
-  if (!client) return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+  if (!client) return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
   const ua = req.headers.get("user-agent") || "";
 
   const parsed = await parseBody(req, AnalyticsTrackBodySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
 
   const raw: Record<string, unknown>[] = Array.isArray(parsed.data)
     ? (parsed.data as Record<string, unknown>[])
@@ -54,17 +58,17 @@ export async function POST(req: NextRequest) {
     .filter((r) => r.session_id && r.event_type);
 
   if (rows.length === 0)
-    return NextResponse.json(
+    return tap(NextResponse.json(
       { ok: true },
       { headers: { "Cache-Control": "no-store", ...rateLimitHeaders(rl) } },
-    );
+    ));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (client as any).from("analytics_events").insert(rows);
   if (error) console.error("[analytics/track]", error.message);
 
-  return NextResponse.json(
+  return tap(NextResponse.json(
     { ok: true },
     { headers: { "Cache-Control": "no-store", ...rateLimitHeaders(rl) } },
-  );
+  ));
 }

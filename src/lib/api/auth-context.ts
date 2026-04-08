@@ -11,9 +11,16 @@
  * Callers can opt in to hard `requireApiKey()` later when we actually start
  * gating endpoints.
  */
-import type { NextRequest } from "next/server";
-import { extractBearerToken, lookupApiKey, type ApiKeyRecord } from "./api-key";
+import type { NextRequest, NextResponse } from "next/server";
+import {
+  extractBearerToken,
+  hasScope,
+  lookupApiKey,
+  type ApiKeyRecord,
+  type ApiScope,
+} from "./api-key";
 import { getClientKey, type RateLimitConfig } from "./rate-limit";
+import { apiError, type ApiErrorBody } from "./response";
 
 export interface AuthContext {
   kind: "anonymous" | "apiKey";
@@ -60,4 +67,39 @@ export async function resolveAuthContext(
     rateLimitConfig: defaultConfig,
     apiKey: null,
   };
+}
+
+/**
+ * Enforce a scope on the resolved auth context. Public read endpoints
+ * (`read:public`) are always allowed for anyone — caller does not need to
+ * call this. Use it inside route handlers for write or restricted endpoints.
+ *
+ * Returns:
+ *   • `null` when allowed (the caller satisfies the required scope)
+ *   • a 401/403 NextResponse to short-circuit the request when not allowed
+ */
+export function requireScope(
+  authCtx: AuthContext,
+  required: ApiScope,
+): NextResponse<ApiErrorBody> | null {
+  if (required === "read:public") return null;
+
+  if (authCtx.kind !== "apiKey" || !authCtx.apiKey) {
+    return apiError(
+      "UNAUTHORIZED",
+      `This endpoint requires an API key with the "${required}" scope. ` +
+        `Authenticate with Authorization: Bearer <key>.`,
+      401,
+    );
+  }
+
+  if (!hasScope(authCtx.apiKey, required)) {
+    return apiError(
+      "FORBIDDEN",
+      `Your API key is missing the required scope "${required}".`,
+      403,
+    );
+  }
+
+  return null;
 }

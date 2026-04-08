@@ -187,6 +187,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard/sprava/penezenky", label: "Peněženky", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>) },
     { href: "/dashboard/sprava/cenik", label: "Ceník služeb", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) },
     { href: "/dashboard/sprava/api-keys", label: "API klíče", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-9.6 9.6" /><circle cx="7.5" cy="15.5" r="5.5" /><path d="M15.5 7.5l3 3L22 7l-3-3" /></svg>) },
+    { href: "/dashboard/sprava/api-audit", label: "API audit", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>) },
   ], [t]);
 
   const items = [

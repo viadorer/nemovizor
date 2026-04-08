@@ -11,6 +11,7 @@ import {
   type RateLimitResult,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +21,20 @@ export const dynamic = "force-dynamic";
  * Full contract: see OpenAPI at /api/openapi (FilterOptionsQuery / FilterOptionsResponse).
  */
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["filter-options"]);
+  const tap = createAuditTap({ endpoint: "/api/filter-options", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   const client = getSupabase();
   if (!client) {
-    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+    return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
   }
 
   const parsed = parseQuery(req.nextUrl.searchParams, FilterOptionsQuerySchema);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return tap(parsed.response);
   const qp = parsed.data;
 
   const listingType = qp.listing_type ?? null;
@@ -50,20 +54,20 @@ export async function GET(req: NextRequest) {
     if (agencyBrokers && agencyBrokers.length > 0) {
       brokerIds = agencyBrokers.map((b: { id: string }) => b.id);
     } else {
-      return NextResponse.json(
+      return tap(NextResponse.json(
         {
           categories: [], cities: [], subtypes: [], listingTypes: [],
           priceRange: { min: 0, max: 0 }, areaRange: { min: 0, max: 0 },
         },
         { headers: rateLimitHeaders(rl) },
-      );
+      ));
     }
   }
 
   const bounds = hasBounds
     ? { swLat: qp.sw_lat!, swLon: qp.sw_lon!, neLat: qp.ne_lat!, neLon: qp.ne_lon! }
     : null;
-  return await fallbackFilterOptions(client, listingType, category, brokerIds, bounds, rl);
+  return tap(await fallbackFilterOptions(client, listingType, category, brokerIds, bounds, rl));
 }
 
 /** Fallback using standard Supabase queries (no custom RPC needed) */

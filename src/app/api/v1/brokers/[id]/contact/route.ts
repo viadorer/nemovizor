@@ -8,6 +8,7 @@ import {
   TIER1_RATE_LIMITS,
 } from "@/lib/api/rate-limit";
 import { resolveAuthContext } from "@/lib/api/auth-context";
+import { createAuditTap } from "@/lib/api/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -45,19 +46,22 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  const startedAt = Date.now();
   const { id } = await context.params;
 
   const authCtx = await resolveAuthContext(req, TIER1_RATE_LIMITS["broker-contact"]);
+  const tap = createAuditTap({ endpoint: "/api/v1/brokers/{id}/contact", method: "GET", authCtx, startedAt });
+
   const rl = await checkRateLimit(authCtx.rateLimitClientKey, authCtx.rateLimitConfig);
-  if (!rl.ok) return rateLimitResponse(rl);
+  if (!rl.ok) return tap(rateLimitResponse(rl));
 
   if (!id || !UUID_RE.test(id)) {
-    return apiError("VALIDATION_ERROR", "Invalid broker id (must be a UUID)", 400);
+    return tap(apiError("VALIDATION_ERROR", "Invalid broker id (must be a UUID)", 400));
   }
 
   const client = getClient();
   if (!client) {
-    return apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503);
+    return tap(apiError("SERVICE_UNAVAILABLE", "Supabase not configured", 503));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,13 +73,13 @@ export async function GET(
     .maybeSingle();
 
   if (error) {
-    return apiError("INTERNAL_ERROR", error.message, 500);
+    return tap(apiError("INTERNAL_ERROR", error.message, 500));
   }
   if (!data) {
-    return apiError("NOT_FOUND", "Broker not found", 404);
+    return tap(apiError("NOT_FOUND", "Broker not found", 404));
   }
 
-  return NextResponse.json(
+  return tap(NextResponse.json(
     {
       data: {
         id: data.id,
@@ -92,5 +96,5 @@ export async function GET(
         ...rateLimitHeaders(rl),
       },
     },
-  );
+  ));
 }

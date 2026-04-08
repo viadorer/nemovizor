@@ -20,6 +20,7 @@ import {
   CreateApiKeyBodySchema,
 } from "@/lib/api/schemas/admin-api-keys";
 import {
+  DEFAULT_SCOPES,
   generateApiKey,
   hashApiKey,
   prefixApiKey,
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       key_prefix: keyPrefix,
       owner_type: body.owner_type,
       owner_id: body.owner_id,
-      scopes: ["public:read"],
+      scopes: body.scopes && body.scopes.length > 0 ? body.scopes : DEFAULT_SCOPES,
       rate_limit_per_min: body.rate_limit_per_min ?? 300,
       expires_at: body.expires_at ?? null,
     })

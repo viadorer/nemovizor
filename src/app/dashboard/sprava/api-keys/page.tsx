@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+const ALL_SCOPES = [
+  { value: "read:public", label: "read:public", note: "Veřejné read endpointy (default, vždy aktivní)" },
+  { value: "read:broker", label: "read:broker", note: "Read broker-scoped data (vlastní inzeráty, vlastní leady)" },
+  { value: "write:broker", label: "write:broker", note: "Mutate broker-scoped data (vytvořit/upravit inzerát přes API)" },
+  { value: "read:admin", label: "read:admin", note: "Cross-broker analytika (admin tier)" },
+  { value: "write:webhooks", label: "write:webhooks", note: "Spravovat webhook subscriptions (Phase D)" },
+] as const;
+
 type ApiKeyRow = {
   id: string;
   name: string;
@@ -56,6 +64,7 @@ export default function AdminApiKeysPage() {
   const [formOwnerId, setFormOwnerId] = useState("");
   const [formRateLimit, setFormRateLimit] = useState("300");
   const [formExpiresAt, setFormExpiresAt] = useState("");
+  const [formScopes, setFormScopes] = useState<string[]>(["read:public"]);
   const [submitting, setSubmitting] = useState(false);
 
   // Just-created raw key (shown once)
@@ -97,6 +106,7 @@ export default function AdminApiKeysPage() {
           owner_id: formOwnerId.trim(),
           rate_limit_per_min: parseInt(formRateLimit, 10) || 300,
           expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+          scopes: formScopes,
         }),
       });
       if (!res.ok) {
@@ -110,6 +120,7 @@ export default function AdminApiKeysPage() {
       setFormOwnerId("");
       setFormRateLimit("300");
       setFormExpiresAt("");
+      setFormScopes(["read:public"]);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create");
@@ -279,6 +290,48 @@ export default function AdminApiKeysPage() {
               style={{ padding: "0.5rem", borderRadius: 4, border: "1px solid var(--border, #e5e7eb)" }}
             />
           </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: "1 / -1" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>Scopes (oprávnění)</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {ALL_SCOPES.map((s) => {
+                const checked = formScopes.includes(s.value);
+                const isPublic = s.value === "read:public";
+                return (
+                  <label
+                    key={s.value}
+                    title={s.note}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "0.4rem 0.6rem",
+                      border: `1px solid ${checked ? "#111827" : "var(--border, #e5e7eb)"}`,
+                      borderRadius: 6,
+                      background: checked ? "#11182710" : "transparent",
+                      cursor: isPublic ? "not-allowed" : "pointer",
+                      fontSize: "0.75rem",
+                      fontFamily: "monospace",
+                      opacity: isPublic ? 0.7 : 1,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={isPublic}
+                      onChange={(e) => {
+                        if (e.target.checked) setFormScopes((prev) => [...prev, s.value]);
+                        else setFormScopes((prev) => prev.filter((x) => x !== s.value));
+                      }}
+                    />
+                    {s.label}
+                  </label>
+                );
+              })}
+            </div>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-muted, #6b7280)" }}>
+              `read:public` je vždy aktivní. Ostatní scopes opt-in.
+            </span>
+          </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>Expirace (volitelné)</span>
             <input
@@ -314,6 +367,7 @@ export default function AdminApiKeysPage() {
               <th style={thStyle}>Název</th>
               <th style={thStyle}>Prefix</th>
               <th style={thStyle}>Vlastník</th>
+              <th style={thStyle}>Scopes</th>
               <th style={thStyle}>Limit/min</th>
               <th style={thStyle}>Vytvořen</th>
               <th style={thStyle}>Naposledy použit</th>
@@ -324,14 +378,14 @@ export default function AdminApiKeysPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #6b7280)" }}>
+                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #6b7280)" }}>
                   Načítání…
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #6b7280)" }}>
+                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted, #6b7280)" }}>
                   Zatím žádné klíče. Vytvořte první pomocí tlačítka „Nový klíč".
                 </td>
               </tr>
@@ -351,6 +405,24 @@ export default function AdminApiKeysPage() {
                       </div>
                       <div style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
                         {row.owner_id.slice(0, 8)}…{row.owner_id.slice(-4)}
+                      </div>
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200 }}>
+                        {(row.scopes || ["read:public"]).map((s) => (
+                          <span
+                            key={s}
+                            style={{
+                              padding: "0.15rem 0.4rem",
+                              background: "var(--bg-muted, #f3f4f6)",
+                              borderRadius: 4,
+                              fontSize: "0.65rem",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {s}
+                          </span>
+                        ))}
                       </div>
                     </td>
                     <td style={tdStyle}>{row.rate_limit_per_min}</td>
