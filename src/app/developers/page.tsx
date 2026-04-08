@@ -2,37 +2,82 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+
+// ─── Content ───────────────────────────────────────────────────────────────
 
 const FEATURES = [
   {
     title: "72 655 aktivních nabídek",
     body: "Reálná data z 8 zdrojů napříč 20 zeměmi: Sreality, Bienici, Fotocasa, Otodom, Idealista, Realmen a další. Aktualizováno průběžně.",
-    icon: "📊",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18" />
+        <path d="M9 21V9" />
+      </svg>
+    ),
   },
   {
     title: "AI search v jakémkoli jazyce",
     body: "Pošli volný text (např. 'Byt 2+kk v Praze do 8 milionů') a dostaneš strukturované filtry. Funguje česky, slovensky, anglicky, francouzsky, italsky, španělsky, německy.",
-    icon: "🤖",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a4 4 0 0 1 4 4v2" />
+        <path d="M8 8V6a4 4 0 0 1 4-4" />
+        <rect x="5" y="8" width="14" height="8" rx="2" />
+        <path d="M12 16v4" />
+        <path d="M8 20h8" />
+        <circle cx="9" cy="12" r="0.5" fill="currentColor" />
+        <circle cx="15" cy="12" r="0.5" fill="currentColor" />
+      </svg>
+    ),
   },
   {
     title: "Webhooks místo pollování",
     body: "Subscribe na property.created, property.price_changed atd. HMAC-SHA256 podepsané doručení do 5 minut od mutace v DB.",
-    icon: "🔔",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="18" cy="18" r="3" />
+        <circle cx="6" cy="6" r="3" />
+        <path d="M6 9v9a3 3 0 0 0 3 3h6" />
+        <path d="M9 6h9a3 3 0 0 1 3 3v6" />
+      </svg>
+    ),
   },
   {
     title: "MCP server pro Claude / Cursor",
     body: "8 tools přímo v Claude Desktop. Žádné HTML scraping, žádné parsování, jen strukturovaná data od prvního dotazu.",
-    icon: "🧠",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M8 10l4 4 4-4" />
+        <path d="M12 14V4" />
+      </svg>
+    ),
   },
   {
     title: "Cursor pagination + detail",
     body: "Stable iteration přes celou DB bez skipping/duplikátů. GET single property by id nebo SEO slug.",
-    icon: "📄",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+        <path d="M9 13h6" />
+        <path d="M9 17h6" />
+      </svg>
+    ),
   },
   {
     title: "OpenAPI 3.1 + dokumentace",
     body: "Auto-generovaný spec ze Zod schémat. Importuj do Postman/Insomnia/Swagger a vygeneruj si SDK pro libovolný jazyk.",
-    icon: "📘",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
   },
 ];
 
@@ -80,7 +125,7 @@ const TIERS = [
       "Vše z Starter",
       "2 000 req/min",
       "Webhook subscriptions (max 50)",
-      "write:broker scope (CRUD vlastních inzerátů)",
+      "write:broker scope",
       "Email support do 24 h",
     ],
     cta: "Požádat o klíč",
@@ -98,7 +143,7 @@ const TIERS = [
       "Dedicated subdomain",
       "Bulk export, multi-region",
       "Slack/email support do 4 h",
-      "Volitelně: revenue share přes Nemovizor brokerskou síť",
+      "Volitelně: revenue share",
     ],
     cta: "Kontaktovat",
     href: "#signup",
@@ -112,9 +157,7 @@ const QUICKSTART_AI_SEARCH = `curl -X POST https://nemovizor.vercel.app/api/v1/a
   -H "Content-Type: application/json" \\
   -d '{"query":"Byt 3+kk v Praze do 8 milionů"}'`;
 
-const QUICKSTART_NODE = `import { Nemovizor } from "nemovizor-sdk"; // coming soon
-
-// Or just use fetch:
+const QUICKSTART_NODE = `// Plain fetch — no SDK needed
 const res = await fetch(
   "https://nemovizor.vercel.app/api/v1/properties?listingType=sale&category=apartment&city=Praha",
   { headers: { Authorization: "Bearer nvz_xxx" } } // optional, raises rate limit
@@ -130,18 +173,23 @@ r = requests.get(
 )
 print(r.json()["total"], "matching listings")`;
 
+// ─── Page ──────────────────────────────────────────────────────────────────
+
 export default function DevelopersPage() {
   return (
-    <main style={{ background: "#0a0a0f", color: "#e5e7eb", minHeight: "100vh" }}>
+    <div style={{ background: "var(--bg)", color: "var(--text)", minHeight: "100vh" }}>
+      <SiteHeader />
       <Hero />
       <Features />
       <Quickstart />
       <Pricing />
       <SignupForm />
-      <Footer />
-    </main>
+      <SiteFooter />
+    </div>
   );
 }
+
+// ─── Sections ──────────────────────────────────────────────────────────────
 
 function Hero() {
   return (
@@ -157,15 +205,15 @@ function Hero() {
         style={{
           display: "inline-block",
           padding: "0.4rem 1rem",
-          background: "rgba(124, 58, 237, 0.15)",
-          color: "#a78bfa",
+          background: "var(--bg-card)",
+          color: "var(--accent)",
           borderRadius: 999,
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          letterSpacing: "0.05em",
+          fontSize: "0.7rem",
+          fontWeight: 700,
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
           marginBottom: "1.5rem",
-          border: "1px solid rgba(124, 58, 237, 0.3)",
+          border: "1px solid var(--border)",
         }}
       >
         Nemovizor API · v1 · Public preview
@@ -176,19 +224,16 @@ function Hero() {
           fontWeight: 800,
           lineHeight: 1.1,
           marginBottom: "1.5rem",
-          background: "linear-gradient(135deg, #fff 0%, #a78bfa 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
+          color: "var(--text)",
         }}
       >
         Postav realitní aplikaci<br />
-        z <span style={{ WebkitTextFillColor: "#a78bfa" }}>72 655 nabídek</span>
+        z <span style={{ color: "var(--accent)" }}>72 655 nabídek</span>
       </h1>
       <p
         style={{
           fontSize: "1.125rem",
-          color: "#9ca3af",
+          color: "var(--text-secondary)",
           maxWidth: 720,
           margin: "0 auto 2.5rem",
           lineHeight: 1.6,
@@ -199,48 +244,15 @@ function Hero() {
       </p>
       <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
         <Link
-          href="/api/openapi"
-          style={{
-            padding: "0.875rem 1.75rem",
-            background: "linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)",
-            color: "white",
-            borderRadius: 8,
-            fontWeight: 600,
-            textDecoration: "none",
-            fontSize: "0.95rem",
-            boxShadow: "0 4px 24px rgba(124, 58, 237, 0.4)",
-          }}
+          href="/developers/api-reference"
+          style={primaryButton}
         >
-          OpenAPI spec →
+          API reference
         </Link>
-        <a
-          href="#quickstart"
-          style={{
-            padding: "0.875rem 1.75rem",
-            background: "rgba(255,255,255,0.05)",
-            color: "white",
-            borderRadius: 8,
-            fontWeight: 600,
-            textDecoration: "none",
-            fontSize: "0.95rem",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
+        <a href="#quickstart" style={secondaryButton}>
           Quick start
         </a>
-        <a
-          href="#signup"
-          style={{
-            padding: "0.875rem 1.75rem",
-            background: "transparent",
-            color: "#a78bfa",
-            borderRadius: 8,
-            fontWeight: 600,
-            textDecoration: "none",
-            fontSize: "0.95rem",
-            border: "1px solid rgba(124, 58, 237, 0.5)",
-          }}
-        >
+        <a href="#signup" style={outlineButton}>
           Požádat o API klíč
         </a>
       </div>
@@ -268,13 +280,20 @@ function Hero() {
             key={s.label}
             style={{
               padding: "1rem",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.05)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
               borderRadius: 8,
             }}
           >
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fff" }}>{s.value}</div>
-            <div style={{ fontSize: "0.7rem", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text)" }}>{s.value}</div>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
               {s.label}
             </div>
           </div>
@@ -293,7 +312,7 @@ function Features() {
           fontWeight: 700,
           textAlign: "center",
           marginBottom: "3rem",
-          color: "#fff",
+          color: "var(--text)",
         }}
       >
         Co dostaneš
@@ -310,16 +329,30 @@ function Features() {
             key={f.title}
             style={{
               padding: "1.5rem",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
             }}
           >
-            <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>{f.icon}</div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 600, marginBottom: "0.5rem", color: "#fff" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 48,
+                height: 48,
+                borderRadius: 10,
+                background: "var(--bg-secondary)",
+                color: "var(--accent)",
+                marginBottom: "1rem",
+              }}
+            >
+              {f.icon}
+            </div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text)" }}>
               {f.title}
             </h3>
-            <p style={{ fontSize: "0.85rem", color: "#9ca3af", lineHeight: 1.5 }}>{f.body}</p>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{f.body}</p>
           </div>
         ))}
       </div>
@@ -336,39 +369,35 @@ function Quickstart() {
     python: { label: "Python", code: QUICKSTART_PYTHON },
   };
   return (
-    <section
-      id="quickstart"
-      style={{ padding: "4rem 1.5rem", maxWidth: 900, margin: "0 auto" }}
-    >
+    <section id="quickstart" style={{ padding: "4rem 1.5rem", maxWidth: 900, margin: "0 auto" }}>
       <h2
         style={{
           fontSize: "1.75rem",
           fontWeight: 700,
           textAlign: "center",
           marginBottom: "0.5rem",
-          color: "#fff",
+          color: "var(--text)",
         }}
       >
         Quick start
       </h2>
-      <p style={{ textAlign: "center", color: "#9ca3af", marginBottom: "2rem" }}>
+      <p style={{ textAlign: "center", color: "var(--text-secondary)", marginBottom: "2rem" }}>
         Bez registrace, hned. API klíč jen pro vyšší rate limit.
       </p>
 
-      {/* Tab buttons */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 0, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {(Object.keys(samples) as Array<keyof typeof samples>).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             style={{
               padding: "0.6rem 1rem",
-              background: tab === k ? "#1f2937" : "transparent",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderBottom: tab === k ? "1px solid #1f2937" : "1px solid rgba(255,255,255,0.08)",
+              background: tab === k ? "var(--bg-card)" : "transparent",
+              border: "1px solid var(--border)",
+              borderBottom: tab === k ? "1px solid var(--bg-card)" : "1px solid var(--border)",
               borderTopLeftRadius: 6,
               borderTopRightRadius: 6,
-              color: tab === k ? "#fff" : "#9ca3af",
+              color: tab === k ? "var(--text)" : "var(--text-muted)",
               fontSize: "0.8rem",
               fontWeight: 600,
               cursor: "pointer",
@@ -384,13 +413,13 @@ function Quickstart() {
         style={{
           margin: 0,
           padding: "1.25rem",
-          background: "#1f2937",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: "0 6px 6px 6px",
           overflow: "auto",
           fontSize: "0.8rem",
           lineHeight: 1.5,
-          color: "#e5e7eb",
+          color: "var(--text)",
         }}
       >
         <code>{samples[tab].code}</code>
@@ -400,7 +429,7 @@ function Quickstart() {
         <Link
           href="/developers/api-reference"
           style={{
-            color: "#a78bfa",
+            color: "var(--accent)",
             textDecoration: "none",
             fontSize: "0.9rem",
             fontWeight: 600,
@@ -422,13 +451,13 @@ function Pricing() {
           fontWeight: 700,
           textAlign: "center",
           marginBottom: "0.5rem",
-          color: "#fff",
+          color: "var(--text)",
         }}
       >
         Pricing
       </h2>
-      <p style={{ textAlign: "center", color: "#9ca3af", marginBottom: "3rem" }}>
-        Free tier zdarma, navždy. Vyšší tier znamená vyšší rate limit + bonus features.
+      <p style={{ textAlign: "center", color: "var(--text-secondary)", marginBottom: "3rem" }}>
+        Free tier zdarma, navždy. Vyšší tier znamená vyšší rate limit a bonus features.
       </p>
       <div
         style={{
@@ -442,10 +471,10 @@ function Pricing() {
             key={tier.name}
             style={{
               padding: "1.5rem",
-              background: tier.primary
-                ? "linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(124,58,237,0.05) 100%)"
-                : "rgba(255,255,255,0.03)",
-              border: tier.primary ? "1px solid rgba(124,58,237,0.5)" : "1px solid rgba(255,255,255,0.06)",
+              background: "var(--bg-card)",
+              border: tier.primary
+                ? "1px solid var(--accent)"
+                : "1px solid var(--border)",
               borderRadius: 12,
               position: "relative",
             }}
@@ -457,37 +486,45 @@ function Pricing() {
                   top: -10,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  background: "#7c3aed",
-                  color: "white",
-                  padding: "0.2rem 0.7rem",
+                  background: "var(--accent)",
+                  color: "var(--accent-text)",
+                  padding: "0.25rem 0.75rem",
                   fontSize: "0.65rem",
                   fontWeight: 700,
                   borderRadius: 999,
                   textTransform: "uppercase",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.1em",
                 }}
               >
                 Doporučeno
               </div>
             )}
-            <div style={{ fontSize: "0.85rem", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                fontWeight: 700,
+              }}
+            >
               {tier.name}
             </div>
             <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: "1.75rem", fontWeight: 800, color: "#fff" }}>{tier.price}</span>
-              <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>/ {tier.period}</span>
+              <span style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text)" }}>{tier.price}</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>/ {tier.period}</span>
             </div>
             <div
               style={{
                 fontSize: "0.7rem",
-                color: "#a78bfa",
+                color: "var(--accent)",
                 fontFamily: "monospace",
                 marginTop: "0.4rem",
               }}
             >
               {tier.rateLimit}
             </div>
-            <p style={{ fontSize: "0.8rem", color: "#9ca3af", margin: "0.75rem 0 1rem", lineHeight: 1.4 }}>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0.75rem 0 1rem", lineHeight: 1.4 }}>
               {tier.description}
             </p>
             <ul style={{ listStyle: "none", padding: 0, margin: 0, marginBottom: "1rem" }}>
@@ -496,13 +533,31 @@ function Pricing() {
                   key={f}
                   style={{
                     fontSize: "0.75rem",
-                    color: "#d1d5db",
+                    color: "var(--text)",
                     padding: "0.3rem 0",
-                    paddingLeft: "1.25rem",
+                    paddingLeft: "1.5rem",
                     position: "relative",
                   }}
                 >
-                  <span style={{ position: "absolute", left: 0, color: "#7c3aed" }}>✓</span> {f}
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "0.35rem",
+                      width: 14,
+                      height: 14,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  {f}
                 </li>
               ))}
             </ul>
@@ -510,18 +565,7 @@ function Pricing() {
               href={tier.href}
               target={tier.href.startsWith("http") ? "_blank" : undefined}
               rel={tier.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              style={{
-                display: "block",
-                textAlign: "center",
-                padding: "0.6rem",
-                background: tier.primary ? "#7c3aed" : "rgba(255,255,255,0.05)",
-                color: "white",
-                borderRadius: 6,
-                textDecoration: "none",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                border: tier.primary ? "none" : "1px solid rgba(255,255,255,0.1)",
-              }}
+              style={tier.primary ? primaryButton : secondaryButton}
             >
               {tier.cta}
             </a>
@@ -537,7 +581,7 @@ function SignupForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
-  const [tier, setTier] = useState("Starter");
+  const [tier, setTier] = useState("Starter (990 Kč/měs)");
   const [useCase, setUseCase] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -573,41 +617,37 @@ function SignupForm() {
   };
 
   return (
-    <section
-      id="signup"
-      style={{ padding: "4rem 1.5rem 6rem", maxWidth: 720, margin: "0 auto" }}
-    >
+    <section id="signup" style={{ padding: "4rem 1.5rem 6rem", maxWidth: 720, margin: "0 auto" }}>
       <h2
         style={{
           fontSize: "1.75rem",
           fontWeight: 700,
           textAlign: "center",
           marginBottom: "0.5rem",
-          color: "#fff",
+          color: "var(--text)",
         }}
       >
         Požádat o API klíč
       </h2>
-      <p style={{ textAlign: "center", color: "#9ca3af", marginBottom: "2rem" }}>
-        Vyplň formulář, ozveme se do 24 hodin s API klíčem a pricing detaily.
-        Free tier funguje bez registrace — využij ho na experimenty hned teď.
+      <p style={{ textAlign: "center", color: "var(--text-secondary)", marginBottom: "2rem" }}>
+        Vyplň formulář, ozveme se do 24 hodin s API klíčem a pricing detaily. Free tier funguje bez registrace — využij ho na experimenty hned teď.
       </p>
 
       {submitted ? (
         <div
           style={{
             padding: "2rem",
-            background: "rgba(21, 128, 61, 0.15)",
-            border: "1px solid rgba(21, 128, 61, 0.4)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--accent)",
             borderRadius: 12,
             textAlign: "center",
-            color: "#86efac",
           }}
         >
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>✅</div>
-          <div style={{ fontWeight: 600, marginBottom: "0.5rem", color: "#fff" }}>Odesláno!</div>
-          <div style={{ fontSize: "0.85rem", color: "#86efac" }}>
-            Ozveme se ti na <strong>{email}</strong> do 24 hodin s dalšími kroky.
+          <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "var(--text)", fontSize: "1.1rem" }}>
+            Odesláno
+          </div>
+          <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+            Ozveme se ti na <strong style={{ color: "var(--text)" }}>{email}</strong> do 24 hodin s dalšími kroky.
           </div>
         </div>
       ) : (
@@ -615,8 +655,8 @@ function SignupForm() {
           onSubmit={onSubmit}
           style={{
             padding: "2rem",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             display: "grid",
             gap: "1rem",
@@ -631,20 +671,11 @@ function SignupForm() {
             <Field label="Firma" value={company} onChange={setCompany} />
           </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Plánovaný tier
-            </span>
+            <span style={labelStyle}>Plánovaný tier</span>
             <select
               value={tier}
               onChange={(e) => setTier(e.target.value)}
-              style={{
-                padding: "0.7rem",
-                background: "#0a0a0f",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 6,
-                color: "#fff",
-                fontSize: "0.85rem",
-              }}
+              style={inputStyle}
             >
               <option>Starter (990 Kč/měs)</option>
               <option>Pro (4 900 Kč/měs)</option>
@@ -653,24 +684,13 @@ function SignupForm() {
             </select>
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Use case (krátce)
-            </span>
+            <span style={labelStyle}>Use case (krátce)</span>
             <textarea
               value={useCase}
               onChange={(e) => setUseCase(e.target.value)}
               rows={3}
               placeholder="např. broker CRM s real-time sync, mobilní aplikace pro hledání bytů, AI asistent s cenovými alerty…"
-              style={{
-                padding: "0.7rem",
-                background: "#0a0a0f",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 6,
-                color: "#fff",
-                fontSize: "0.85rem",
-                fontFamily: "inherit",
-                resize: "vertical",
-              }}
+              style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
             />
           </label>
 
@@ -678,8 +698,9 @@ function SignupForm() {
             <div
               style={{
                 padding: "0.6rem",
-                background: "rgba(185, 28, 28, 0.15)",
-                border: "1px solid rgba(185, 28, 28, 0.4)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderLeft: "3px solid #ef4444",
                 borderRadius: 6,
                 color: "#fca5a5",
                 fontSize: "0.8rem",
@@ -693,15 +714,12 @@ function SignupForm() {
             type="submit"
             disabled={submitting || !name.trim() || !email.trim()}
             style={{
+              ...primaryButton,
               padding: "0.875rem",
-              background: "linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)",
-              color: "white",
               border: "none",
-              borderRadius: 6,
-              fontWeight: 600,
               cursor: submitting ? "wait" : "pointer",
-              fontSize: "0.9rem",
               opacity: submitting || !name.trim() || !email.trim() ? 0.5 : 1,
+              fontFamily: "inherit",
             }}
           >
             {submitting ? "Odesílám…" : "Odeslat žádost"}
@@ -711,6 +729,8 @@ function SignupForm() {
     </section>
   );
 }
+
+// ─── Shared helpers ────────────────────────────────────────────────────────
 
 function Field({
   label,
@@ -727,62 +747,73 @@ function Field({
 }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span
-        style={{
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          color: "#9ca3af",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}
-      >
-        {label}
-      </span>
+      <span style={labelStyle}>{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        style={{
-          padding: "0.7rem",
-          background: "#0a0a0f",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 6,
-          color: "#fff",
-          fontSize: "0.85rem",
-          fontFamily: "inherit",
-        }}
+        style={inputStyle}
       />
     </label>
   );
 }
 
-function Footer() {
-  return (
-    <footer
-      style={{
-        padding: "2rem 1.5rem",
-        borderTop: "1px solid rgba(255,255,255,0.05)",
-        textAlign: "center",
-        fontSize: "0.75rem",
-        color: "#6b7280",
-      }}
-    >
-      <div style={{ marginBottom: "0.5rem" }}>
-        <Link href="/" style={{ color: "#9ca3af", textDecoration: "none", marginRight: 16 }}>
-          Nemovizor
-        </Link>
-        <Link href="/api/openapi" style={{ color: "#9ca3af", textDecoration: "none", marginRight: 16 }}>
-          OpenAPI
-        </Link>
-        <Link href="/llms.txt" style={{ color: "#9ca3af", textDecoration: "none", marginRight: 16 }}>
-          llms.txt
-        </Link>
-        <Link href="/developers/api-reference" style={{ color: "#9ca3af", textDecoration: "none" }}>
-          API reference
-        </Link>
-      </div>
-      <div>© 2026 Nemovizor · Made for developers</div>
-    </footer>
-  );
-}
+// ─── Styles ────────────────────────────────────────────────────────────────
+
+const primaryButton: React.CSSProperties = {
+  display: "inline-block",
+  padding: "0.75rem 1.5rem",
+  background: "var(--accent)",
+  color: "var(--accent-text)",
+  borderRadius: 8,
+  fontWeight: 700,
+  textDecoration: "none",
+  fontSize: "0.85rem",
+  border: "1px solid var(--accent)",
+  textAlign: "center",
+};
+
+const secondaryButton: React.CSSProperties = {
+  display: "inline-block",
+  padding: "0.75rem 1.5rem",
+  background: "var(--bg-card)",
+  color: "var(--text)",
+  borderRadius: 8,
+  fontWeight: 600,
+  textDecoration: "none",
+  fontSize: "0.85rem",
+  border: "1px solid var(--border)",
+  textAlign: "center",
+};
+
+const outlineButton: React.CSSProperties = {
+  display: "inline-block",
+  padding: "0.75rem 1.5rem",
+  background: "transparent",
+  color: "var(--accent)",
+  borderRadius: 8,
+  fontWeight: 600,
+  textDecoration: "none",
+  fontSize: "0.85rem",
+  border: "1px solid var(--accent)",
+  textAlign: "center",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: "0.7rem",
+  fontWeight: 700,
+  color: "var(--text-muted)",
+  textTransform: "uppercase",
+  letterSpacing: "0.1em",
+};
+
+const inputStyle: React.CSSProperties = {
+  padding: "0.7rem",
+  background: "var(--bg-input)",
+  border: "1px solid var(--border)",
+  borderRadius: 6,
+  color: "var(--text)",
+  fontSize: "0.85rem",
+  fontFamily: "inherit",
+};
