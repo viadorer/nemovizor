@@ -73,7 +73,8 @@ export default async function proxy(request: NextRequest) {
     user &&
     (pathname.startsWith("/dashboard/moje-inzeraty") ||
       pathname.startsWith("/dashboard/poptavky") ||
-      pathname.startsWith("/dashboard/moje-analytika"))
+      pathname.startsWith("/dashboard/moje-analytika") ||
+      pathname.startsWith("/dashboard/moje-api"))
   ) {
     const { data: profile } = await supabase
       .from("profiles")

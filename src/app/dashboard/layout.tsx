@@ -174,6 +174,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard/moje-analytika", label: t.dashboard.analytics, icon: ICONS.analytics },
     { href: "/dashboard/penezenka", label: "Peněženka", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>) },
     { href: "/dashboard/moje-oceneni", label: "Moje ocenění", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 7h6M9 11h6M9 15h4M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" /></svg>) },
+    { href: "/dashboard/moje-api", label: "Moje API", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-9.6 9.6" /><circle cx="7.5" cy="15.5" r="5.5" /><path d="M15.5 7.5l3 3L22 7l-3-3" /></svg>) },
   ], [t]);
 
   const adminItems: SidebarItem[] = useMemo(() => [
