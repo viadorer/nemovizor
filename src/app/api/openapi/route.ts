@@ -38,6 +38,13 @@ import {
   BrokerAnalyticsQuerySchema,
   BrokerAnalyticsResponseSchema,
 } from "@/lib/api/schemas/broker-analytics";
+import {
+  CreateWebhookBodySchema,
+  CreateWebhookResponseSchema,
+  UpdateWebhookBodySchema,
+  WebhookDetailResponseSchema,
+  WebhookListResponseSchema,
+} from "@/lib/api/schemas/webhooks";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
@@ -397,6 +404,96 @@ function buildSpec() {
     },
   });
 
+  // ── Webhooks (Phase D) ─────────────────────────────────────────────────
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/webhooks",
+    summary: "Create a webhook subscription",
+    description:
+      "Register a URL to receive HTTPS POST notifications when properties are created, updated, deleted, or change price. The plain webhook signing secret is returned ONCE in the response — store it immediately. All deliveries are signed with HMAC-SHA256 in the `X-Nemovizor-Signature: sha256=<hex>` header so receivers can verify authenticity. Requires an API key with the `write:webhooks` scope.",
+    tags: ["Webhooks"],
+    request: {
+      body: {
+        required: true,
+        content: { "application/json": { schema: CreateWebhookBodySchema } },
+      },
+    },
+    responses: {
+      201: {
+        description: "Subscription created",
+        content: { "application/json": { schema: CreateWebhookResponseSchema } },
+      },
+      400: { description: "Invalid body", content: { "application/json": { schema: ApiErrorSchema } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "API key missing write:webhooks scope", content: { "application/json": { schema: ApiErrorSchema } } },
+      409: { description: "Per-owner subscription quota exceeded", content: { "application/json": { schema: ApiErrorSchema } } },
+      429: { description: "Rate limit exceeded", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/webhooks",
+    summary: "List your webhook subscriptions",
+    tags: ["Webhooks"],
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: WebhookListResponseSchema } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "API key missing write:webhooks scope", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/webhooks/{id}",
+    summary: "Fetch a single webhook subscription",
+    tags: ["Webhooks"],
+    request: { params: z.object({ id: z.string().uuid() }) },
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: WebhookDetailResponseSchema } } },
+      400: { description: "Invalid id", content: { "application/json": { schema: ApiErrorSchema } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "API key missing write:webhooks scope", content: { "application/json": { schema: ApiErrorSchema } } },
+      404: { description: "Not found", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/api/v1/webhooks/{id}",
+    summary: "Update a webhook subscription",
+    description: "Change url, event_types, filter, or active flag.",
+    tags: ["Webhooks"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: {
+        required: true,
+        content: { "application/json": { schema: UpdateWebhookBodySchema } },
+      },
+    },
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: WebhookDetailResponseSchema } } },
+      400: { description: "Invalid body", content: { "application/json": { schema: ApiErrorSchema } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "API key missing write:webhooks scope", content: { "application/json": { schema: ApiErrorSchema } } },
+      404: { description: "Not found", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/api/v1/webhooks/{id}",
+    summary: "Delete a webhook subscription",
+    tags: ["Webhooks"],
+    request: { params: z.object({ id: z.string().uuid() }) },
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: z.object({ ok: z.literal(true) }) } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "API key missing write:webhooks scope", content: { "application/json": { schema: ApiErrorSchema } } },
+      404: { description: "Not found", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
   registry.registerPath({
     method: "get",
     path: "/api/broker/analytics-behavior",
@@ -450,6 +547,7 @@ function buildSpec() {
       { name: "Valuation", description: "Property valuation via RealVisor/Valuo." },
       { name: "Leads", description: "Lead capture." },
       { name: "Analytics", description: "Analytics tracking and dashboards." },
+      { name: "Webhooks", description: "Outbound webhook subscriptions for property events." },
     ],
   });
 }

@@ -20,6 +20,7 @@ All endpoints return JSON and use stable UUID identifiers and ISO 8601 timestamp
 - [POST /api/leads](https://nemovizor.cz/api/leads): Public lead capture. Rate-limited to 10/min.
 - [POST /api/analytics/track](https://nemovizor.cz/api/analytics/track): Client-side event tracking (single event or array).
 - [GET /api/broker/analytics-behavior](https://nemovizor.cz/api/broker/analytics-behavior): 7-day behavioral dashboard for a broker or agency.
+- [POST /api/v1/webhooks](https://nemovizor.cz/api/v1/webhooks): Subscribe to property events (created/updated/deleted/price_changed). HMAC-SHA256 signed deliveries. Requires API key with `write:webhooks` scope.
 
 ## Conventions
 

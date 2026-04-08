@@ -188,6 +188,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard/sprava/cenik", label: "Ceník služeb", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) },
     { href: "/dashboard/sprava/api-keys", label: "API klíče", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-9.6 9.6" /><circle cx="7.5" cy="15.5" r="5.5" /><path d="M15.5 7.5l3 3L22 7l-3-3" /></svg>) },
     { href: "/dashboard/sprava/api-audit", label: "API audit", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>) },
+    { href: "/dashboard/sprava/webhooks", label: "Webhooks", icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 9v9a3 3 0 0 0 3 3h6" /><path d="M9 6h9a3 3 0 0 1 3 3v6" /></svg>) },
   ], [t]);
 
   const items = [

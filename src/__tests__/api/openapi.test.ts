@@ -36,6 +36,13 @@ describe("GET /api/openapi", () => {
     expect(doc.paths["/api/v1/properties/by-slug/{slug}"].get).toBeDefined();
     expect(doc.paths["/api/v1/brokers/{id}/contact"].get).toBeDefined();
 
+    // Phase D — webhook subscriptions
+    expect(doc.paths["/api/v1/webhooks"].post).toBeDefined();
+    expect(doc.paths["/api/v1/webhooks"].get).toBeDefined();
+    expect(doc.paths["/api/v1/webhooks/{id}"].get).toBeDefined();
+    expect(doc.paths["/api/v1/webhooks/{id}"].patch).toBeDefined();
+    expect(doc.paths["/api/v1/webhooks/{id}"].delete).toBeDefined();
+
     // Component schemas were registered
     const schemas = doc.components?.schemas ?? {};
     expect(schemas.ApiError).toBeDefined();

@@ -200,6 +200,34 @@ const brokerContactShape = {
     .describe("Broker UUID. Returned in property responses as `brokers.id`."),
 } as const;
 
+const createWebhookShape = {
+  url: z
+    .string()
+    .url()
+    .describe("HTTPS URL that will receive POSTed webhook deliveries."),
+  event_types: z
+    .array(z.enum(["property.created", "property.updated", "property.deleted", "property.price_changed"]))
+    .min(1)
+    .optional()
+    .describe("Event types to subscribe to. Default: all four property events."),
+  filter: z
+    .object({
+      category: z.array(z.string()).optional(),
+      subtype: z.array(z.string()).optional(),
+      city: z.string().optional(),
+      country: z.array(z.string()).optional(),
+      listing_type: z.string().optional(),
+      price_min: z.number().nonnegative().optional(),
+      price_max: z.number().nonnegative().optional(),
+      area_min: z.number().nonnegative().optional(),
+      area_max: z.number().nonnegative().optional(),
+      broker_id: z.string().uuid().optional(),
+    })
+    .nullable()
+    .optional()
+    .describe("Optional filter — only matching events will be delivered."),
+} as const;
+
 // ─── Server ────────────────────────────────────────────────────────────────
 
 const server = new McpServer(
@@ -282,6 +310,16 @@ server.tool(
   brokerContactShape,
   async (args) => {
     const data = await nemovizorGet(`/api/v1/brokers/${args.id}/contact`, {});
+    return asToolResult(data);
+  },
+);
+
+server.tool(
+  "nemovizor_create_webhook",
+  "Subscribe to Nemovizor property events (created, updated, deleted, price_changed). Returns the subscription record AND the plain webhook signing secret — store the secret immediately, it cannot be retrieved later. Receivers verify deliveries using the X-Nemovizor-Signature: sha256=<hex> header. Requires NEMOVIZOR_API_KEY env var with the write:webhooks scope.",
+  createWebhookShape,
+  async (args) => {
+    const data = await nemovizorPost("/api/v1/webhooks", args);
     return asToolResult(data);
   },
 );
