@@ -6,6 +6,8 @@ All endpoints return JSON and use stable UUID identifiers and ISO 8601 timestamp
 
 ## API
 
+- [Developer landing](https://nemovizor.cz/developers): Hero, features, pricing tiers, signup form, code samples.
+- [API reference](https://nemovizor.cz/developers/api-reference): Interactive Scalar-rendered OpenAPI viewer.
 - [OpenAPI 3.1 specification](https://nemovizor.cz/api/openapi): Full machine-readable description of public endpoints.
 - [AI plugin manifest](https://nemovizor.cz/.well-known/ai-plugin.json): Plugin discovery manifest.
 

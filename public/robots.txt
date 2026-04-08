@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /developers
+Allow: /developers/api-reference
 Allow: /api/properties
 Allow: /api/map-points
 Allow: /api/filter-options
