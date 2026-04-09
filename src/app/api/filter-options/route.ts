@@ -67,6 +67,52 @@ export async function GET(req: NextRequest) {
   const bounds = hasBounds
     ? { swLat: qp.sw_lat!, swLon: qp.sw_lon!, neLat: qp.ne_lat!, neLon: qp.ne_lon! }
     : null;
+
+  // Fast path: call the SQL function from migration 045. This replaces a
+  // 73-page runtime iteration (~7.6s on 72k rows) with a single GROUP BY
+  // query (~100ms). Falls through to the legacy runtime aggregation if the
+  // RPC is missing (migration not yet applied) or returns an error.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rpcClient = client as any;
+    const { data: rpcData, error: rpcError } = await rpcClient.rpc(
+      "nemovizor_filter_options",
+      {
+        p_listing_type: listingType ?? null,
+        p_category: category ?? null,
+        p_broker_ids: brokerIds ?? null,
+        p_sw_lat: bounds?.swLat ?? null,
+        p_sw_lon: bounds?.swLon ?? null,
+        p_ne_lat: bounds?.neLat ?? null,
+        p_ne_lon: bounds?.neLon ?? null,
+      },
+    );
+    if (!rpcError && rpcData) {
+      return tap(
+        NextResponse.json(rpcData, {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+            ...rateLimitHeaders(rl),
+          },
+        }),
+      );
+    }
+    if (rpcError) {
+      console.warn(
+        "[filter-options] RPC failed, falling back to runtime aggregation:",
+        rpcError.message,
+      );
+    }
+  } catch (e) {
+    console.warn(
+      "[filter-options] RPC threw, falling back:",
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+
+  // Legacy slow path — kept as a fallback until migration 045 is applied
+  // on every environment. Safe to delete once production is confirmed on
+  // the RPC path.
   return tap(await fallbackFilterOptions(client, listingType, category, brokerIds, bounds, rl));
 }
 
