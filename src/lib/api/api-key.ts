@@ -42,6 +42,7 @@ export const KNOWN_SCOPES = [
   "write:broker",
   "read:admin",
   "write:webhooks",
+  "write:import",
 ] as const;
 
 export type ApiScope = (typeof KNOWN_SCOPES)[number];

@@ -45,6 +45,11 @@ import {
   WebhookDetailResponseSchema,
   WebhookListResponseSchema,
 } from "@/lib/api/schemas/webhooks";
+import {
+  ImportBatchBodySchema,
+  ImportBatchResponseSchema,
+  ImportJobStatusSchema,
+} from "@/lib/api/schemas/import";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
@@ -588,6 +593,67 @@ function buildSpec() {
     },
   });
 
+  // ── Import API ───────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/import/batch",
+    summary: "Submit a batch import (agencies, branches, brokers, properties)",
+    description:
+      "Enqueues an async import job. Returns 202 with a job_id for polling via `/api/v1/import/jobs/{id}`. " +
+      "Requires API key with `write:import` scope and `owner_type=agency`. " +
+      "Items are processed in dependency order: agency → branches → brokers → properties.",
+    tags: ["Import"],
+    request: {
+      body: {
+        required: true,
+        content: { "application/json": { schema: ImportBatchBodySchema } },
+      },
+    },
+    responses: {
+      202: { description: "Job enqueued", content: { "application/json": { schema: ImportBatchResponseSchema } } },
+      400: { description: "Invalid payload", content: { "application/json": { schema: ApiErrorSchema } } },
+      401: { description: "Missing or invalid API key", content: { "application/json": { schema: ApiErrorSchema } } },
+      403: { description: "Missing write:import scope or not agency key", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/import/jobs",
+    summary: "List recent import jobs",
+    tags: ["Import"],
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: z.object({ data: z.array(ImportJobStatusSchema) }) } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/import/jobs/{id}",
+    summary: "Get import job status + per-item results",
+    description: "Returns progress counters while processing. When completed, includes per-item results with warnings/errors.",
+    tags: ["Import"],
+    request: { params: z.object({ id: z.string().uuid() }) },
+    responses: {
+      200: { description: "OK", content: { "application/json": { schema: ImportJobStatusSchema } } },
+      404: { description: "Job not found", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/api/v1/import/properties/{external_id}",
+    summary: "Deactivate a property by external_id",
+    description: "Synchronous single-property deactivation. Sets active=false on the matching property.",
+    tags: ["Import"],
+    request: { params: z.object({ external_id: z.string() }) },
+    responses: {
+      200: { description: "Deactivated", content: { "application/json": { schema: z.object({ ok: z.literal(true), nemovizor_id: z.string().uuid(), nemovizor_slug: z.string(), action: z.literal("deactivated") }) } } },
+      404: { description: "Property not found", content: { "application/json": { schema: ApiErrorSchema } } },
+    },
+  });
+
   const generator = new OpenApiGeneratorV31(registry.definitions);
   return generator.generateDocument({
     openapi: "3.1.0",
@@ -614,6 +680,7 @@ function buildSpec() {
       { name: "Leads", description: "Lead capture." },
       { name: "Analytics", description: "Analytics tracking and dashboards." },
       { name: "Webhooks", description: "Outbound webhook subscriptions for property events." },
+      { name: "Import", description: "Batch import API for CRMs and agency management systems." },
     ],
   });
 }
