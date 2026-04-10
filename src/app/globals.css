@@ -9337,7 +9337,7 @@ table.admin-table tr:hover td {
 .ad-hero2-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--bg, #0a0a0f) 0%, rgba(10, 10, 15, 0.92) 50%, rgba(10, 10, 15, 0.7) 100%);
+  background: linear-gradient(135deg, var(--bg, #0a0a0f) 0%, rgba(10, 10, 15, 0.95) 60%, rgba(10, 10, 15, 0.85) 100%);
 }
 .ad-hero2-inner {
   position: relative;
