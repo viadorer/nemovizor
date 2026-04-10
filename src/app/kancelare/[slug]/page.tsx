@@ -160,11 +160,11 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
 
   // Build tab list dynamically
   const tabs: Array<{ id: string; label: string; count?: number }> = [];
-  if (propertiesPage1.total > 0) tabs.push({ id: "nabidky", label: t.nav.listings, count: propertiesPage1.total });
+  if (hasAboutTab) tabs.push({ id: "o-nas", label: "O nas" });
   if (agencyBrokers.length > 0) tabs.push({ id: "tym", label: "Tym", count: agencyBrokers.length });
   if (agencyBranches.length > 0) tabs.push({ id: "pobocky", label: t.profile.branches, count: agencyBranches.length });
+  if (propertiesPage1.total > 0) tabs.push({ id: "nabidky", label: t.nav.listings, count: propertiesPage1.total });
   if (reviewsList.length > 0) tabs.push({ id: "recenze", label: t.profile.reviews, count: reviewsList.length });
-  if (hasAboutTab) tabs.push({ id: "o-nas", label: "O nas" });
 
   return (
     <div className="page-shell">
@@ -292,64 +292,6 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
       {/* ── Content ────────────────────────────────────────────── */}
       <main className="ad-content">
 
-        {/* Nabidky */}
-        {propertiesPage1.total > 0 && (
-          <Section id="nabidky">
-            <SectionTitle count={propertiesPage1.total}>{t.nav.listings}</SectionTitle>
-            <DetailPropertiesGrid
-              agencyId={agency.id}
-              initialItems={propertiesPage1.items}
-              initialTotal={propertiesPage1.total}
-            />
-          </Section>
-        )}
-
-        {/* Tym */}
-        {agencyBrokers.length > 0 && (
-          <Section id="tym">
-            <SectionTitle count={agencyBrokers.length}>Tym</SectionTitle>
-            <div className="agency-brokers-grid">
-              {agencyBrokers.map((broker) => <BrokerMiniCard key={broker.id} broker={broker} />)}
-            </div>
-          </Section>
-        )}
-
-        {/* Pobocky */}
-        {agencyBranches.length > 0 && (
-          <Section id="pobocky">
-            <SectionTitle count={agencyBranches.length}>{t.profile.branches}</SectionTitle>
-            <div className="agency-branches-grid">
-              {agencyBranches.map((branch) => <BranchCard key={branch.id} branch={branch} />)}
-            </div>
-          </Section>
-        )}
-
-        {/* Recenze */}
-        {reviewsList.length > 0 && (
-          <Section id="recenze">
-            <SectionTitle count={reviewsList.length}>{t.profile.reviews}</SectionTitle>
-            <div className="ad-reviews-summary">
-              <span className="ad-reviews-avg">{agency.rating}</span>
-              <Stars rating={agency.rating} size={20} />
-              <span className="ad-reviews-total">({reviewsList.length} hodnoceni)</span>
-            </div>
-            <div className="broker-reviews-grid">
-              {reviewsList.map((r: Review) => (
-                <div key={r.id} className="broker-review-card">
-                  <div className="broker-review-header">
-                    <span className="broker-review-author">{r.authorName}</span>
-                    <Stars rating={r.rating} size={12} />
-                  </div>
-                  <p className="broker-review-text">{r.text}</p>
-                  <span className="broker-review-date">
-                    {new Date(r.date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
         {/* O nas */}
         {hasAboutTab && (
           <Section id="o-nas">
@@ -466,6 +408,64 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
                 </div>
               </div>
             )}
+          </Section>
+        )}
+
+        {/* Tym */}
+        {agencyBrokers.length > 0 && (
+          <Section id="tym">
+            <SectionTitle count={agencyBrokers.length}>Tym</SectionTitle>
+            <div className="agency-brokers-grid">
+              {agencyBrokers.map((broker) => <BrokerMiniCard key={broker.id} broker={broker} />)}
+            </div>
+          </Section>
+        )}
+
+        {/* Pobocky */}
+        {agencyBranches.length > 0 && (
+          <Section id="pobocky">
+            <SectionTitle count={agencyBranches.length}>{t.profile.branches}</SectionTitle>
+            <div className="agency-branches-grid">
+              {agencyBranches.map((branch) => <BranchCard key={branch.id} branch={branch} />)}
+            </div>
+          </Section>
+        )}
+
+        {/* Nabidky */}
+        {propertiesPage1.total > 0 && (
+          <Section id="nabidky">
+            <SectionTitle count={propertiesPage1.total}>{t.nav.listings}</SectionTitle>
+            <DetailPropertiesGrid
+              agencyId={agency.id}
+              initialItems={propertiesPage1.items}
+              initialTotal={propertiesPage1.total}
+            />
+          </Section>
+        )}
+
+        {/* Recenze */}
+        {reviewsList.length > 0 && (
+          <Section id="recenze">
+            <SectionTitle count={reviewsList.length}>{t.profile.reviews}</SectionTitle>
+            <div className="ad-reviews-summary">
+              <span className="ad-reviews-avg">{agency.rating}</span>
+              <Stars rating={agency.rating} size={20} />
+              <span className="ad-reviews-total">({reviewsList.length} hodnoceni)</span>
+            </div>
+            <div className="broker-reviews-grid">
+              {reviewsList.map((r: Review) => (
+                <div key={r.id} className="broker-review-card">
+                  <div className="broker-review-header">
+                    <span className="broker-review-author">{r.authorName}</span>
+                    <Stars rating={r.rating} size={12} />
+                  </div>
+                  <p className="broker-review-text">{r.text}</p>
+                  <span className="broker-review-date">
+                    {new Date(r.date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long" })}
+                  </span>
+                </div>
+              ))}
+            </div>
           </Section>
         )}
 
