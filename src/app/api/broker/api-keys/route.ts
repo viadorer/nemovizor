@@ -133,6 +133,36 @@ export async function POST(req: NextRequest) {
 
   const requested = { type: body.owner_type, id: body.owner_id };
 
+  // Check for active subscription to enforce plan limits
+  let subscriptionId: string | null = null;
+  let planRateLimit = 60; // free-tier default
+  let planScopes = DEFAULT_SCOPES;
+
+  const { data: activeSub } = await client
+    .from("api_subscriptions")
+    .select("id, rate_limit_per_min, scopes")
+    .eq("user_id", auth.user.id)
+    .in("status", ["active", "trialing"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeSub) {
+    subscriptionId = activeSub.id;
+    planRateLimit = activeSub.rate_limit_per_min;
+    planScopes = activeSub.scopes ?? DEFAULT_SCOPES;
+  }
+
+  // Enforce: rate limit cannot exceed plan ceiling
+  const requestedRate = body.rate_limit_per_min ?? planRateLimit;
+  const effectiveRate = Math.min(requestedRate, planRateLimit);
+
+  // Enforce: scopes must be subset of plan's allowed scopes
+  const requestedScopes: string[] = body.scopes && body.scopes.length > 0 ? body.scopes : [...planScopes];
+  const planScopeStrings: string[] = planScopes;
+  const effectiveScopes: string[] = requestedScopes.filter((s) => planScopeStrings.includes(s));
+  if (effectiveScopes.length === 0) effectiveScopes.push("read:public");
+
   const rawKey = generateApiKey();
   const keyHash = hashApiKey(rawKey);
   const keyPrefix = prefixApiKey(rawKey);
@@ -145,12 +175,13 @@ export async function POST(req: NextRequest) {
       key_prefix: keyPrefix,
       owner_type: requested.type,
       owner_id: requested.id,
-      scopes: body.scopes && body.scopes.length > 0 ? body.scopes : DEFAULT_SCOPES,
-      rate_limit_per_min: body.rate_limit_per_min ?? 300,
+      scopes: effectiveScopes,
+      rate_limit_per_min: effectiveRate,
+      subscription_id: subscriptionId,
       expires_at: body.expires_at ?? null,
     })
     .select(
-      "id, name, key_prefix, owner_type, owner_id, scopes, rate_limit_per_min, created_at, last_used_at, expires_at, revoked_at",
+      "id, name, key_prefix, owner_type, owner_id, scopes, rate_limit_per_min, created_at, last_used_at, expires_at, revoked_at, subscription_id",
     )
     .single();
 

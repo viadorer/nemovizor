@@ -111,8 +111,9 @@ const TIERS = [
       "Email support do 48 h",
       "300 req/min na klíč",
     ],
-    cta: "Požádat o klíč",
+    cta: "Předplatit",
     href: "#signup",
+    checkoutTier: "starter" as const,
     primary: true,
   },
   {
@@ -128,8 +129,9 @@ const TIERS = [
       "write:broker scope",
       "Email support do 24 h",
     ],
-    cta: "Požádat o klíč",
+    cta: "Předplatit",
     href: "#signup",
+    checkoutTier: "pro" as const,
     primary: false,
   },
   {
@@ -562,10 +564,30 @@ function Pricing() {
               ))}
             </ul>
             <a
-              href={tier.href}
+              href={"checkoutTier" in tier && tier.checkoutTier ? "#" : tier.href}
               target={tier.href.startsWith("http") ? "_blank" : undefined}
               rel={tier.href.startsWith("http") ? "noopener noreferrer" : undefined}
               style={tier.primary ? primaryButton : secondaryButton}
+              onClick={"checkoutTier" in tier && tier.checkoutTier ? async (e: React.MouseEvent) => {
+                e.preventDefault();
+                const ct = (tier as { checkoutTier: string }).checkoutTier;
+                try {
+                  const res = await fetch("/api/subscriptions/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ tier: ct }),
+                  });
+                  const data = await res.json();
+                  if (res.status === 401) {
+                    window.location.href = `/login?redirect=/developers&tier=${ct}`;
+                    return;
+                  }
+                  if (data.url) window.location.href = data.url;
+                  else if (data.error) alert(data.error);
+                } catch {
+                  alert("Chyba pri vytvareni platby. Zkuste to znovu.");
+                }
+              } : undefined}
             >
               {tier.cta}
             </a>

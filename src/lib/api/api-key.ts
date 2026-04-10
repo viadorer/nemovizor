@@ -117,6 +117,7 @@ interface ApiKeyRow {
   rate_limit_per_min: number | null;
   expires_at: string | null;
   revoked_at: string | null;
+  subscription_id: string | null;
 }
 
 export async function lookupApiKey(raw: string): Promise<ApiKeyRecord | null> {
@@ -129,7 +130,7 @@ export async function lookupApiKey(raw: string): Promise<ApiKeyRecord | null> {
   const client = supabaseAdmin as unknown as any;
   const { data, error } = (await client
     .from("api_keys")
-    .select("id, name, owner_type, owner_id, scopes, rate_limit_per_min, expires_at, revoked_at")
+    .select("id, name, owner_type, owner_id, scopes, rate_limit_per_min, expires_at, revoked_at, subscription_id")
     .eq("key_hash", hash)
     .maybeSingle()) as { data: ApiKeyRow | null; error: unknown };
 
@@ -138,6 +139,20 @@ export async function lookupApiKey(raw: string): Promise<ApiKeyRecord | null> {
   const now = new Date();
   if (data.revoked_at) return null;
   if (data.expires_at && new Date(data.expires_at) <= now) return null;
+
+  // Defense-in-depth: if key is linked to a subscription, verify it's still
+  // in an allowed state. Catches edge cases where the webhook failed to
+  // revoke the key on subscription cancellation.
+  if (data.subscription_id) {
+    const { data: sub } = (await client
+      .from("api_subscriptions")
+      .select("status")
+      .eq("id", data.subscription_id)
+      .maybeSingle()) as { data: { status: string } | null; error: unknown };
+
+    const allowedStatuses = ["active", "past_due", "trialing"];
+    if (!sub || !allowedStatuses.includes(sub.status)) return null;
+  }
 
   // Fire-and-forget: stamp last_used_at so we can surface stale keys later.
   void client

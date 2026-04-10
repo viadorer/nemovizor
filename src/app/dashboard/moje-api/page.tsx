@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -86,12 +87,168 @@ const ALL_SCOPES = [
   { value: "write:webhooks", label: "write:webhooks", disabled: false },
 ];
 
+// ─── Subscription types ───────────────────────────────────────────────────
+
+type SubscriptionInfo = {
+  id: string;
+  plan_tier: string;
+  status: string;
+  rate_limit_per_min: number;
+  max_webhooks: number;
+  scopes: string[];
+  current_period_end: string | null;
+  cancel_at: string | null;
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  starter: "Starter (990 Kc/mes)",
+  pro: "Pro (4 900 Kc/mes)",
+  enterprise: "Enterprise (19 900 Kc/mes)",
+};
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  active: { label: "Aktivni", color: "#15803d" },
+  trialing: { label: "Zkusebni doba", color: "#2563eb" },
+  past_due: { label: "Platba po splatnosti", color: "#b45309" },
+  canceled: { label: "Zruseno", color: "#b91c1c" },
+  incomplete: { label: "Nedokonceno", color: "#6b7280" },
+  paused: { label: "Pozastaveno", color: "#6b7280" },
+};
+
+function PlanBanner({ sub }: { sub: SubscriptionInfo | null }) {
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  async function openPortal() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/subscriptions/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      // ignore
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
+  if (!sub) {
+    return (
+      <div
+        style={{
+          padding: "1rem 1.25rem",
+          background: "var(--bg-card, #f9fafb)",
+          border: "1px solid var(--border, #e5e7eb)",
+          borderRadius: 8,
+          marginBottom: "1.5rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
+        <div>
+          <strong>Free tier</strong>{" "}
+          <span style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            — 60 req/min, bez API klice
+          </span>
+        </div>
+        <a
+          href="/developers#pricing"
+          style={{
+            padding: "0.5rem 1rem",
+            background: "var(--accent, #ffb800)",
+            color: "#000",
+            borderRadius: 6,
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            textDecoration: "none",
+          }}
+        >
+          Predplatit vyssi plan
+        </a>
+      </div>
+    );
+  }
+
+  const statusInfo = STATUS_LABELS[sub.status] ?? { label: sub.status, color: "#6b7280" };
+
+  return (
+    <div
+      style={{
+        padding: "1rem 1.25rem",
+        background: "var(--bg-card, #f9fafb)",
+        border: "1px solid var(--border, #e5e7eb)",
+        borderRadius: 8,
+        marginBottom: "1.5rem",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div>
+          <strong>{PLAN_LABELS[sub.plan_tier] ?? sub.plan_tier}</strong>{" "}
+          <span
+            style={{
+              display: "inline-block",
+              padding: "2px 8px",
+              borderRadius: 4,
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              background: statusInfo.color + "18",
+              color: statusInfo.color,
+              marginLeft: 8,
+            }}
+          >
+            {statusInfo.label}
+          </span>
+        </div>
+        <button
+          onClick={openPortal}
+          disabled={portalLoading}
+          style={{
+            padding: "0.5rem 1rem",
+            background: "var(--bg, #fff)",
+            border: "1px solid var(--border, #e5e7eb)",
+            borderRadius: 6,
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {portalLoading ? "..." : "Sprava predplatneho"}
+        </button>
+      </div>
+      <div style={{ marginTop: 8, fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+        <span>{sub.rate_limit_per_min} req/min</span>
+        <span>Max {sub.max_webhooks} webhooks</span>
+        <span>Scopes: {sub.scopes.join(", ")}</span>
+        {sub.current_period_end && (
+          <span>Dalsi platba: {fmtDate(sub.current_period_end)}</span>
+        )}
+        {sub.cancel_at && (
+          <span style={{ color: "#b91c1c" }}>Zrusi se: {fmtDate(sub.cancel_at)}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 type Tab = "keys" | "webhooks" | "audit";
 
 export default function MyApiPage() {
   const [tab, setTab] = useState<Tab>("keys");
+  const [sub, setSub] = useState<SubscriptionInfo | null>(null);
+  const searchParams = useSearchParams();
+  const subSuccess = searchParams.get("subscription") === "success";
+
+  useEffect(() => {
+    fetch("/api/subscriptions/status")
+      .then((r) => r.json())
+      .then((d) => { if (d.data) setSub(d.data); })
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 1400, margin: "0 auto" }}>
@@ -101,6 +258,14 @@ export default function MyApiPage() {
           Vaše API klíče, webhook subscriptions a audit log volání. Vše je scoped jen na vaše vlastní resources.
         </p>
       </div>
+
+      {subSuccess && (
+        <div style={{ padding: "0.75rem 1rem", background: "#dcfce7", border: "1px solid #86efac", borderRadius: 8, marginBottom: "1rem", fontSize: "0.875rem", color: "#15803d" }}>
+          Vas plan je aktivni. Vytvorte si nize API klic pro pristup k API.
+        </div>
+      )}
+
+      <PlanBanner sub={sub} />
 
       {/* Tabs */}
       <div
