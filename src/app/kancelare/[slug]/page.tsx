@@ -19,11 +19,13 @@ type AgencyDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
 function Stars({ rating, size = 12 }: { rating: number; size?: number }) {
   return (
-    <span className="agent-stars" style={{ display: "inline-flex", gap: 1 }}>
+    <span style={{ display: "inline-flex", gap: 1 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i <= Math.round(rating) ? "var(--color-accent)" : "none"} stroke="var(--color-accent)" strokeWidth="2">
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i <= Math.round(rating) ? "var(--color-accent, #ffb800)" : "none"} stroke="var(--color-accent, #ffb800)" strokeWidth="2">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
@@ -84,7 +86,7 @@ function BrokerMiniCard({ broker }: { broker: Broker }) {
             </div>
           )}
           <h3 className="agency-broker-card-name">{broker.name}</h3>
-          <p className="agency-broker-card-spec">{broker.specialization || `${broker.activeListings} nabídek`}</p>
+          <p className="agency-broker-card-spec">{broker.specialization || `${broker.activeListings} nabidek`}</p>
         </div>
       </div>
     </Link>
@@ -104,7 +106,7 @@ function BranchCard({ branch }: { branch: Branch }) {
           {branch.name}
           {branch.isHeadquarters && <span className="agency-branch-badge">HQ</span>}
         </h3>
-        <p className="agency-branch-card-address">{branch.address}, {branch.city}</p>
+        <p className="agency-branch-card-address">{branch.address}{branch.city ? `, ${branch.city}` : ""}</p>
         <div className="agency-branch-card-contacts">
           {branch.phone && <span>{branch.phone}</span>}
           {branch.email && <span>{branch.email}</span>}
@@ -113,6 +115,23 @@ function BranchCard({ branch }: { branch: Branch }) {
     </div>
   );
 }
+
+/* ── Section wrapper ────────────────────────────────────────────────────── */
+
+function Section({ id, children }: { id: string; children: React.ReactNode }) {
+  return <section id={id} className="ad-section">{children}</section>;
+}
+
+function SectionTitle({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <h2 className="ad-section-title">
+      {children}
+      {count !== undefined && count > 0 && <span className="ad-section-count">{count}</span>}
+    </h2>
+  );
+}
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
 
 export default async function AgencyDetailPage({ params }: AgencyDetailPageProps) {
   const { slug } = await params;
@@ -133,58 +152,63 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
     : [agency.seatAddress, agency.seatCity].filter(Boolean).join(", ") || "";
 
   const hasSocials = agency.linkedin || agency.instagram || agency.facebook || agency.whatsapp || agency.twitter;
-  const hasAbout = agency.descriptionLong || agency.mission || agency.valuesText || (agency.awards?.length ?? 0) > 0 || (agency.agencyCertifications?.length ?? 0) > 0;
+  const hasAbout = agency.descriptionLong || agency.description || agency.mission || agency.valuesText || (agency.awards?.length ?? 0) > 0 || (agency.agencyCertifications?.length ?? 0) > 0;
   const hasGallery = (agency.gallery?.length ?? 0) > 0;
-  const hasServiceAreas = (agency.serviceAreas?.length ?? 0) > 0 || (agency.serviceCountries?.length ?? 0) > 0;
+  const hasServiceAreas = (agency.serviceAreas?.length ?? 0) > 0 || (agency.serviceCountries?.length ?? 0) > 0 || (agency.specializations?.length ?? 0) > 0;
+  const hasPerformance = (agency.totalSalesVolume && agency.totalSalesVolume > 0) || (agency.avgResponseTimeHours && agency.avgResponseTimeHours > 0) || (agency.propertiesSoldCount && agency.propertiesSoldCount > 0);
+  const hasAboutTab = hasAbout || hasGallery || hasServiceAreas || agency.videoUrl || hasPerformance;
+
+  // Build tab list dynamically
+  const tabs: Array<{ id: string; label: string; count?: number }> = [];
+  if (propertiesPage1.total > 0) tabs.push({ id: "nabidky", label: t.nav.listings, count: propertiesPage1.total });
+  if (agencyBrokers.length > 0) tabs.push({ id: "tym", label: "Tym", count: agencyBrokers.length });
+  if (agencyBranches.length > 0) tabs.push({ id: "pobocky", label: t.profile.branches, count: agencyBranches.length });
+  if (reviewsList.length > 0) tabs.push({ id: "recenze", label: t.profile.reviews, count: reviewsList.length });
+  if (hasAboutTab) tabs.push({ id: "o-nas", label: "O nas" });
 
   return (
     <div className="page-shell">
       <SiteHeader />
       <TrackPage event="agency_profile_view" props={{ agency_id: agency.id, agency_slug: agency.slug, agency_name: agency.name }} />
 
-      {/* ── Hero ──────────────────────────────────────────────── */}
-      <section className="agency-hero-wide">
-        <div className="agency-hero-left">
-          <div className="agency-hero-identity">
+      {/* ── Cover Hero ─────────────────────────────────────────── */}
+      <div className="ad-hero" style={agency.coverPhoto ? { backgroundImage: `url(${agency.coverPhoto})` } : undefined}>
+        <div className="ad-hero-overlay" />
+        <div className="ad-hero-content">
+          <div className="ad-hero-identity">
             {agency.logo ? (
-              <img src={agency.logo} alt={agency.name} className="agency-hero-logo" />
+              <img src={agency.logo} alt={agency.name} className="ad-hero-logo" />
             ) : (
-              <div className="agency-hero-logo-placeholder">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 11h.01M6 15h.01M12 11h.01M12 15h.01M18 11h.01M18 15h.01M6 7V3h12v4" /></svg>
+              <div className="ad-hero-logo ad-hero-logo--placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 11h.01M6 15h.01M12 11h.01M12 15h.01M18 11h.01M18 15h.01M6 7V3h12v4" /></svg>
               </div>
             )}
             <div>
-              <h1 className="agency-hero-name">{agency.name}</h1>
-              {agency.motto && <p className="bp-motto" style={{ marginTop: 2 }}>{agency.motto}</p>}
+              <h1 className="ad-hero-name">{agency.name}</h1>
+              {agency.motto && <p className="ad-hero-motto">{agency.motto}</p>}
               {agencyAddress && (
-                <span className="agency-hero-address">
+                <span className="ad-hero-address">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                   {agencyAddress}
                 </span>
               )}
             </div>
           </div>
-          {agency.description && <p className="agency-hero-desc">{agency.description}</p>}
 
-          <div className="agency-hero-contacts">
+          {agency.description && <p className="ad-hero-desc">{agency.description}</p>}
+
+          <div className="ad-hero-actions">
             {agency.phone && (
-              <a href={`tel:${agency.phone}`} className="broker-hero-btn broker-hero-btn--primary">
+              <a href={`tel:${agency.phone}`} className="ad-btn ad-btn--primary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 {agency.phone}
               </a>
             )}
-            {agency.email && (
-              <a href={`mailto:${agency.email}`} className="broker-hero-btn broker-hero-btn--secondary">Kontakt</a>
-            )}
-            {agency.website && (
-              <a href={agency.website} target="_blank" rel="noopener" className="broker-hero-btn broker-hero-btn--secondary">Web</a>
-            )}
-            {agency.calendlyUrl && (
-              <a href={agency.calendlyUrl} target="_blank" rel="noopener" className="broker-hero-btn broker-hero-btn--secondary">Rezervovat schůzku</a>
-            )}
+            {agency.email && <a href={`mailto:${agency.email}`} className="ad-btn ad-btn--secondary">Kontakt</a>}
+            {agency.website && <a href={agency.website} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Web</a>}
+            {agency.calendlyUrl && <a href={agency.calendlyUrl} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Rezervovat schuzku</a>}
           </div>
 
-          {/* Social icons */}
           {hasSocials && (
             <div className="bp-socials">
               {agency.linkedin && <SocialIcon type="linkedin" url={agency.linkedin} />}
@@ -196,188 +220,112 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
           )}
 
           {parentAgency && (
-            <div className="agency-parent-link">
-              Součást sítě: <Link href={`/kancelare/${parentAgency.slug}`}>{parentAgency.name}</Link>
+            <div className="ad-hero-parent">
+              Soucast site: <Link href={`/kancelare/${parentAgency.slug}`}>{parentAgency.name}</Link>
             </div>
           )}
         </div>
+      </div>
 
-        <div className="agency-hero-right">
-          <div className="agency-hero-stats">
-            <div className="agency-hero-stat">
-              <span className="agency-hero-stat-value">{propertiesPage1.total.toLocaleString("cs")}</span>
-              <span className="agency-hero-stat-label">{t.profile.activeListings}</span>
+      {/* ── Stats bar (glassmorphism) ─────────────────────────── */}
+      <div className="ad-stats-bar">
+        <div className="ad-stats-inner">
+          {propertiesPage1.total > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{propertiesPage1.total.toLocaleString("cs")}</span>
+              <span className="ad-stat-label">{t.profile.activeListings}</span>
             </div>
-            <div className="agency-hero-stat">
-              <span className="agency-hero-stat-value">{agencyBrokers.length}</span>
-              <span className="agency-hero-stat-label">{t.nav.brokers}</span>
+          )}
+          {agencyBrokers.length > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{agencyBrokers.length}</span>
+              <span className="ad-stat-label">{t.nav.brokers}</span>
             </div>
-            {agencyBranches.length > 0 && (
-              <div className="agency-hero-stat">
-                <span className="agency-hero-stat-value">{agencyBranches.length}</span>
-                <span className="agency-hero-stat-label">{t.profile.branches}</span>
-              </div>
-            )}
-            {agency.rating > 0 && (
-              <div className="agency-hero-stat">
-                <span className="agency-hero-stat-value">{agency.rating}</span>
-                <span className="agency-hero-stat-label"><Stars rating={agency.rating} size={14} /></span>
-              </div>
-            )}
-            {agency.foundedYear > 0 && (
-              <div className="agency-hero-stat">
-                <span className="agency-hero-stat-value">{agency.foundedYear}</span>
-                <span className="agency-hero-stat-label">Založeno</span>
-              </div>
-            )}
-          </div>
+          )}
+          {agencyBranches.length > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{agencyBranches.length}</span>
+              <span className="ad-stat-label">{t.profile.branches}</span>
+            </div>
+          )}
+          {agency.rating > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{agency.rating}</span>
+              <span className="ad-stat-label"><Stars rating={agency.rating} size={14} /></span>
+            </div>
+          )}
+          {agency.foundedYear > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{agency.foundedYear}</span>
+              <span className="ad-stat-label">Zalozeno</span>
+            </div>
+          )}
+          {agency.propertiesSoldCount && agency.propertiesSoldCount > 0 && (
+            <div className="ad-stat">
+              <span className="ad-stat-value">{agency.propertiesSoldCount.toLocaleString("cs")}</span>
+              <span className="ad-stat-label">Prodano</span>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
 
-      <main className="broker-detail-content">
+      {/* ── Tab navigation (sticky) ───────────────────────────── */}
+      {tabs.length > 1 && (
+        <nav className="ad-tabs">
+          <div className="ad-tabs-inner">
+            {tabs.map((tab) => (
+              <a key={tab.id} href={`#${tab.id}`} className="ad-tab">
+                {tab.label}
+                {tab.count !== undefined && <span className="ad-tab-count">{tab.count}</span>}
+              </a>
+            ))}
+          </div>
+        </nav>
+      )}
 
-        {/* ── Video ──────────────────────────────────────────── */}
-        {agency.videoUrl && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Video představení</h2>
-            <VideoEmbed url={agency.videoUrl} type={agency.videoType} />
-          </section>
+      {/* ── Content ────────────────────────────────────────────── */}
+      <main className="ad-content">
+
+        {/* Nabidky */}
+        {propertiesPage1.total > 0 && (
+          <Section id="nabidky">
+            <SectionTitle count={propertiesPage1.total}>{t.nav.listings}</SectionTitle>
+            <DetailPropertiesGrid
+              agencyId={agency.id}
+              initialItems={propertiesPage1.items}
+              initialTotal={propertiesPage1.total}
+            />
+          </Section>
         )}
 
-        {/* ── About / Mission / Values ──────────────────────── */}
-        {hasAbout && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">O nás</h2>
-            <div className="bp-about-grid">
-              <div className="bp-about-text">
-                {agency.descriptionLong && <p>{agency.descriptionLong}</p>}
-                {agency.mission && (
-                  <div style={{ marginTop: 16 }}>
-                    <span className="bp-detail-label">Mise</span>
-                    <p style={{ marginTop: 4 }}>{agency.mission}</p>
-                  </div>
-                )}
-                {agency.valuesText && (
-                  <div style={{ marginTop: 16 }}>
-                    <span className="bp-detail-label">Hodnoty</span>
-                    <p style={{ marginTop: 4 }}>{agency.valuesText}</p>
-                  </div>
-                )}
-              </div>
-              <div className="bp-about-details">
-                {(agency.awards?.length ?? 0) > 0 && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Ocenění</span>
-                    <div className="bp-awards">
-                      {agency.awards!.map((a, i) => (
-                        <span key={i} className="bp-award">{a.name}{a.year ? ` (${a.year})` : ""}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(agency.agencyCertifications?.length ?? 0) > 0 && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Certifikace</span>
-                    <div className="bp-chips-wrap">
-                      {agency.agencyCertifications!.map((c, i) => (
-                        <span key={i} className="bp-chip bp-chip--accent">{c}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {agency.totalSalesVolume && agency.totalSalesVolume > 0 && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Objem prodejů</span>
-                    <span className="bp-detail-value">{agency.totalSalesVolume.toLocaleString("cs")} Kč</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ── Service areas ─────────────────────────────────── */}
-        {hasServiceAreas && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Oblast působení</h2>
-            <div className="bp-chips-wrap">
-              {agency.serviceCountries?.map((c, i) => (
-                <span key={`c-${i}`} className="bp-chip bp-chip--accent">{c.toUpperCase()}</span>
-              ))}
-              {agency.serviceAreas?.map((sa, i) => (
-                <span key={i} className="bp-chip">{sa.district ? `${sa.district}, ` : ""}{sa.city}{sa.country ? ` (${sa.country.toUpperCase()})` : ""}</span>
-              ))}
-              {agency.specializations?.map((s, i) => (
-                <span key={`sp-${i}`} className="bp-chip">{s}</span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Gallery ───────────────────────────────────────── */}
-        {hasGallery && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Galerie</h2>
-            <div className="bp-gallery">
-              {agency.gallery!.map((img, i) => (
-                <div key={i} className="bp-gallery-item">
-                  <img src={img} alt={`${agency.name} galerie ${i + 1}`} loading="lazy" />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Branches ──────────────────────────────────────── */}
-        {agencyBranches.length > 0 && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">
-              {t.profile.branches}
-              <span className="broker-section-count">{agencyBranches.length}</span>
-            </h2>
-            <div className="agency-branches-grid">
-              {agencyBranches.map((branch) => <BranchCard key={branch.id} branch={branch} />)}
-            </div>
-          </section>
-        )}
-
-        {/* ── Team ──────────────────────────────────────────── */}
+        {/* Tym */}
         {agencyBrokers.length > 0 && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">
-              {t.nav.brokers}
-              <span className="broker-section-count">{agencyBrokers.length}</span>
-            </h2>
+          <Section id="tym">
+            <SectionTitle count={agencyBrokers.length}>Tym</SectionTitle>
             <div className="agency-brokers-grid">
               {agencyBrokers.map((broker) => <BrokerMiniCard key={broker.id} broker={broker} />)}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* ── Listings ──────────────────────────────────────── */}
-        <section className="bp-section">
-          <h2 className="broker-section-title">
-            {t.nav.listings}
-            <span className="broker-section-count">{propertiesPage1.total}</span>
-          </h2>
-          <DetailPropertiesGrid
-            agencyId={agency.id}
-            initialItems={propertiesPage1.items}
-            initialTotal={propertiesPage1.total}
-          />
-        </section>
+        {/* Pobocky */}
+        {agencyBranches.length > 0 && (
+          <Section id="pobocky">
+            <SectionTitle count={agencyBranches.length}>{t.profile.branches}</SectionTitle>
+            <div className="agency-branches-grid">
+              {agencyBranches.map((branch) => <BranchCard key={branch.id} branch={branch} />)}
+            </div>
+          </Section>
+        )}
 
-        {/* ── Reviews ───────────────────────────────────────── */}
+        {/* Recenze */}
         {reviewsList.length > 0 && (
-          <section className="broker-reviews-section">
-            <h2 className="broker-section-title">
-              {t.profile.reviews}
-              <span className="broker-section-count">{reviewsList.length}</span>
-            </h2>
-            <div className="broker-reviews-summary">
-              <span className="broker-reviews-avg">{agency.rating}</span>
-              <Stars rating={agency.rating} size={18} />
-              <span className="broker-reviews-total">({reviewsList.length})</span>
+          <Section id="recenze">
+            <SectionTitle count={reviewsList.length}>{t.profile.reviews}</SectionTitle>
+            <div className="ad-reviews-summary">
+              <span className="ad-reviews-avg">{agency.rating}</span>
+              <Stars rating={agency.rating} size={20} />
+              <span className="ad-reviews-total">({reviewsList.length} hodnoceni)</span>
             </div>
             <div className="broker-reviews-grid">
               {reviewsList.map((r: Review) => (
@@ -393,13 +341,132 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
                 </div>
               ))}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* ── CTA ───────────────────────────────────────────── */}
+        {/* O nas */}
+        {hasAboutTab && (
+          <Section id="o-nas">
+            <SectionTitle>O nas</SectionTitle>
+
+            {/* Video */}
+            {agency.videoUrl && (
+              <div style={{ marginBottom: 32 }}>
+                <VideoEmbed url={agency.videoUrl} type={agency.videoType} />
+              </div>
+            )}
+
+            {/* Text content */}
+            {hasAbout && (
+              <div className="ad-about-grid">
+                <div className="ad-about-text">
+                  {(agency.descriptionLong || agency.description) && (
+                    <p>{agency.descriptionLong || agency.description}</p>
+                  )}
+                  {agency.mission && (
+                    <div style={{ marginTop: 20 }}>
+                      <span className="ad-label">Mise</span>
+                      <p style={{ marginTop: 6 }}>{agency.mission}</p>
+                    </div>
+                  )}
+                  {agency.valuesText && (
+                    <div style={{ marginTop: 20 }}>
+                      <span className="ad-label">Hodnoty</span>
+                      <p style={{ marginTop: 6 }}>{agency.valuesText}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="ad-about-sidebar">
+                  {(agency.awards?.length ?? 0) > 0 && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Oceneni</span>
+                      <div className="ad-awards">
+                        {agency.awards!.map((a, i) => (
+                          <div key={i} className="ad-award">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" /></svg>
+                            <span>{a.name}{a.year ? ` (${a.year})` : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(agency.agencyCertifications?.length ?? 0) > 0 && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Certifikace</span>
+                      <div className="bp-chips-wrap">
+                        {agency.agencyCertifications!.map((c, i) => (
+                          <span key={i} className="bp-chip bp-chip--accent">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hasPerformance && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Vykon</span>
+                      <div className="ad-performance">
+                        {agency.totalSalesVolume && agency.totalSalesVolume > 0 && (
+                          <div className="ad-perf-row">
+                            <span className="ad-perf-value">{agency.totalSalesVolume.toLocaleString("cs")} Kc</span>
+                            <span className="ad-perf-label">Objem prodeju</span>
+                          </div>
+                        )}
+                        {agency.propertiesSoldCount && agency.propertiesSoldCount > 0 && (
+                          <div className="ad-perf-row">
+                            <span className="ad-perf-value">{agency.propertiesSoldCount.toLocaleString("cs")}</span>
+                            <span className="ad-perf-label">Prodanych nemovitosti</span>
+                          </div>
+                        )}
+                        {agency.avgResponseTimeHours && agency.avgResponseTimeHours > 0 && (
+                          <div className="ad-perf-row">
+                            <span className="ad-perf-value">{agency.avgResponseTimeHours}h</span>
+                            <span className="ad-perf-label">Prumerna odezva</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Service areas */}
+            {hasServiceAreas && (
+              <div style={{ marginTop: 32 }}>
+                <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Oblast pusobeni</span>
+                <div className="bp-chips-wrap">
+                  {agency.serviceCountries?.map((c, i) => (
+                    <span key={`c-${i}`} className="bp-chip bp-chip--accent">{c.toUpperCase()}</span>
+                  ))}
+                  {agency.serviceAreas?.map((sa, i) => (
+                    <span key={i} className="bp-chip">{sa.district ? `${sa.district}, ` : ""}{sa.city}{sa.country ? ` (${sa.country.toUpperCase()})` : ""}</span>
+                  ))}
+                  {agency.specializations?.map((s, i) => (
+                    <span key={`sp-${i}`} className="bp-chip">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Gallery */}
+            {hasGallery && (
+              <div style={{ marginTop: 32 }}>
+                <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Galerie</span>
+                <div className="bp-gallery">
+                  {agency.gallery!.map((img, i) => (
+                    <div key={i} className="bp-gallery-item">
+                      <img src={img} alt={`${agency.name} galerie ${i + 1}`} loading="lazy" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* CTA */}
         {agency.ctaText && agency.ctaUrl && (
-          <section className="bp-section" style={{ textAlign: "center", padding: "48px 0" }}>
-            <a href={agency.ctaUrl} target="_blank" rel="noopener" className="broker-hero-btn broker-hero-btn--primary" style={{ fontSize: "1rem", padding: "14px 40px" }}>
+          <section className="ad-cta">
+            <a href={agency.ctaUrl} target="_blank" rel="noopener" className="ad-btn ad-btn--primary ad-btn--large">
               {agency.ctaText}
             </a>
           </section>
