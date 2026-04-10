@@ -110,7 +110,7 @@ export function AiSearch({ onFiltersReady, compact }: AiSearchProps) {
 
       {!compact && (
         <p className="ai-search-hint">
-          {"nap\u0159. \u201eByt 3+kk v Praze do 8M\u201c nebo \u201eD\u016fm se zahradou na Morav\u011b\u201c"}
+          {"nap\u0159. \u201eByt 3+kk v Praze do 8M\u201c nebo \u201eD\u016fm se zahradou v Brn\u011b do 12M\u201c"}
         </p>
       )}
 
