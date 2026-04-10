@@ -94,6 +94,18 @@ export default function HeroMap() {
     L.tileLayer(isDark ? TILE_DARK : TILE_SATELLITE, { maxZoom: 19 }).addTo(map);
     mapRef.current = map;
 
+    // Rotate to a random city every 60s
+    let lastIndex = LOCATIONS.indexOf(loc);
+    const rotateInterval = setInterval(() => {
+      let nextIndex: number;
+      do {
+        nextIndex = Math.floor(Math.random() * LOCATIONS.length);
+      } while (nextIndex === lastIndex && LOCATIONS.length > 1);
+      lastIndex = nextIndex;
+      const next = LOCATIONS[nextIndex];
+      map.flyTo([next.lat, next.lon], next.zoom, { duration: 2.5 });
+    }, 60_000);
+
     // Theme changes
     const observer = new MutationObserver(() => {
       const nowDark = document.documentElement.getAttribute("data-theme") !== "light";
@@ -109,6 +121,7 @@ export default function HeroMap() {
     });
 
     return () => {
+      clearInterval(rotateInterval);
       observer.disconnect();
       map.remove();
       mapRef.current = null;
