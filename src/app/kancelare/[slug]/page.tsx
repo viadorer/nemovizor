@@ -153,7 +153,8 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
 
   const hasSocials = agency.linkedin || agency.instagram || agency.facebook || agency.whatsapp || agency.twitter;
   const hasAbout = agency.descriptionLong || agency.description || agency.mission || agency.valuesText || (agency.awards?.length ?? 0) > 0 || (agency.agencyCertifications?.length ?? 0) > 0;
-  const hasGallery = (agency.gallery?.length ?? 0) > 0;
+  const galleryImages = (agency.gallery ?? []).filter((u) => u && u.startsWith("http"));
+  const hasGallery = galleryImages.length > 0;
   const hasServiceAreas = (agency.serviceAreas?.length ?? 0) > 0 || (agency.serviceCountries?.length ?? 0) > 0 || (agency.specializations?.length ?? 0) > 0;
   const hasPerformance = (agency.totalSalesVolume && agency.totalSalesVolume > 0) || (agency.avgResponseTimeHours && agency.avgResponseTimeHours > 0) || (agency.propertiesSoldCount && agency.propertiesSoldCount > 0);
   const hasAboutTab = hasAbout || hasGallery || hasServiceAreas || agency.videoUrl || hasPerformance;
@@ -400,7 +401,7 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
               <div style={{ marginTop: 32 }}>
                 <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Galerie</span>
                 <div className="bp-gallery">
-                  {agency.gallery!.map((img, i) => (
+                  {galleryImages.map((img, i) => (
                     <div key={i} className="bp-gallery-item">
                       <img src={img} alt={`${agency.name} galerie ${i + 1}`} loading="lazy" />
                     </div>

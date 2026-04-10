@@ -102,7 +102,8 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
   const hasSocials = broker.linkedin || broker.instagram || broker.facebook || broker.whatsapp || broker.twitter || broker.website;
   const hasAbout = broker.bioLong || broker.bio || broker.education || broker.licenseNumber || (broker.awards?.length ?? 0) > 0 || broker.hobbies || broker.funFact;
   const hasServiceAreas = (broker.serviceAreas?.length ?? 0) > 0 || (broker.specializations?.length ?? 0) > 0 || (broker.propertyTypes?.length ?? 0) > 0;
-  const hasGallery = (broker.gallery?.length ?? 0) > 0;
+  const galleryImages = (broker.gallery ?? []).filter((u) => u && u.startsWith("http"));
+  const hasGallery = galleryImages.length > 0;
   const hasPerformance = (broker.totalSalesVolume && broker.totalSalesVolume > 0) || (broker.responseRatePct && broker.responseRatePct > 0);
   const hasAboutTab = hasAbout || hasServiceAreas || hasGallery || broker.videoUrl || hasPerformance;
 
@@ -370,7 +371,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
               <div style={{ marginTop: 32 }}>
                 <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Galerie</span>
                 <div className="bp-gallery">
-                  {broker.gallery!.map((img, i) => (
+                  {galleryImages.map((img, i) => (
                     <div key={i} className="bp-gallery-item">
                       <img src={img} alt={`${broker.name} galerie ${i + 1}`} loading="lazy" />
                     </div>
