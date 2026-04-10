@@ -171,101 +171,107 @@ export default async function AgencyDetailPage({ params }: AgencyDetailPageProps
       <SiteHeader />
       <TrackPage event="agency_profile_view" props={{ agency_id: agency.id, agency_slug: agency.slug, agency_name: agency.name }} />
 
-      {/* ── Cover Hero ─────────────────────────────────────────── */}
-      <div className="ad-hero" style={agency.coverPhoto ? { backgroundImage: `url(${agency.coverPhoto})` } : undefined}>
-        <div className="ad-hero-overlay" />
-        <div className="ad-hero-content">
-          <div className="ad-hero-identity">
-            {agency.logo ? (
-              <img src={agency.logo} alt={agency.name} className="ad-hero-logo" />
-            ) : (
-              <div className="ad-hero-logo ad-hero-logo--placeholder">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 11h.01M6 15h.01M12 11h.01M12 15h.01M18 11h.01M18 15h.01M6 7V3h12v4" /></svg>
+      {/* ── Hero (two-column) ────────────────────────────────── */}
+      <div className="ad-hero2" style={agency.coverPhoto ? { backgroundImage: `url(${agency.coverPhoto})` } : undefined}>
+        <div className="ad-hero2-overlay" />
+        <div className="ad-hero2-inner">
+          {/* Left: Identity */}
+          <div className="ad-hero2-left">
+            <div className="ad-hero2-logo-wrap">
+              {agency.logo ? (
+                <img src={agency.logo} alt={agency.name} className="ad-hero2-logo" />
+              ) : (
+                <div className="ad-hero2-logo ad-hero2-logo--placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 11h.01M6 15h.01M12 11h.01M12 15h.01M18 11h.01M18 15h.01M6 7V3h12v4" /></svg>
+                </div>
+              )}
+            </div>
+            <h1 className="ad-hero2-name">{agency.name}</h1>
+            {agency.motto && <p className="ad-hero2-motto">{agency.motto}</p>}
+            {agencyAddress && (
+              <span className="ad-hero2-address">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                {agencyAddress}
+              </span>
+            )}
+            {agency.description && <p className="ad-hero2-desc">{agency.description}</p>}
+
+            <div className="ad-hero2-actions">
+              {agency.phone && (
+                <a href={`tel:${agency.phone}`} className="ad-btn ad-btn--primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                  {agency.phone}
+                </a>
+              )}
+              {agency.email && <a href={`mailto:${agency.email}`} className="ad-btn ad-btn--secondary">Kontakt</a>}
+              {agency.website && <a href={agency.website} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Web</a>}
+              {agency.calendlyUrl && <a href={agency.calendlyUrl} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Rezervovat schuzku</a>}
+            </div>
+
+            {hasSocials && (
+              <div className="bp-socials" style={{ marginTop: 8 }}>
+                {agency.linkedin && <SocialIcon type="linkedin" url={agency.linkedin} />}
+                {agency.instagram && <SocialIcon type="instagram" url={agency.instagram} />}
+                {agency.facebook && <SocialIcon type="facebook" url={agency.facebook} />}
+                {agency.twitter && <SocialIcon type="twitter" url={agency.twitter} />}
+                {agency.whatsapp && <SocialIcon type="whatsapp" url={`https://wa.me/${agency.whatsapp.replace(/\D/g, "")}`} />}
               </div>
             )}
-            <div>
-              <h1 className="ad-hero-name">{agency.name}</h1>
-              {agency.motto && <p className="ad-hero-motto">{agency.motto}</p>}
-              {agencyAddress && (
-                <span className="ad-hero-address">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  {agencyAddress}
-                </span>
+
+            {parentAgency && (
+              <div className="ad-hero-parent" style={{ marginTop: 8 }}>
+                Soucast site: <Link href={`/kancelare/${parentAgency.slug}`}>{parentAgency.name}</Link>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Stats cards */}
+          <div className="ad-hero2-right">
+            <div className="ad-stats-grid">
+              {propertiesPage1.total > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                  <span className="ad-stat-card-value">{propertiesPage1.total.toLocaleString("cs")}</span>
+                  <span className="ad-stat-card-label">{t.profile.activeListings}</span>
+                </div>
+              )}
+              {agencyBrokers.length > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                  <span className="ad-stat-card-value">{agencyBrokers.length}</span>
+                  <span className="ad-stat-card-label">{t.nav.brokers}</span>
+                </div>
+              )}
+              {agency.foundedYear > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  <span className="ad-stat-card-value">{agency.foundedYear}</span>
+                  <span className="ad-stat-card-label">Zalozeno</span>
+                </div>
+              )}
+              {agency.rating > 0 && (
+                <div className="ad-stat-card">
+                  <Stars rating={agency.rating} size={16} />
+                  <span className="ad-stat-card-value">{agency.rating}</span>
+                  <span className="ad-stat-card-label">Hodnoceni</span>
+                </div>
+              )}
+              {agencyBranches.length > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  <span className="ad-stat-card-value">{agencyBranches.length}</span>
+                  <span className="ad-stat-card-label">{t.profile.branches}</span>
+                </div>
+              )}
+              {agency.propertiesSoldCount && agency.propertiesSoldCount > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                  <span className="ad-stat-card-value">{agency.propertiesSoldCount.toLocaleString("cs")}</span>
+                  <span className="ad-stat-card-label">Prodano</span>
+                </div>
               )}
             </div>
           </div>
-
-          {agency.description && <p className="ad-hero-desc">{agency.description}</p>}
-
-          <div className="ad-hero-actions">
-            {agency.phone && (
-              <a href={`tel:${agency.phone}`} className="ad-btn ad-btn--primary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                {agency.phone}
-              </a>
-            )}
-            {agency.email && <a href={`mailto:${agency.email}`} className="ad-btn ad-btn--secondary">Kontakt</a>}
-            {agency.website && <a href={agency.website} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Web</a>}
-            {agency.calendlyUrl && <a href={agency.calendlyUrl} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">Rezervovat schuzku</a>}
-          </div>
-
-          {hasSocials && (
-            <div className="bp-socials">
-              {agency.linkedin && <SocialIcon type="linkedin" url={agency.linkedin} />}
-              {agency.instagram && <SocialIcon type="instagram" url={agency.instagram} />}
-              {agency.facebook && <SocialIcon type="facebook" url={agency.facebook} />}
-              {agency.twitter && <SocialIcon type="twitter" url={agency.twitter} />}
-              {agency.whatsapp && <SocialIcon type="whatsapp" url={`https://wa.me/${agency.whatsapp.replace(/\D/g, "")}`} />}
-            </div>
-          )}
-
-          {parentAgency && (
-            <div className="ad-hero-parent">
-              Soucast site: <Link href={`/kancelare/${parentAgency.slug}`}>{parentAgency.name}</Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Stats bar (glassmorphism) ─────────────────────────── */}
-      <div className="ad-stats-bar">
-        <div className="ad-stats-inner">
-          {propertiesPage1.total > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{propertiesPage1.total.toLocaleString("cs")}</span>
-              <span className="ad-stat-label">{t.profile.activeListings}</span>
-            </div>
-          )}
-          {agencyBrokers.length > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{agencyBrokers.length}</span>
-              <span className="ad-stat-label">{t.nav.brokers}</span>
-            </div>
-          )}
-          {agencyBranches.length > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{agencyBranches.length}</span>
-              <span className="ad-stat-label">{t.profile.branches}</span>
-            </div>
-          )}
-          {agency.rating > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{agency.rating}</span>
-              <span className="ad-stat-label"><Stars rating={agency.rating} size={14} /></span>
-            </div>
-          )}
-          {agency.foundedYear > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{agency.foundedYear}</span>
-              <span className="ad-stat-label">Zalozeno</span>
-            </div>
-          )}
-          {agency.propertiesSoldCount && agency.propertiesSoldCount > 0 && (
-            <div className="ad-stat">
-              <span className="ad-stat-value">{agency.propertiesSoldCount.toLocaleString("cs")}</span>
-              <span className="ad-stat-label">Prodano</span>
-            </div>
-          )}
         </div>
       </div>
 
