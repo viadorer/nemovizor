@@ -23,6 +23,7 @@ export const COUNTRY_BBOXES: Record<string, [number, number, number, number]> = 
 };
 
 export const POPULAR_CITIES: { name: string; count: string }[] = [
+  // Česko
   { name: "Praha", count: "500+" },
   { name: "Brno", count: "200+" },
   { name: "Ostrava", count: "150+" },
@@ -31,4 +32,15 @@ export const POPULAR_CITIES: { name: string; count: string }[] = [
   { name: "Liberec", count: "50+" },
   { name: "České Budějovice", count: "45+" },
   { name: "Hradec Králové", count: "40+" },
+  // Evropa
+  { name: "Bratislava", count: "300+" },
+  { name: "Barcelona", count: "400+" },
+  { name: "Paris", count: "500+" },
+  { name: "London", count: "350+" },
+  { name: "Berlin", count: "250+" },
+  { name: "Roma", count: "200+" },
+  { name: "Wien", count: "150+" },
+  { name: "Warszawa", count: "200+" },
+  { name: "Milano", count: "180+" },
+  { name: "Lisboa", count: "120+" },
 ];
