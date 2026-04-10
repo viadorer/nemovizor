@@ -77,6 +77,72 @@ function buildSpec() {
     },
   });
 
+  // ── v1 camelCase proxies ────────────────────────────────────────────────
+  // These are thin proxies over their /api/* counterparts. Query params
+  // accept camelCase (e.g. listingType instead of listing_type) and
+  // response bodies return camelCase keys. Behavior, rate limits and auth
+  // are identical to the legacy endpoints.
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/properties",
+    summary: "Search listings (camelCase, v1)",
+    description:
+      "camelCase proxy over `/api/properties`. Query params and response keys are camelCase. Business-sensitive fields and broker PII are stripped from the response.",
+    tags: ["Listings"],
+    request: { query: PropertiesQuerySchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: PropertiesResponseSchema } },
+      },
+      400: {
+        description: "Invalid query parameters",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/filter-options",
+    summary: "Faceted filter metadata (camelCase, v1)",
+    description:
+      "camelCase proxy over `/api/filter-options`. Returns available categories, subtypes, cities, price and area ranges with counts, optionally scoped by current filter selection.",
+    tags: ["Listings"],
+    request: { query: FilterOptionsQuerySchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: FilterOptionsResponseSchema } },
+      },
+      400: {
+        description: "Invalid query parameters",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/map-points",
+    summary: "Map geo-points (camelCase, v1)",
+    description:
+      "camelCase proxy over `/api/map-points`. Lightweight lat/lon + metadata for map markers. Zoom >= 13 returns up to 500 pins, otherwise up to 2000.",
+    tags: ["Listings"],
+    request: { query: MapPointsQuerySchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: MapPointsResponseSchema } },
+      },
+      400: {
+        description: "Invalid query parameters",
+        content: { "application/json": { schema: ApiErrorSchema } },
+      },
+    },
+  });
+
   // ── v1 detail endpoints (Phase 2: white-label readiness) ───────────────
   registry.registerPath({
     method: "get",
