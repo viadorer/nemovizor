@@ -85,6 +85,7 @@ const ALL_SCOPES = [
   { value: "read:broker", label: "read:broker", disabled: false },
   { value: "write:broker", label: "write:broker", disabled: false },
   { value: "write:webhooks", label: "write:webhooks", disabled: false },
+  { value: "write:import", label: "write:import", disabled: false },
 ];
 
 // ─── Subscription types ───────────────────────────────────────────────────

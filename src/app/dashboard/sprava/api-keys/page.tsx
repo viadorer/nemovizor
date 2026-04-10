@@ -8,6 +8,7 @@ const ALL_SCOPES = [
   { value: "write:broker", label: "write:broker", note: "Mutate broker-scoped data (vytvořit/upravit inzerát přes API)" },
   { value: "read:admin", label: "read:admin", note: "Cross-broker analytika (admin tier)" },
   { value: "write:webhooks", label: "write:webhooks", note: "Spravovat webhook subscriptions (Phase D)" },
+  { value: "write:import", label: "write:import", note: "Batch import API pro CRM/RK systemy" },
 ] as const;
 
 type ApiKeyRow = {
