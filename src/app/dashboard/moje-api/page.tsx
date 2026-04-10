@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -237,11 +237,20 @@ function PlanBanner({ sub }: { sub: SubscriptionInfo | null }) {
 
 type Tab = "keys" | "webhooks" | "audit";
 
+function SubscriptionSuccessBanner() {
+  const searchParams = useSearchParams();
+  const subSuccess = searchParams.get("subscription") === "success";
+  if (!subSuccess) return null;
+  return (
+    <div style={{ padding: "0.75rem 1rem", background: "#dcfce7", border: "1px solid #86efac", borderRadius: 8, marginBottom: "1rem", fontSize: "0.875rem", color: "#15803d" }}>
+      Vas plan je aktivni. Vytvorte si nize API klic pro pristup k API.
+    </div>
+  );
+}
+
 export default function MyApiPage() {
   const [tab, setTab] = useState<Tab>("keys");
   const [sub, setSub] = useState<SubscriptionInfo | null>(null);
-  const searchParams = useSearchParams();
-  const subSuccess = searchParams.get("subscription") === "success";
 
   useEffect(() => {
     fetch("/api/subscriptions/status")
@@ -259,11 +268,9 @@ export default function MyApiPage() {
         </p>
       </div>
 
-      {subSuccess && (
-        <div style={{ padding: "0.75rem 1rem", background: "#dcfce7", border: "1px solid #86efac", borderRadius: 8, marginBottom: "1rem", fontSize: "0.875rem", color: "#15803d" }}>
-          Vas plan je aktivni. Vytvorte si nize API klic pro pristup k API.
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <SubscriptionSuccessBanner />
+      </Suspense>
 
       <PlanBanner sub={sub} />
 
