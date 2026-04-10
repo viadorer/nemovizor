@@ -44,6 +44,10 @@
     {
       "path": "/api/cron/dispatch-webhooks",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-filter-cache",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
