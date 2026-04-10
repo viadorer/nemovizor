@@ -9666,6 +9666,79 @@ table.admin-table tr:hover td {
   .agency-brokers-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
 }
 
+/* ── Broker Detail Premium (bd-*) ──────────────────────────── */
+
+.bd-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent, #ffb800);
+}
+.bd-hero-right {
+  flex-shrink: 0;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bd-portrait {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--bg-card, #1a1a24);
+  border: 2px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+.bd-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bd-portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+.bd-stats-grid {
+  grid-template-columns: 1fr 1fr;
+}
+.bd-agency-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: var(--bg-card, #1a1a24);
+  border: 1px solid var(--border-light, #22222e);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text, #f0f0f5);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.bd-agency-link:hover {
+  border-color: var(--color-accent, #ffb800);
+}
+.bd-agency-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .bd-hero-right { width: 100%; }
+  .bd-portrait { max-height: 360px; aspect-ratio: 4/3; }
+  .bd-stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 /* ── Broker Profile Extended Sections ──────────────────────── */
 .bp-section { margin-top: 48px; }
 .bp-title {

@@ -18,30 +18,17 @@ type BrokerDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
-    <span className="agent-stars" style={{ display: "inline-flex", gap: 1 }}>
+    <span style={{ display: "inline-flex", gap: 1 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i <= Math.round(rating) ? "var(--color-accent)" : "none"} stroke="var(--color-accent)" strokeWidth="2">
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i <= Math.round(rating) ? "var(--color-accent, #ffb800)" : "none"} stroke="var(--color-accent, #ffb800)" strokeWidth="2">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
     </span>
-  );
-}
-
-function ReviewCard({ review }: { review: Review }) {
-  return (
-    <div className="broker-review-card">
-      <div className="broker-review-header">
-        <span className="broker-review-author">{review.authorName}</span>
-        <Stars rating={review.rating} size={12} />
-      </div>
-      <p className="broker-review-text">{review.text}</p>
-      <span className="broker-review-date">
-        {new Date(review.date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long" })}
-      </span>
-    </div>
   );
 }
 
@@ -78,10 +65,24 @@ function VideoEmbed({ url, type }: { url: string; type?: string }) {
   );
 }
 
+function Section({ id, children }: { id: string; children: React.ReactNode }) {
+  return <section id={id} className="ad-section">{children}</section>;
+}
+
+function SectionTitle({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <h2 className="ad-section-title">
+      {children}
+      {count !== undefined && count > 0 && <span className="ad-section-count">{count}</span>}
+    </h2>
+  );
+}
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
+
 export default async function BrokerDetailPage({ params }: BrokerDetailPageProps) {
   const { slug } = await params;
   const broker = await getBrokerBySlug(slug);
-
   if (!broker) notFound();
 
   const [reviewsList, agency, agencyBranches, propertiesPage1] = await Promise.all([
@@ -99,257 +100,323 @@ export default async function BrokerDetailPage({ params }: BrokerDetailPageProps
   const yearsExp = broker.yearStarted ? new Date().getFullYear() - broker.yearStarted : 0;
 
   const hasSocials = broker.linkedin || broker.instagram || broker.facebook || broker.whatsapp || broker.twitter || broker.website;
-  const hasAbout = broker.bioLong || broker.education || broker.licenseNumber || (broker.awards?.length ?? 0) > 0 || broker.hobbies || broker.funFact;
-  const hasServiceAreas = (broker.serviceAreas?.length ?? 0) > 0 || (broker.specializations?.length ?? 0) > 0;
+  const hasAbout = broker.bioLong || broker.bio || broker.education || broker.licenseNumber || (broker.awards?.length ?? 0) > 0 || broker.hobbies || broker.funFact;
+  const hasServiceAreas = (broker.serviceAreas?.length ?? 0) > 0 || (broker.specializations?.length ?? 0) > 0 || (broker.propertyTypes?.length ?? 0) > 0;
   const hasGallery = (broker.gallery?.length ?? 0) > 0;
+  const hasPerformance = (broker.totalSalesVolume && broker.totalSalesVolume > 0) || (broker.responseRatePct && broker.responseRatePct > 0);
+  const hasAboutTab = hasAbout || hasServiceAreas || hasGallery || broker.videoUrl || hasPerformance;
+
+  // Tabs: O mne → Nabidky → Recenze
+  const tabs: Array<{ id: string; label: string; count?: number }> = [];
+  if (hasAboutTab) tabs.push({ id: "o-mne", label: "O mne" });
+  if (propertiesPage1.total > 0) tabs.push({ id: "nabidky", label: t.nav.listings, count: propertiesPage1.total });
+  if (reviewsList.length > 0) tabs.push({ id: "recenze", label: t.profile.reviews, count: reviewsList.length });
 
   return (
     <div className="page-shell">
       <SiteHeader />
       <TrackPage event="broker_profile_view" props={{ broker_id: broker.id, broker_slug: broker.slug, broker_name: broker.name }} />
 
-      {/* ── Hero ──────────────────────────────────────────────── */}
-      <section className="broker-hero">
-        <div className="broker-hero-text">
-          {broker.title && <span className="bp-title">{broker.title}</span>}
-          <span className="broker-hero-label">
-            {broker.specialization || t.nav.brokers}
-            {agencyAddress ? ` | ${agencyAddress}` : ""}
-          </span>
-          <h1 className="broker-hero-name">{broker.name}</h1>
-          {broker.motto && <p className="bp-motto">{broker.motto}</p>}
+      {/* ── Hero (two-column: left info, right portrait) ─────── */}
+      <div className="ad-hero2" style={broker.coverPhoto ? { backgroundImage: `url(${broker.coverPhoto})` } : undefined}>
+        <div className="ad-hero2-overlay" />
+        <div className="ad-hero2-inner">
+          {/* Left: Identity */}
+          <div className="ad-hero2-left">
+            {broker.title && <span className="bd-title">{broker.title}</span>}
+            <h1 className="ad-hero2-name">{broker.name}</h1>
+            {broker.motto && <p className="ad-hero2-motto">{broker.motto}</p>}
+            <span className="ad-hero2-address">
+              {broker.specialization && <>{broker.specialization}</>}
+              {broker.specialization && agencyAddress && <> | </>}
+              {agencyAddress && (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  {agencyAddress}
+                </>
+              )}
+            </span>
 
-          <div className="broker-hero-stats">
-            <div className="broker-hero-stat">
-              <span className="broker-hero-stat-value">{broker.activeListings.toLocaleString("cs")}</span>
-              <span className="broker-hero-stat-label">{t.profile.activeListings}</span>
-            </div>
-            {broker.totalDeals > 0 && (
-              <div className="broker-hero-stat">
-                <span className="broker-hero-stat-value">{broker.totalDeals}+</span>
-                <span className="broker-hero-stat-label">{t.profile.totalDeals}</span>
-              </div>
-            )}
-            {yearsExp > 0 && (
-              <div className="broker-hero-stat">
-                <span className="broker-hero-stat-value">{yearsExp}</span>
-                <span className="broker-hero-stat-label">let praxe</span>
-              </div>
-            )}
-            {broker.rating > 0 && (
-              <div className="broker-hero-stat">
-                <span className="broker-hero-stat-value">{broker.rating}</span>
-                <span className="broker-hero-stat-label"><Stars rating={broker.rating} size={12} /></span>
-              </div>
-            )}
-            {broker.avgResponseTimeHours && broker.avgResponseTimeHours > 0 && (
-              <div className="broker-hero-stat">
-                <span className="broker-hero-stat-value">{broker.avgResponseTimeHours < 1 ? `${Math.round(broker.avgResponseTimeHours * 60)}min` : `${broker.avgResponseTimeHours}h`}</span>
-                <span className="broker-hero-stat-label">odpověď</span>
-              </div>
-            )}
-          </div>
+            {broker.bio && <p className="ad-hero2-desc">{broker.bio}</p>}
 
-          <div className="broker-hero-actions">
-            {broker.email && (
-              <a href={`mailto:${broker.email}`} className="broker-hero-btn broker-hero-btn--primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><path d="M22 6l-10 7L2 6" /></svg>
-                Kontaktovat
-              </a>
-            )}
-            {broker.phone && (
-              <a href={`tel:${broker.phone}`} className="broker-hero-btn broker-hero-btn--secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                {broker.phone}
-              </a>
-            )}
-            {broker.calendlyUrl && (
-              <a href={broker.calendlyUrl} target="_blank" rel="noopener" className="broker-hero-btn broker-hero-btn--secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                Rezervovat schůzku
-              </a>
-            )}
-          </div>
-
-          {/* Tags */}
-          {((broker.languages?.length ?? 0) > 0 || (broker.certifications?.length ?? 0) > 0) && (
-            <div className="broker-hero-tags">
-              {broker.languages?.map((l) => <span key={l} className="broker-hero-tag">{l}</span>)}
-              {broker.certifications?.map((c) => <span key={c} className="broker-hero-tag broker-hero-tag--cert">{c}</span>)}
-            </div>
-          )}
-
-          {/* Social icons */}
-          {hasSocials && (
-            <div className="bp-socials">
-              {broker.linkedin && <SocialIcon type="linkedin" url={broker.linkedin} />}
-              {broker.instagram && <SocialIcon type="instagram" url={broker.instagram} />}
-              {broker.facebook && <SocialIcon type="facebook" url={broker.facebook} />}
-              {broker.twitter && <SocialIcon type="twitter" url={broker.twitter} />}
-              {broker.whatsapp && <SocialIcon type="whatsapp" url={`https://wa.me/${broker.whatsapp.replace(/\D/g, "")}`} />}
-              {broker.website && (
-                <a href={broker.website} target="_blank" rel="noopener" className="bp-social-icon" title="Web">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+            <div className="ad-hero2-actions">
+              {broker.email && (
+                <a href={`mailto:${broker.email}`} className="ad-btn ad-btn--primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><path d="M22 6l-10 7L2 6" /></svg>
+                  Kontaktovat
+                </a>
+              )}
+              {broker.phone && (
+                <a href={`tel:${broker.phone}`} className="ad-btn ad-btn--secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                  {broker.phone}
+                </a>
+              )}
+              {broker.calendlyUrl && (
+                <a href={broker.calendlyUrl} target="_blank" rel="noopener" className="ad-btn ad-btn--secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  Rezervovat schuzku
                 </a>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Portrait */}
-        <div className="broker-hero-portrait-wrap">
-          <div className="broker-hero-portrait">
-            {broker.photo ? (
-              <img src={broker.photo} alt={broker.name} />
-            ) : (
-              <div className="broker-hero-portrait-placeholder">
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+            {((broker.languages?.length ?? 0) > 0 || (broker.certifications?.length ?? 0) > 0) && (
+              <div className="bp-chips-wrap" style={{ marginTop: 8 }}>
+                {broker.languages?.map((l) => <span key={l} className="bp-chip">{l}</span>)}
+                {broker.certifications?.map((c) => <span key={c} className="bp-chip bp-chip--accent">{c}</span>)}
               </div>
             )}
-          </div>
-          {broker.bio && (
-            <div className="broker-hero-quote">
-              <p>{broker.bio.slice(0, 180)}{broker.bio.length > 180 ? "..." : ""}</p>
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* ── Agency link ────────────────────────────────────────── */}
-      {agency && (
-        <div className="broker-agency-bar">
-          <Link href={`/kancelare/${agency.slug}`} className="broker-agency-link">
-            {agency.logo && <img src={agency.logo} alt={agency.name} className="broker-agency-logo" />}
-            <span>{agency.name}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
-          </Link>
-        </div>
-      )}
-
-      <main className="broker-detail-content">
-
-        {/* ── Video greeting ────────────────────────────────────── */}
-        {broker.videoUrl && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Video představení</h2>
-            <VideoEmbed url={broker.videoUrl} type={broker.videoType} />
-          </section>
-        )}
-
-        {/* ── About / Bio ──────────────────────────────────────── */}
-        {hasAbout && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">O mně</h2>
-            <div className="bp-about-grid">
-              {broker.bioLong && (
-                <div className="bp-about-text">
-                  <p>{broker.bioLong}</p>
-                </div>
-              )}
-              <div className="bp-about-details">
-                {broker.education && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Vzdělání</span>
-                    <span className="bp-detail-value">{broker.education}</span>
-                  </div>
-                )}
-                {broker.licenseNumber && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Licence</span>
-                    <span className="bp-detail-value">{broker.licenseNumber}</span>
-                  </div>
-                )}
-                {(broker.awards?.length ?? 0) > 0 && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Ocenění</span>
-                    <div className="bp-awards">
-                      {broker.awards!.map((a, i) => (
-                        <span key={i} className="bp-award">{a.name}{a.year ? ` (${a.year})` : ""}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {broker.hobbies && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Koníčky</span>
-                    <span className="bp-detail-value">{broker.hobbies}</span>
-                  </div>
-                )}
-                {broker.funFact && (
-                  <div className="bp-detail-row">
-                    <span className="bp-detail-label">Fun fact</span>
-                    <span className="bp-detail-value">{broker.funFact}</span>
-                  </div>
+            {hasSocials && (
+              <div className="bp-socials" style={{ marginTop: 8 }}>
+                {broker.linkedin && <SocialIcon type="linkedin" url={broker.linkedin} />}
+                {broker.instagram && <SocialIcon type="instagram" url={broker.instagram} />}
+                {broker.facebook && <SocialIcon type="facebook" url={broker.facebook} />}
+                {broker.twitter && <SocialIcon type="twitter" url={broker.twitter} />}
+                {broker.whatsapp && <SocialIcon type="whatsapp" url={`https://wa.me/${broker.whatsapp.replace(/\D/g, "")}`} />}
+                {broker.website && (
+                  <a href={broker.website} target="_blank" rel="noopener" className="bp-social-icon" title="Web">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                  </a>
                 )}
               </div>
+            )}
+
+            {agency && (
+              <Link href={`/kancelare/${agency.slug}`} className="bd-agency-link">
+                {agency.logo && <img src={agency.logo} alt={agency.name} className="bd-agency-logo" />}
+                <span>{agency.name}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+              </Link>
+            )}
+          </div>
+
+          {/* Right: Portrait + stats */}
+          <div className="bd-hero-right">
+            <div className="bd-portrait">
+              {broker.photo ? (
+                <img src={broker.photo} alt={broker.name} />
+              ) : (
+                <div className="bd-portrait-placeholder">
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                </div>
+              )}
             </div>
-          </section>
+            <div className="ad-stats-grid bd-stats-grid">
+              {broker.activeListings > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                  <span className="ad-stat-card-value">{broker.activeListings.toLocaleString("cs")}</span>
+                  <span className="ad-stat-card-label">{t.profile.activeListings}</span>
+                </div>
+              )}
+              {broker.totalDeals > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                  <span className="ad-stat-card-value">{broker.totalDeals}+</span>
+                  <span className="ad-stat-card-label">{t.profile.totalDeals}</span>
+                </div>
+              )}
+              {yearsExp > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  <span className="ad-stat-card-value">{yearsExp}</span>
+                  <span className="ad-stat-card-label">Let praxe</span>
+                </div>
+              )}
+              {broker.rating > 0 && (
+                <div className="ad-stat-card">
+                  <Stars rating={broker.rating} size={14} />
+                  <span className="ad-stat-card-value">{broker.rating}</span>
+                  <span className="ad-stat-card-label">Hodnoceni</span>
+                </div>
+              )}
+              {broker.avgResponseTimeHours && broker.avgResponseTimeHours > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                  <span className="ad-stat-card-value">{broker.avgResponseTimeHours < 1 ? `${Math.round(broker.avgResponseTimeHours * 60)}min` : `${broker.avgResponseTimeHours}h`}</span>
+                  <span className="ad-stat-card-label">Odezva</span>
+                </div>
+              )}
+              {broker.responseRatePct && broker.responseRatePct > 0 && (
+                <div className="ad-stat-card">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                  <span className="ad-stat-card-value">{broker.responseRatePct}%</span>
+                  <span className="ad-stat-card-label">Mira odpovedi</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tabs (sticky) ─────────────────────────────────────── */}
+      {tabs.length > 1 && (
+        <nav className="ad-tabs">
+          <div className="ad-tabs-inner">
+            {tabs.map((tab) => (
+              <a key={tab.id} href={`#${tab.id}`} className="ad-tab">
+                {tab.label}
+                {tab.count !== undefined && <span className="ad-tab-count">{tab.count}</span>}
+              </a>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      {/* ── Content ────────────────────────────────────────────── */}
+      <main className="ad-content">
+
+        {/* O mne */}
+        {hasAboutTab && (
+          <Section id="o-mne">
+            <SectionTitle>O mne</SectionTitle>
+
+            {broker.videoUrl && (
+              <div style={{ marginBottom: 32 }}>
+                <VideoEmbed url={broker.videoUrl} type={broker.videoType} />
+              </div>
+            )}
+
+            {hasAbout && (
+              <div className="ad-about-grid">
+                <div className="ad-about-text">
+                  {(broker.bioLong || broker.bio) && <p>{broker.bioLong || broker.bio}</p>}
+                </div>
+                <div className="ad-about-sidebar">
+                  {broker.education && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Vzdelani</span>
+                      <p style={{ fontSize: "0.85rem", margin: 0 }}>{broker.education}</p>
+                    </div>
+                  )}
+                  {broker.licenseNumber && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Licence</span>
+                      <p style={{ fontSize: "0.85rem", margin: 0 }}>{broker.licenseNumber}</p>
+                    </div>
+                  )}
+                  {(broker.awards?.length ?? 0) > 0 && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Oceneni</span>
+                      <div className="ad-awards">
+                        {broker.awards!.map((a, i) => (
+                          <div key={i} className="ad-award">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent, #ffb800)" strokeWidth="2"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" /></svg>
+                            <span>{a.name}{a.year ? ` (${a.year})` : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hasPerformance && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Vykon</span>
+                      <div className="ad-performance">
+                        {broker.totalSalesVolume && broker.totalSalesVolume > 0 && (
+                          <div className="ad-perf-row">
+                            <span className="ad-perf-value">{broker.totalSalesVolume.toLocaleString("cs")} Kc</span>
+                            <span className="ad-perf-label">Objem prodeju</span>
+                          </div>
+                        )}
+                        {broker.responseRatePct && broker.responseRatePct > 0 && (
+                          <div className="ad-perf-row">
+                            <span className="ad-perf-value">{broker.responseRatePct}%</span>
+                            <span className="ad-perf-label">Mira odpovedi</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {broker.hobbies && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Konicky</span>
+                      <p style={{ fontSize: "0.85rem", margin: 0 }}>{broker.hobbies}</p>
+                    </div>
+                  )}
+                  {broker.funFact && (
+                    <div className="ad-sidebar-block">
+                      <span className="ad-label">Fun fact</span>
+                      <p style={{ fontSize: "0.85rem", margin: 0 }}>{broker.funFact}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {hasServiceAreas && (
+              <div style={{ marginTop: 32 }}>
+                <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Oblast pusobeni a specializace</span>
+                <div className="bp-chips-wrap">
+                  {broker.serviceAreas?.map((sa, i) => (
+                    <span key={i} className="bp-chip">{sa.district ? `${sa.district}, ` : ""}{sa.city}{sa.country ? ` (${sa.country.toUpperCase()})` : ""}</span>
+                  ))}
+                  {broker.specializations?.map((s, i) => (
+                    <span key={`sp-${i}`} className="bp-chip bp-chip--accent">{s}</span>
+                  ))}
+                  {broker.propertyTypes?.map((pt, i) => (
+                    <span key={`pt-${i}`} className="bp-chip">{pt}</span>
+                  ))}
+                </div>
+                {broker.priceRangeMin && broker.priceRangeMax ? (
+                  <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 10 }}>
+                    Cenovy rozsah: {broker.priceRangeMin.toLocaleString("cs")} – {broker.priceRangeMax.toLocaleString("cs")} Kc
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            {hasGallery && (
+              <div style={{ marginTop: 32 }}>
+                <span className="ad-label" style={{ marginBottom: 10, display: "block" }}>Galerie</span>
+                <div className="bp-gallery">
+                  {broker.gallery!.map((img, i) => (
+                    <div key={i} className="bp-gallery-item">
+                      <img src={img} alt={`${broker.name} galerie ${i + 1}`} loading="lazy" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Section>
         )}
 
-        {/* ── Service areas & specializations ──────────────────── */}
-        {hasServiceAreas && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Oblast působení</h2>
-            <div className="bp-chips-wrap">
-              {broker.serviceAreas?.map((sa, i) => (
-                <span key={i} className="bp-chip">{sa.district ? `${sa.district}, ` : ""}{sa.city}{sa.country ? ` (${sa.country.toUpperCase()})` : ""}</span>
-              ))}
-              {broker.specializations?.map((s, i) => (
-                <span key={`sp-${i}`} className="bp-chip bp-chip--accent">{s}</span>
-              ))}
-              {broker.propertyTypes?.map((pt, i) => (
-                <span key={`pt-${i}`} className="bp-chip">{pt}</span>
-              ))}
-            </div>
-            {broker.priceRangeMin && broker.priceRangeMax ? (
-              <p className="bp-price-range">Cenový rozsah: {broker.priceRangeMin.toLocaleString("cs")} – {broker.priceRangeMax.toLocaleString("cs")} Kč</p>
-            ) : null}
-          </section>
+        {/* Nabidky */}
+        {propertiesPage1.total > 0 && (
+          <Section id="nabidky">
+            <SectionTitle count={propertiesPage1.total}>{t.nav.listings}</SectionTitle>
+            <DetailPropertiesGrid
+              brokerId={broker.id}
+              initialItems={propertiesPage1.items}
+              initialTotal={propertiesPage1.total}
+            />
+          </Section>
         )}
 
-        {/* ── Gallery ──────────────────────────────────────────── */}
-        {hasGallery && (
-          <section className="bp-section">
-            <h2 className="broker-section-title">Galerie</h2>
-            <div className="bp-gallery">
-              {broker.gallery!.map((img, i) => (
-                <div key={i} className="bp-gallery-item">
-                  <img src={img} alt={`${broker.name} galerie ${i + 1}`} loading="lazy" />
+        {/* Recenze */}
+        {reviewsList.length > 0 && (
+          <Section id="recenze">
+            <SectionTitle count={reviewsList.length}>{t.profile.reviews}</SectionTitle>
+            <div className="ad-reviews-summary">
+              <span className="ad-reviews-avg">{broker.rating}</span>
+              <Stars rating={broker.rating} size={20} />
+              <span className="ad-reviews-total">({reviewsList.length} hodnoceni)</span>
+            </div>
+            <div className="broker-reviews-grid">
+              {reviewsList.map((r: Review) => (
+                <div key={r.id} className="broker-review-card">
+                  <div className="broker-review-header">
+                    <span className="broker-review-author">{r.authorName}</span>
+                    <Stars rating={r.rating} size={12} />
+                  </div>
+                  <p className="broker-review-text">{r.text}</p>
+                  <span className="broker-review-date">
+                    {new Date(r.date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long" })}
+                  </span>
                 </div>
               ))}
             </div>
-          </section>
-        )}
-
-        {/* ── Listings ─────────────────────────────────────────── */}
-        <section className="bp-section">
-          <h2 className="broker-section-title">
-            {t.nav.listings}
-            <span className="broker-section-count">{propertiesPage1.total}</span>
-          </h2>
-          <DetailPropertiesGrid
-            brokerId={broker.id}
-            initialItems={propertiesPage1.items}
-            initialTotal={propertiesPage1.total}
-          />
-        </section>
-
-        {/* ── Reviews ──────────────────────────────────────────── */}
-        {reviewsList.length > 0 && (
-          <section className="broker-reviews-section">
-            <h2 className="broker-section-title">
-              {t.profile.reviews}
-              <span className="broker-section-count">{reviewsList.length}</span>
-            </h2>
-            <div className="broker-reviews-summary">
-              <span className="broker-reviews-avg">{broker.rating}</span>
-              <Stars rating={broker.rating} size={18} />
-              <span className="broker-reviews-total">({reviewsList.length} hodnocení)</span>
-            </div>
-            <div className="broker-reviews-grid">
-              {reviewsList.map((r) => <ReviewCard key={r.id} review={r} />)}
-            </div>
-          </section>
+          </Section>
         )}
       </main>
 
