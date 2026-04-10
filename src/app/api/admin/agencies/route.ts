@@ -3,10 +3,21 @@ import { requireAuth } from "@/lib/auth-utils";
 
 // Allowed fields for agency insert/update (prevents unknown column errors)
 const AGENCY_FIELDS = [
+  // Core
   "name", "slug", "logo", "description", "phone", "email", "website",
   "seat_city", "seat_address", "founded_year", "total_brokers", "total_listings",
   "total_deals", "rating", "specializations", "parent_agency_id", "is_independent",
   "user_id", "active",
+  // Extended profile (migration 036)
+  "description_long", "motto", "mission", "values_text",
+  "cover_photo", "gallery", "video_url", "video_type",
+  // Social
+  "linkedin", "instagram", "facebook", "twitter", "whatsapp",
+  // Awards & service
+  "certifications", "service_areas", "service_countries",
+  "avg_response_time_hours", "total_sales_volume", "properties_sold_count",
+  // CTA
+  "newsletter_enabled", "cta_text", "cta_url", "calendly_url",
 ];
 
 function pickAgencyFields(body: Record<string, unknown>): Record<string, unknown> {

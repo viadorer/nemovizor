@@ -3,9 +3,20 @@ import { requireAuth } from "@/lib/auth-utils";
 
 // Allowed fields for broker insert/update (prevents unknown column errors)
 const BROKER_FIELDS = [
+  // Core
   "name", "slug", "email", "phone", "photo", "agency_name", "specialization",
   "active_listings", "rating", "total_deals", "bio", "agency_id", "user_id",
   "languages", "certifications", "year_started", "branch_id", "active",
+  // Extended profile (migration 036)
+  "title", "motto", "bio_short", "bio_long", "education", "license_number",
+  "hobbies", "fun_fact", "video_url", "video_type", "cover_photo", "gallery", "awards",
+  // Social
+  "linkedin", "instagram", "facebook", "twitter", "website", "whatsapp", "calendly_url",
+  // Expertise
+  "specializations", "property_types", "service_areas",
+  "price_range_min", "price_range_max",
+  // Performance
+  "total_sales_volume", "avg_response_time_hours", "response_rate_pct",
 ];
 
 function pickBrokerFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -29,7 +40,7 @@ export async function GET(request: NextRequest) {
   if (id) {
     const { data, error } = await supabase
       .from("brokers")
-      .select("id, name, slug, email, phone, photo, agency_name, specialization, active_listings, rating, total_deals, bio, agency_id, user_id, languages, certifications, year_started, branch_id, created_at, agencies(name)")
+      .select("*, agencies(name)")
       .eq("id", id)
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
