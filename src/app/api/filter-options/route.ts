@@ -39,6 +39,13 @@ export async function GET(req: NextRequest) {
 
   const listingType = qp.listing_type ?? null;
   const category = qp.category ?? null;
+  const subtype = qp.subtype ?? null;
+  const country = qp.country ?? null;
+  const city = qp.city ?? null;
+  const priceMin = qp.price_min ?? null;
+  const priceMax = qp.price_max ?? null;
+  const areaMin = qp.area_min ?? null;
+  const areaMax = qp.area_max ?? null;
   const hasBounds =
     qp.sw_lat !== undefined && qp.sw_lon !== undefined && qp.ne_lat !== undefined && qp.ne_lon !== undefined;
 
@@ -80,6 +87,13 @@ export async function GET(req: NextRequest) {
       {
         p_listing_type: listingType ?? null,
         p_category: category ?? null,
+        p_subtype: subtype ?? null,
+        p_country: country ?? null,
+        p_city: city ?? null,
+        p_price_min: priceMin ?? null,
+        p_price_max: priceMax ?? null,
+        p_area_min: areaMin ?? null,
+        p_area_max: areaMax ?? null,
         p_broker_ids: brokerIds ?? null,
         p_sw_lat: bounds?.swLat ?? null,
         p_sw_lon: bounds?.swLon ?? null,
@@ -113,7 +127,7 @@ export async function GET(req: NextRequest) {
   // Legacy slow path — kept as a fallback until migration 045 is applied
   // on every environment. Safe to delete once production is confirmed on
   // the RPC path.
-  return tap(await fallbackFilterOptions(client, listingType, category, brokerIds, bounds, rl));
+  return tap(await fallbackFilterOptions(client, listingType, category, subtype, country, city, priceMin, priceMax, areaMin, areaMax, brokerIds, bounds, rl));
 }
 
 /** Fallback using standard Supabase queries (no custom RPC needed) */
@@ -121,6 +135,13 @@ async function fallbackFilterOptions(
   client: ReturnType<typeof getSupabase>,
   listingType: string | null,
   category: string[] | null,
+  subtype: string[] | null,
+  country: string[] | null,
+  city: string | null,
+  priceMin: number | null,
+  priceMax: number | null,
+  areaMin: number | null,
+  areaMax: number | null,
   brokerIds: string[] | null = null,
   bounds: { swLat: number; swLon: number; neLat: number; neLon: number } | null = null,
   rl: RateLimitResult | null = null,
@@ -137,6 +158,19 @@ async function fallbackFilterOptions(
     if (category) {
       q = category.length === 1 ? q.eq("category", category[0]) : q.in("category", category);
     }
+    if (subtype) {
+      q = subtype.length === 1 ? q.eq("subtype", subtype[0]) : q.in("subtype", subtype);
+    }
+    if (country) {
+      q = country.length === 1 ? q.ilike("country", country[0]) : q.in("country", country);
+    }
+    if (city) {
+      q = q.ilike("city", city);
+    }
+    if (priceMin !== null) q = q.gte("price", priceMin);
+    if (priceMax !== null) q = q.lte("price", priceMax);
+    if (areaMin !== null) q = q.gte("area", areaMin);
+    if (areaMax !== null) q = q.lte("area", areaMax);
     if (brokerIds) {
       q = brokerIds.length === 1 ? q.eq("broker_id", brokerIds[0]) : q.in("broker_id", brokerIds);
     }
@@ -167,7 +201,7 @@ async function fallbackFilterOptions(
   const ltMap = new Map<string, number>();
   const countryMap = new Map<string, number>();
   const currencyMap = new Map<string, number>();
-  let priceMin = Infinity, priceMax = 0, areaMin = Infinity, areaMax = 0;
+  let aggPriceMin = Infinity, aggPriceMax = 0, aggAreaMin = Infinity, aggAreaMax = 0;
 
   for (const r of rows) {
     if (r.category) categoryMap.set(r.category, (categoryMap.get(r.category) || 0) + 1);
@@ -177,8 +211,8 @@ async function fallbackFilterOptions(
     if (r.country) countryMap.set(r.country, (countryMap.get(r.country) || 0) + 1);
     const cur = (r.price_currency || "czk").toLowerCase();
     currencyMap.set(cur, (currencyMap.get(cur) || 0) + 1);
-    if (r.price && r.price > 0) { priceMin = Math.min(priceMin, r.price); priceMax = Math.max(priceMax, r.price); }
-    if (r.area && r.area > 0) { areaMin = Math.min(areaMin, r.area); areaMax = Math.max(areaMax, r.area); }
+    if (r.price && r.price > 0) { aggPriceMin = Math.min(aggPriceMin, r.price); aggPriceMax = Math.max(aggPriceMax, r.price); }
+    if (r.area && r.area > 0) { aggAreaMin = Math.min(aggAreaMin, r.area); aggAreaMax = Math.max(aggAreaMax, r.area); }
   }
 
   const toArr = (m: Map<string, number>) =>
@@ -192,8 +226,8 @@ async function fallbackFilterOptions(
       listingTypes: toArr(ltMap),
       countries: toArr(countryMap),
       currencies: toArr(currencyMap),
-      priceRange: { min: priceMin === Infinity ? 0 : priceMin, max: priceMax },
-      areaRange: { min: areaMin === Infinity ? 0 : areaMin, max: areaMax },
+      priceRange: { min: aggPriceMin === Infinity ? 0 : aggPriceMin, max: aggPriceMax },
+      areaRange: { min: aggAreaMin === Infinity ? 0 : aggAreaMin, max: aggAreaMax },
     },
     {
       headers: {

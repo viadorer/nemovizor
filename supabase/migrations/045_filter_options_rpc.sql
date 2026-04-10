@@ -74,7 +74,7 @@ begin
       country,
       price,
       area,
-      coalesce(nullif(lower(price_currency), ''), 'czk') as price_currency_norm
+      coalesce(nullif(lower(price_currency::text), ''), 'czk') as price_currency_norm
     from public.properties
     where active = true
       and (p_listing_type is null or listing_type = p_listing_type)

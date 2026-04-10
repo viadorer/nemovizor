@@ -160,6 +160,13 @@ const mapPointsShape = {
 const filterOptionsShape = {
   listing_type: listingTypeEnum.optional(),
   category: z.array(categoryEnum).optional(),
+  subtype: z.array(z.string()).optional().describe("One or more subtype codes such as `2+kk`, `3+1`, `rodinny`, `T2`, ..."),
+  city: z.string().optional().describe("Exact city name (e.g. `Praha`, `Milano`)."),
+  country: z.array(z.string()).optional().describe("One or more ISO 3166-1 alpha-2 country codes, lowercase (`cz`, `sk`, `it`, ...)."),
+  price_min: z.number().nonnegative().optional(),
+  price_max: z.number().nonnegative().optional(),
+  area_min: z.number().nonnegative().optional(),
+  area_max: z.number().nonnegative().optional(),
   broker_id: z.string().uuid().optional(),
   agency_id: z.string().uuid().optional(),
   sw_lat: z.number().optional(),

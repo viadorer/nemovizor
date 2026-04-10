@@ -9,6 +9,13 @@ export const FilterOptionsQuerySchema = z
   .object({
     listing_type: ListingTypeSchema.optional(),
     category: qCsvList().optional(),
+    subtype: qCsvList().optional(),
+    country: qCsvList().optional(),
+    city: z.string().optional(),
+    price_min: qNumber().optional(),
+    price_max: qNumber().optional(),
+    area_min: qNumber().optional(),
+    area_max: qNumber().optional(),
     broker_id: z.string().uuid().optional(),
     agency_id: z.string().uuid().optional(),
     sw_lat: qNumber().optional(),
