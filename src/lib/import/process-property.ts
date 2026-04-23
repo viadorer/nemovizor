@@ -91,20 +91,65 @@ export async function processProperty(
       active: true,
     };
 
-    // Map all known property fields
+    // Map ALL known property fields (172 columns in DB)
     const directFields = [
+      // Core
       "title", "listing_type", "category", "subtype", "rooms_label",
-      "price", "price_currency", "price_unit", "price_note",
-      "city", "district", "street", "zip", "region", "country",
+      // Price
+      "price", "price_currency", "price_unit", "price_note", "price_negotiation",
+      // Location
+      "city", "district", "street", "zip", "region", "city_part", "country",
       "latitude", "longitude", "location_label",
-      "area", "land_area", "floor_area", "garden_area", "balcony_area",
-      "terrace_area", "cellar_area", "built_up_area",
+      // Areas (all 16)
+      "area", "land_area", "built_up_area", "floor_area", "balcony_area",
+      "basin_area", "cellar_area", "garden_area", "loggia_area", "terrace_area",
+      "nolive_total_area", "offices_area", "production_area", "shop_area",
+      "store_area", "workshop_area",
+      // Description
       "summary", "description",
+      // Building parameters
       "condition", "ownership", "furnishing", "energy_rating", "building_material",
-      "floor", "total_floors", "year_built", "last_renovation",
+      "flooring",
+      // Floor info
+      "floor", "total_floors", "underground_floors", "ceiling_height",
+      // Amenities (booleans)
       "balcony", "terrace", "garden", "elevator", "cellar", "garage", "pool",
-      "parking", "parking_spaces",
-      "matterport_url", "keywords",
+      "loggia", "low_energy", "ftv_panels", "solar_panels", "mortgage",
+      // Parking
+      "parking", "parking_spaces", "garage_count",
+      // Access & type
+      "easy_access", "object_type", "object_kind", "object_location", "flat_class",
+      // Infrastructure (arrays)
+      "heating", "heating_element", "heating_source", "water_heat_source",
+      "electricity", "gas", "water", "gully", "road_type",
+      "telecommunication", "transport", "internet_connection_type",
+      // Internet
+      "internet_connection_provider", "internet_connection_speed",
+      // Surroundings
+      "surroundings_type", "protection",
+      // Electrical
+      "circuit_breaker", "phase_distribution",
+      // Well
+      "well_type",
+      // Financial
+      "annuity", "cost_of_living", "commission", "mortgage_percent",
+      "spor_percent", "refundable_deposit",
+      // Lease/rental
+      "lease_type", "tenant_not_pay_commission", "ready_date",
+      // Auction
+      "auction_kind", "auction_date", "auction_place",
+      "price_auction_principal", "price_expert_report", "price_minimum_bid",
+      // Shares
+      "share_numerator", "share_denominator",
+      // Age/dates
+      "year_built", "last_renovation", "acceptance_year",
+      "beginning_date", "finish_date", "sale_date", "first_tour_date",
+      // Status
+      "extra_info", "exclusively_at_rk", "personal_transfer", "num_owners",
+      // Media
+      "matterport_url", "mapy_panorama_url",
+      // Other
+      "keywords", "apartment_number",
     ];
 
     for (const f of directFields) {
