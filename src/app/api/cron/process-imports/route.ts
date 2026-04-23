@@ -43,7 +43,13 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  if (jobErr) return NextResponse.json({ ok: false, error: jobErr.message }, { status: 500 });
+  if (jobErr) {
+    // Graceful fallback if import tables don't exist yet (migration 049 not applied)
+    if (jobErr.message?.includes("relation") && jobErr.message?.includes("does not exist")) {
+      return NextResponse.json({ ok: true, message: "Import tables not initialized yet" });
+    }
+    return NextResponse.json({ ok: false, error: jobErr.message }, { status: 500 });
+  }
   if (!job) return NextResponse.json({ ok: true, message: "No pending jobs" });
 
   // Mark as processing
@@ -144,15 +150,23 @@ export async function GET(req: NextRequest) {
       .update(jobUpdate)
       .eq("id", job.id);
 
-    // Fire callback webhook if job just completed
+    // Fire callback webhook if job just completed (with HMAC signature)
     if (isComplete && job.callback_url) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const jobData: any = { ...jobUpdate, id: job.id };
+        const payload = JSON.stringify(jobData);
+        const { createHmac } = await import("node:crypto");
+        const signingKey = process.env.CRON_SECRET || "nemovizor-import";
+        const signature = createHmac("sha256", signingKey).update(payload).digest("hex");
         await fetch(job.callback_url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(jobData),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Nemovizor-Signature": `sha256=${signature}`,
+            "X-Nemovizor-Event": "import.completed",
+          },
+          body: payload,
           signal: AbortSignal.timeout(5000),
         });
       } catch {

@@ -32,6 +32,10 @@ export async function GET(req: NextRequest) {
   const elapsed = Date.now() - started;
 
   if (error) {
+    // Graceful fallback if matview doesn't exist yet (migration 047 not applied)
+    if (error.message?.includes("does not exist")) {
+      return NextResponse.json({ ok: true, message: "Matview not initialized yet", elapsed_ms: elapsed });
+    }
     console.error("[refresh-filter-cache] failed:", error.message);
     return NextResponse.json({ ok: false, error: error.message, elapsed_ms: elapsed }, { status: 500 });
   }

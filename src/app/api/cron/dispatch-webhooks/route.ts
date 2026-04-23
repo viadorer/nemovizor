@@ -32,13 +32,23 @@ export async function GET(req: NextRequest) {
   }
 
   const startedAt = Date.now();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const summary = await dispatchPendingWebhooks(client as any);
-  const elapsedMs = Date.now() - startedAt;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const summary = await dispatchPendingWebhooks(client as any);
+    const elapsedMs = Date.now() - startedAt;
 
-  return NextResponse.json({
-    ok: true,
-    elapsed_ms: elapsedMs,
-    ...summary,
-  });
+    return NextResponse.json({
+      ok: true,
+      elapsed_ms: elapsedMs,
+      ...summary,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Graceful fallback if webhook tables don't exist yet (migration 044 not applied)
+    if (msg.includes("relation") && msg.includes("does not exist")) {
+      return NextResponse.json({ ok: true, message: "Webhook tables not initialized yet" });
+    }
+    console.error("[dispatch-webhooks] Error:", msg);
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
 }
