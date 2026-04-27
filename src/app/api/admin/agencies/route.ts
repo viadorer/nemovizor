@@ -14,7 +14,7 @@ const AGENCY_FIELDS = [
   // Social
   "linkedin", "instagram", "facebook", "twitter", "whatsapp",
   // Awards & service
-  "certifications", "service_areas", "service_countries",
+  "awards", "certifications", "service_areas", "service_countries",
   "avg_response_time_hours", "total_sales_volume", "properties_sold_count",
   // CTA
   "newsletter_enabled", "cta_text", "cta_url", "calendly_url",

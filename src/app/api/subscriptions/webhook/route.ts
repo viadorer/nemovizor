@@ -199,8 +199,16 @@ export async function POST(req: NextRequest) {
     const webhookSecret = process.env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET || "";
     if (webhookSecret) {
       event = getStripe().webhooks.constructEvent(body, sig, webhookSecret);
+    } else if (process.env.NODE_ENV === "production") {
+      // SECURITY: never accept unsigned events in production
+      console.error("[sub-webhook] STRIPE_SUBSCRIPTION_WEBHOOK_SECRET not configured");
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 503 },
+      );
     } else {
-      // Dev mode — no signature verification
+      // Dev mode — log warning, parse without verification
+      console.warn("[sub-webhook] Dev mode: signature verification skipped (no STRIPE_SUBSCRIPTION_WEBHOOK_SECRET)");
       event = JSON.parse(body) as Stripe.Event;
     }
   } catch (err) {

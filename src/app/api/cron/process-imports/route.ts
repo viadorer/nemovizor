@@ -152,25 +152,29 @@ export async function GET(req: NextRequest) {
 
     // Fire callback webhook if job just completed (with HMAC signature)
     if (isComplete && job.callback_url) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const jobData: any = { ...jobUpdate, id: job.id };
-        const payload = JSON.stringify(jobData);
-        const { createHmac } = await import("node:crypto");
-        const signingKey = process.env.CRON_SECRET || "nemovizor-import";
-        const signature = createHmac("sha256", signingKey).update(payload).digest("hex");
-        await fetch(job.callback_url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Nemovizor-Signature": `sha256=${signature}`,
-            "X-Nemovizor-Event": "import.completed",
-          },
-          body: payload,
-          signal: AbortSignal.timeout(5000),
-        });
-      } catch {
-        // Best-effort — don't fail the cron
+      const signingKey = process.env.IMPORT_CALLBACK_SECRET || process.env.CRON_SECRET;
+      if (!signingKey) {
+        console.warn("[process-imports] No IMPORT_CALLBACK_SECRET or CRON_SECRET — skipping callback");
+      } else {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const jobData: any = { ...jobUpdate, id: job.id };
+          const payload = JSON.stringify(jobData);
+          const { createHmac } = await import("node:crypto");
+          const signature = createHmac("sha256", signingKey).update(payload).digest("hex");
+          await fetch(job.callback_url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Nemovizor-Signature": `sha256=${signature}`,
+              "X-Nemovizor-Event": "import.completed",
+            },
+            body: payload,
+            signal: AbortSignal.timeout(5000),
+          });
+        } catch {
+          // Best-effort — don't fail the cron
+        }
       }
     }
   }
